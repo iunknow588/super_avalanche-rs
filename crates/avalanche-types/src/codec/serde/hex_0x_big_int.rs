@@ -42,7 +42,9 @@ impl<'de> DeserializeAs<'de, BigInt> for Hex0xBigInt {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- codec::serde::hex_0x_big_int::test_custom_de_serializer --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// codec::serde::hex_0x_big_int::test_custom_de_serializer --exact
+/// --show-output
 #[test]
 fn test_custom_de_serializer() {
     use serde::Serialize;

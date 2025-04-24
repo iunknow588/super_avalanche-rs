@@ -14,54 +14,32 @@ pub const APP_NAME: &str = "avalanche-e2e";
 
 #[tokio::main]
 async fn main() {
-    let matches = Command::new(APP_NAME)
-        .version(crate_version!())
-        .about("Runs e2e tests against Avalanche node")
-        .long_about(
-            "
-
-e.g.,
-
-$ avalanche-e2e \
---network-id 1337 \
---log-level=info \
---spec-path=\"/tmp/avalanche.e2e.spec.yaml\" \
-default-spec
-
-$ avalanche-e2e \
---log-level=info \
---spec-path=\"/tmp/avalanche.e2e.spec.yaml\"
-
-
-",
-        )
+    let matches = Command::new("avalanche-e2e")
+        .version(VERSION)
+        .about("AvalancheGo end-to-end test executor")
         .arg(
             Arg::new("LOG_LEVEL")
                 .long("log-level")
-                .short('l')
                 .help("Sets the log level")
                 .required(false)
                 .num_args(1)
-                .value_parser(["debug", "info"])
                 .default_value("info"),
-        )
-        .arg(
-            Arg::new("SPEC_PATH")
-                .long("spec-path")
-                .short('p')
-                .help("Sets the spec file path")
-                .required(true)
-                .num_args(1),
         )
         .arg(
             Arg::new("SKIP_PROMPT")
                 .long("skip-prompt")
-                .short('s')
                 .help("Skips prompt mode")
                 .required(false)
                 .num_args(0),
         )
-        .subcommands(vec![default_spec::command()])
+        .arg(
+            Arg::new("SPEC_PATH")
+                .long("spec-path")
+                .help("Sets the spec file path to load")
+                .required(false)
+                .num_args(1),
+        )
+        .subcommand(default_spec::command())
         .get_matches();
 
     match matches.subcommand() {
@@ -70,13 +48,11 @@ $ avalanche-e2e \
                 .get_one::<usize>("KEYS_TO_GENERATE")
                 .unwrap_or(&30);
 
-            let network_id = *sub_matches.get_one::<u32>("NETWORK_ID").unwrap_or(&1337);
+            let network_runner_grpc_endpoint = sub_matches
+                .get_one::<String>("NETWORK_RUNNER_GRPC_ENDPOINT")
+                .map(String::from);
 
-            let network_runner_grpc_endpoint = {
-                sub_matches
-                    .get_one::<String>("NETWORK_RUNNER_GRPC_ENDPOINT")
-                    .map(String::from)
-            };
+            let network_id = *sub_matches.get_one::<u32>("NETWORK_ID").unwrap_or(&1337);
 
             let avalanchego_path = {
                 sub_matches

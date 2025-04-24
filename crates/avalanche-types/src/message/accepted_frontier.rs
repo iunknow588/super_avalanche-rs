@@ -1,8 +1,7 @@
 use std::io::{self, Error, ErrorKind};
 
 use crate::{ids, message, proto::pb::p2p};
-use prost::bytes::Bytes;
-use prost::Message as ProstMessage;
+use prost::{bytes::Bytes, Message as ProstMessage};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Message {
@@ -125,7 +124,8 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- message::accepted_frontier::test_message --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// message::accepted_frontier::test_message --exact --show-output
 #[test]
 fn test_message() {
     let _ = env_logger::builder()

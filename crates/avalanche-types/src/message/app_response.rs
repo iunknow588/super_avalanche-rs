@@ -124,7 +124,8 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- message::app_response::test_message --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// message::app_response::test_message --exact --show-output
 #[test]
 fn test_message() {
     let _ = env_logger::builder()

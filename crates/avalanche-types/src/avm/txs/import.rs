@@ -96,14 +96,17 @@ impl Tx {
 
                 // decide the type
                 // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableInput
-                if transferable_input.transfer_input.is_none()
-                    && transferable_input.stakeable_lock_in.is_none()
+                if transferable_input.transfer_input.is_none() &&
+                    transferable_input.stakeable_lock_in.is_none()
                 {
                     return Err(Error::Other {
-                        message: "unexpected Nones in TransferableInput transfer_input and stakeable_lock_in".to_string(),
+                        message: "unexpected Nones in TransferableInput transfer_input and \
+                                 stakeable_lock_in"
+                            .to_string(),
                         retryable: false,
                     });
                 }
+
                 let type_id_transferable_in = {
                     if transferable_input.transfer_input.is_some() {
                         key::secp256k1::txs::transfer::Input::type_id()
@@ -111,7 +114,9 @@ impl Tx {
                         platformvm::txs::StakeableLockIn::type_id()
                     }
                 };
-                // marshal type ID for "key::secp256k1::txs::transfer::Input" or "platformvm::txs::StakeableLockIn"
+
+                // marshal type ID for "key::secp256k1::txs::transfer::Input" or
+                // "platformvm::txs::StakeableLockIn"
                 packer.pack_u32(type_id_transferable_in)?;
 
                 match type_id_transferable_in {
@@ -241,7 +246,9 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- avm::txs::import::test_import_tx_serialization_with_two_signers --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib -- \
+/// avm::txs::import::test_import_tx_serialization_with_two_signers --exact \
+/// --show-output
 /// ref. "avalanchego/vms/avm.TestImportTxSerialization"
 #[test]
 fn test_import_tx_serialization_with_two_signers() {
@@ -367,13 +374,16 @@ fn test_import_tx_serialization_with_two_signers() {
         // "Tx.source_chain_ins[0]" secp256k1fx.TransferInput type ID
         0x00, 0x00, 0x00, 0x05, //
         //
-        // "Tx.source_chain_ins[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.amount
+        // "Tx.source_chain_ins[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.amount
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xe8, //
         //
-        // "Tx.source_chain_ins[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices.len()
+        // "Tx.source_chain_ins[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices.len()
         0x00, 0x00, 0x00, 0x01, //
         //
-        // "Tx.source_chain_ins[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices[0]
+        // "Tx.source_chain_ins[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices[0]
         0x00, 0x00, 0x00, 0x00, //
         //
         // number of of credentials (avax.Tx.fx_creds.len())

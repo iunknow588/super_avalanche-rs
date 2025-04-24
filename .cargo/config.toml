@@ -1,0 +1,3 @@
+[env]
+PROTOC_FLAGS = "--experimental_allow_proto3_optional"
+PROTOC_ARG = "--experimental_allow_proto3_optional"

@@ -40,7 +40,6 @@ const DEFAULT_CHECK_ACCEPTANCE: bool = true;
 /// TODO: make more transfers to evenly distribute funds
 pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
     let spec_rlocked = spec.read().await;
-    let key_infos = spec_rlocked.key_infos.clone();
 
     let (rounds, check_acceptance) = if let Some(cfg) = &spec_rlocked.x_simple_transfers {
         (cfg.rounds, cfg.check_acceptance)

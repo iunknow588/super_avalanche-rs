@@ -120,23 +120,17 @@ impl Spec {
 
     /// Loads the spec from the file.
     pub fn load(file_path: &str) -> io::Result<Self> {
-        log::info!("loading Spec from {}", file_path);
+        let raw_data = fs::read_to_string(file_path)?;
 
-        if !Path::new(file_path).exists() {
-            return Err(Error::new(
-                ErrorKind::NotFound,
-                format!("file {} does not exists", file_path),
-            ));
-        }
+        let spec = if file_path.ends_with(".yaml") || file_path.ends_with(".yml") {
+            serde_yaml::from_str(&raw_data)
+                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse YAML: {}", e)))?
+        } else {
+            serde_json::from_str(&raw_data)
+                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse JSON: {}", e)))?
+        };
 
-        let f = File::open(file_path).map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("failed to open {} ({})", file_path, e),
-            )
-        })?;
-        serde_yaml::from_reader(f)
-            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid YAML: {}", e)))
+        Ok(spec)
     }
 
     /// Validates the spec.
@@ -163,7 +157,8 @@ impl Spec {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-e2e -- spec::test_spec --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-e2e -- spec::test_spec --exact \
+/// --show-output
 #[test]
 fn test_spec() {
     let d = r#"

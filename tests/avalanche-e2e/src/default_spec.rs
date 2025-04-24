@@ -24,21 +24,14 @@ pub fn command() -> Command {
                 .long("randomize")
                 .help("Sets to randomize test order")
                 .required(false)
-                .num_args(0)
-        )
-        .arg(
-            Arg::new("PARALLELIZE")
-                .long("parallelize")
-                .help("Sets to parallelize test runs")
-                .required(false)
-                .num_args(0)
+                .num_args(0),
         )
         .arg(
             Arg::new("IGNORE_ERRORS")
                 .long("ignore-errors")
                 .help("Sets to ignore errors from test runs")
                 .required(false)
-                .num_args(0)
+                .num_args(0),
         )
         .arg(
             Arg::new("NETWORK_ID")
@@ -50,39 +43,29 @@ pub fn command() -> Command {
                 .default_value("1337"),
         )
         .arg(
-            Arg::new("KEYS_TO_GENERATE")
-                .long("keys-to-generate")
-                .help("Sets the number of keys to generate")
-                .required(false)
-                .num_args(1)
-                .value_parser(value_parser!(usize))
-                .default_value("30"),
-        )
-        .arg(
             Arg::new("SIGN_WITH_KMS_AWS")
                 .long("sign-with-kms-aws")
                 .help("Sets to sign transactions with AW KMS")
                 .required(false)
-                .num_args(0)
+                .num_args(0),
         )
         .arg(
             Arg::new("NETWORK_RUNNER_GRPC_ENDPOINT")
                 .long("network-runner-grpc-endpoint")
-                .help("Sets the gRPC endpoint for network-runner RPC server, only required for network runner runs")
-                .required(false)
-                .num_args(1),
-        )
-        .arg(
-            Arg::new("NETWORK_RUNNER_AVALANCHEGO_PATH")
-                .long("network-runner-avalanchego-path")
-                .help("Sets the AvalancheGo binary path, only required for network runner runs")
+                .help(
+                    "Sets the gRPC endpoint for network-runner RPC server, only required for \
+                     network runner runs",
+                )
                 .required(false)
                 .num_args(1),
         )
         .arg(
             Arg::new("AVALANCHEGO_RPC_ENDPOINT")
                 .long("avalanchego-rpc-endpoint")
-                .help("Sets the AvalancheGo RPC endpoint, only required for running against existing clusters")
+                .help(
+                    "Sets the AvalancheGo RPC endpoint, only required for running against \
+                     existing clusters",
+                )
                 .required(false)
                 .num_args(1),
         )

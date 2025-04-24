@@ -31,15 +31,16 @@ pub fn decode_calldata(calldata: &str) -> io::Result<(Function, Vec<Token>)> {
     unimplemented!("not yet")
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::abi::test_encode_calldata_register_name --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
+/// -- evm::abi::test_encode_calldata_register_name --exact --show-output
 #[test]
 fn test_encode_calldata_register_name() {
-    use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
-
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .is_test(true)
         .try_init();
+
+    use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 
     // parsed function of "register(string name)"
     let func = Function {
@@ -58,20 +59,21 @@ fn test_encode_calldata_register_name() {
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::abi::test_encode_calldata_register_mint --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
+/// -- evm::abi::test_encode_calldata_register_mint --exact --show-output
 #[test]
 fn test_encode_calldata_register_mint() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
+
     use std::str::FromStr;
 
     use ethers_core::{
         abi::{Function, Param, ParamType, StateMutability, Token},
         types::{H160, U256},
     };
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
 
     // parsed function of "mint(address receiver, uint amount)"
     let func = Function {
@@ -103,20 +105,21 @@ fn test_encode_calldata_register_mint() {
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::abi::test_encode_calldata_send --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
+/// -- evm::abi::test_encode_calldata_send --exact --show-output
 #[test]
 fn test_encode_calldata_send() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
+
     use std::str::FromStr;
 
     use ethers_core::{
         abi::{Function, Param, ParamType, StateMutability, Token},
         types::{H160, U256},
     };
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
 
     // parsed function of "send(address receiver, uint amount)"
     let func = Function {

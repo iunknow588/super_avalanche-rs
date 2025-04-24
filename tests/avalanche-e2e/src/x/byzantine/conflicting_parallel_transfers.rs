@@ -24,12 +24,12 @@ use tokio::{
 
 pub const NAME: &str = "X_BYZANTINE_CONFLICTING_PARALLEL_TRANSFERS";
 
-/// Sends multiple transactions with conflicting inputs (attempt to double-spend)
-/// and makes sure only virtuous transactions are accepted.
-/// Transactions that follow may fail its liveness due to conflicts created from this call.
+/// Sends multiple transactions with conflicting inputs (attempt to
+/// double-spend) and makes sure only virtuous transactions are accepted.
+/// Transactions that follow may fail its liveness due to conflicts created from
+/// this call.
 pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
     let spec_rlocked = spec.read().await;
-
     let network_id = spec_rlocked.status.clone().unwrap().network_id;
     let rpc_eps = spec_rlocked.rpc_endpoints.clone();
 

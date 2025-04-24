@@ -15,7 +15,6 @@ pub enum Error {
 }
 
 impl Error {
-    /// Returns the error message in "String".
     #[inline]
     #[must_use]
     pub fn message(&self) -> String {
@@ -24,20 +23,12 @@ impl Error {
         }
     }
 
-    /// Returns if the error is retryable.
     #[inline]
     #[must_use]
     pub fn retryable(&self) -> bool {
         match self {
             Error::API { retryable, .. } | Error::Other { retryable, .. } => *retryable,
         }
-    }
-
-    /// Returns true if the error message contains the substring.
-    #[inline]
-    #[must_use]
-    pub fn contains(&self, s: &str) -> bool {
-        self.message().contains(s)
     }
 }
 
@@ -68,9 +59,6 @@ impl Default for Errors {
     }
 }
 
-/// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
-/// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
 impl fmt::Display for Errors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut errs: Vec<String> = Vec::new();

@@ -55,8 +55,8 @@ pub struct Genesis {
 /// On the X-Chain, one AVAX is 10^9  units.
 /// On the P-Chain, one AVAX is 10^9  units.
 /// On the C-Chain, one AVAX is 10^18 units.
-/// "0x204FCE5E3E25026110000000" is "10000000000000000000000000000" (10,000,000,000 AVAX).
-/// ref. <https://www.rapidtables.com/convert/number/decimal-to-hex.html>
+/// "0x204FCE5E3E25026110000000" is "10000000000000000000000000000"
+/// (10,000,000,000 AVAX). ref. <https://www.rapidtables.com/convert/number/decimal-to-hex.html>
 /// ref. <https://www.rapidtables.com/convert/number/hex-to-decimal.html>
 /// ref. <https://snowtrace.io/unitconverter>
 pub const DEFAULT_INITIAL_AMOUNT: &str = "0x204FCE5E3E25026110000000";

@@ -257,8 +257,6 @@ where
         let resp = client_p::issue_tx(&picked_http_rpc.1, &hex_tx).await?;
 
         if let Some(e) = resp.error {
-            // handle duplicate validator
-            // ref. "avalanchego/vms/platformvm/txs/executor" "verifyAddValidatorTx"
             let already_validator = e
                 .message
                 .contains("attempted to issue duplicate validation for");

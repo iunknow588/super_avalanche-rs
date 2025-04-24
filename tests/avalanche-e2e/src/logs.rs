@@ -1,23 +1,14 @@
-pub fn setup_logger(log_level: String) {
-    let lvl = match log_level.to_lowercase().as_str() {
-        "off" => log::LevelFilter::Off,
-        "error" => log::LevelFilter::Error,
-        "warn" => log::LevelFilter::Warn,
-        "info" => log::LevelFilter::Info,
-        "debug" => log::LevelFilter::Debug,
-        "trace" => log::LevelFilter::Trace,
-        _ => {
-            println!("defaulting {} to 'info' level", log_level);
-            log::LevelFilter::Info
-        }
-    };
-
-    let mut builder = env_logger::Builder::new();
-    builder.filter(None, lvl);
-
-    if let Ok(env) = std::env::var("RUST_LOG") {
-        builder.parse_filters(&env);
-    }
-
-    let _r = builder.try_init();
+pub fn init(log_level: &str) {
+    let env = env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, log_level);
+    env_logger::Builder::from_env(env)
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "{} [{}] {}",
+                chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                record.level(),
+                record.args()
+            )
+        })
+        .init();
 }

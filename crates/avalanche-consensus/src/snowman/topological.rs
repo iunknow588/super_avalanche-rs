@@ -3012,7 +3012,7 @@ fn test_topological_error_on_decided_block() {
     assert!(res.is_err());
     match res {
         Ok(_) => panic!("unexpected Ok"),
-        Err(e) => assert!(e.contains("duplicate block add")),
+        Err(e) => assert!(e.to_string().contains("duplicate block add")),
     }
 }
 
@@ -3073,7 +3073,7 @@ fn test_topological_error_on_add_duplicate_block_id() {
     assert!(res.is_err());
     match res {
         Ok(_) => panic!("unexpected Ok"),
-        Err(e) => assert!(e.contains("duplicate block add")),
+        Err(e) => assert!(e.to_string().contains("duplicate block add")),
     }
 }
 

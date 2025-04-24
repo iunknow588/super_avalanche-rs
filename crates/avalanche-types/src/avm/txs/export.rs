@@ -213,7 +213,9 @@ impl Tx {
                 sigs.push(Vec::from(sig));
             }
 
-            let cred = key::secp256k1::txs::Credential { signatures: sigs };
+            let cred = key::secp256k1::txs::Credential {
+                signatures: sigs,
+            };
 
             let fx_cred = fx::Credential {
                 cred,
@@ -251,7 +253,9 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- avm::txs::export::test_export_tx_serialization_with_two_signers --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib -- \
+/// avm::txs::export::test_export_tx_serialization_with_two_signers --exact \
+/// --show-output
 /// ref. "avalanchego/vms/avm.TestExportTxSerialization"
 #[test]
 fn test_export_tx_serialization_with_two_signers() {

@@ -1,8 +1,7 @@
 use std::io::{self, Error, ErrorKind};
 
 use crate::{ids, message, proto::pb::p2p};
-use prost::bytes::Bytes;
-use prost::Message as ProstMessage;
+use prost::{bytes::Bytes, Message as ProstMessage};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Message {

@@ -8,9 +8,9 @@
 //! Avalanche. See the `subnet` subdirectory for an SDK that makes it easy to build a
 //! custom VM in Rust.
 //!
-//! avalanche-types can also be used to build Rust clients and tooling within the Avalanche
-//! ecosystem.
-//!
+//! avalanche-types can also be used to build Rust clients and tooling within
+//! the Avalanche ecosystem.
+
 #![cfg_attr(docsrs, feature(doc_cfg))]
 pub mod avm;
 pub mod choices;

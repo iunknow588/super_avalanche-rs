@@ -28,6 +28,7 @@ use tokio::sync::RwLock;
 pub struct Database {
     db: BoxedDatabase,
     mem: Arc<RwLock<HashMap<Vec<u8>, iterator::ValueDelete>>>,
+    #[allow(dead_code)] // 这个字段在将来可能会用到
     batch: BoxedBatch,
     /// True if the database is closed.
     closed: Arc<AtomicBool>,

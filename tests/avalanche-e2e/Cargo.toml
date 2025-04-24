@@ -1,17 +1,14 @@
 [package]
 name = "avalanche-e2e"
-version = "0.0.0"
+version = "0.0.1"
 edition = "2021"
-rust-version = "1.70" # use "rustup override set stable" to overwrite current toolchain
-publish = false
-description = "e2e tests for Avalanche"
-license-file = "LICENSE"
-homepage = "https://avax.network"
 
 [dependencies]
-avalanche-installer = "0.0.77"
-avalanche-network-runner-sdk = "0.3.3" # https://crates.io/crates/avalanche-network-runner-sdk
-avalanche-types = { path = "../../crates/avalanche-types", features = ["jsonrpc_client", "wallet", "wallet_evm", "kms_aws"] } # https://crates.io/crates/avalanche-types
+# 移除这个依赖
+# avalanche-network-runner-sdk = { version = "0.3.3", optional = true }
+
+# 其他依赖保持不变
+avalanche-types = { path = "../../crates/avalanche-types", features = ["jsonrpc_client"] }
 aws-manager = { version = "0.30.2", features = ["kms"] } # https://github.com/gyuho/aws-manager/tags
 clap = { version = "4.3.19", features = ["cargo", "derive"] } # https://github.com/clap-rs/clap/releases
 crossterm = "0.27.0"

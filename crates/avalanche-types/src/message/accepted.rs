@@ -129,7 +129,8 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- message::accepted::test_message --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// message::accepted::test_message --exact --show-output
 #[test]
 fn test_message() {
     let _ = env_logger::builder()

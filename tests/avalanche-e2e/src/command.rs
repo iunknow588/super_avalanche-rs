@@ -34,9 +34,6 @@ pub async fn execute(opts: flags::Options) -> io::Result<()> {
         Print(format!("\nLoaded Spec: '{}'\n", opts.spec_path)),
         ResetColor
     )?;
-    let spec_contents = spec.encode_yaml()?;
-    println!("{}\n", spec_contents);
-    log::info!("loaded {} key infos from spec", spec.key_infos.len());
 
     if !opts.skip_prompt {
         let options = &[
@@ -57,7 +54,9 @@ pub async fn execute(opts: flags::Options) -> io::Result<()> {
     // set up local network if necessary
     match spec.rpc_endpoint_kind.as_str() {
         spec::RPC_ENDPOINT_KIND_NETWORK_RUNNER_RPC_SERVER => {
-            log::info!("network runner RPC server given, launching a new local network with gRPC client...");
+            log::info!(
+                "network runner RPC server given, launching a new local network with gRPC client..."
+            );
             if spec.avalanchego_path.is_none() {
                 // download "avalanchego" and plugins
                 let bin =
@@ -114,6 +113,11 @@ pub async fn execute(opts: flags::Options) -> io::Result<()> {
         .await
         .unwrap();
     let network_id = resp.result.unwrap().network_id;
+
+    let key_info = avalanche_types::key::secp256k1::private_key::Key::generate()
+        .expect("unexpected key generate failure")
+        .to_info(network_id)
+        .unwrap();
 
     let mut randomized_scenarios = spec.scenarios.clone();
     randomized_scenarios.shuffle(&mut thread_rng());
