@@ -186,7 +186,8 @@ impl<'de> Deserialize<'de> for Id {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::node::test_custom_de_serializer --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::node::test_custom_de_serializer --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -243,8 +244,8 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "ids::must_deserialize_id")] to serde without derive.
-/// ref. <https://serde.rs/impl-deserialize.html>
+/// Use #[serde(deserialize_with = "ids::must_deserialize_id")] to serde without
+/// derive. ref. <https://serde.rs/impl-deserialize.html>
 pub fn must_deserialize_id<'de, D>(deserializer: D) -> Result<Id, D::Error>
 where
     D: Deserializer<'de>,
@@ -273,8 +274,8 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "short::must_deserialize_ids")] to serde with derive.
-/// ref. <https://serde.rs/impl-deserialize.html>
+/// Use #[serde(deserialize_with = "short::must_deserialize_ids")] to serde with
+/// derive. ref. <https://serde.rs/impl-deserialize.html>
 pub fn must_deserialize_ids<'de, D>(deserializer: D) -> Result<Vec<Id>, D::Error>
 where
     D: Deserializer<'de>,
@@ -307,7 +308,8 @@ where
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::node::test_serialize --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::node::test_serialize --exact --show-output
 #[test]
 fn test_serialize() {
     let id = Id::from_slice(&<Vec<u8>>::from([
@@ -345,14 +347,15 @@ pub type Set = HashSet<Id>;
 
 /// Return a new NodeIdSet with initial capacity \[size\].
 /// More or less than \[size\] elements can be added to this set.
-/// Using NewNodeIDSet() rather than ids.NodeIDSet{} is just an optimization that can
-/// be used if you know how many elements will be put in this set.
+/// Using NewNodeIDSet() rather than ids.NodeIDSet{} is just an optimization
+/// that can be used if you know how many elements will be put in this set.
 pub fn new_set(size: usize) -> Set {
     let set: HashSet<Id> = HashSet::with_capacity(size);
     set
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::node::test_from_cert_file --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::node::test_from_cert_file --exact --show-output
 #[test]
 fn test_from_cert_file() {
     let _ = env_logger::builder()
@@ -561,7 +564,8 @@ impl PartialEq for Ids {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::node::test_sort --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::node::test_sort --exact --show-output
 #[test]
 fn test_sort() {
     // lengths of individual ids do not matter since all are fixed-sized
@@ -598,7 +602,7 @@ fn test_sort() {
     assert!(id1 > id2);
 
     // lengths of NodeIds matter
-    let ids1 = Ids(vec![
+    let id_set1 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -612,7 +616,7 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    let ids2 = Ids(vec![
+    let id_set2 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -626,10 +630,10 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    assert!(ids1 == ids2);
+    assert!(id_set1 == id_set2);
 
     // lengths of NodeIds matter
-    let ids1 = Ids(vec![
+    let id_set1 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -643,7 +647,7 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    let ids2 = Ids(vec![
+    let id_set2 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -661,10 +665,10 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    assert!(ids1 < ids2);
+    assert!(id_set1 < id_set2);
 
     // lengths of NodeIds matter
-    let ids1 = Ids(vec![
+    let id_set1 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -682,7 +686,7 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    let ids2 = Ids(vec![
+    let id_set2 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -696,10 +700,10 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    assert!(ids1 > ids2);
+    assert!(id_set1 > id_set2);
 
     // lengths of NodeIds matter
-    let ids1 = Ids(vec![
+    let id_set1 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -713,7 +717,7 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    let ids2 = Ids(vec![
+    let id_set2 = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -727,9 +731,9 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ]);
-    assert!(ids1 < ids2);
+    assert!(id_set1 < id_set2);
 
-    let mut ids1 = vec![
+    let mut id_set1 = vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -743,8 +747,8 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ];
-    ids1.sort();
-    let ids2 = vec![
+    id_set1.sort();
+    let id_set2 = vec![
         Id::from_slice(&<Vec<u8>>::from([
             0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -758,5 +762,5 @@ fn test_sort() {
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         ])),
     ];
-    assert!(ids1 == ids2);
+    assert!(id_set1 == id_set2);
 }

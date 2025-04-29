@@ -83,15 +83,15 @@ pub trait VersionedDatabase {
 async fn clone_box_test() {
     // create box and mutate underlying hashmap
     let mut db = memdb::Database::new_boxed();
-    let resp = db.put("foo".as_bytes(), "bar".as_bytes()).await;
+    let resp = db.put(b"foo", b"bar").await;
     assert!(resp.is_ok());
 
     // clone and mutate
     let mut cloned_db = db.clone();
-    let resp = cloned_db.delete("foo".as_bytes()).await;
+    let resp = cloned_db.delete(b"foo").await;
     assert!(resp.is_ok());
 
     // verify mutation
-    let resp = cloned_db.get("foo".as_bytes()).await;
+    let resp = cloned_db.get(b"foo").await;
     assert!(resp.is_err());
 }

@@ -5,8 +5,10 @@ use reqwest::{header::CONTENT_TYPE, ClientBuilder};
 
 use crate::{
     errors::{Error, Result},
-    jsonrpc::admin::{ChainAliasParams, ChainAliasRequest, ChainAliasResponse},
-    jsonrpc::client::url,
+    jsonrpc::{
+        admin::{ChainAliasParams, ChainAliasRequest, ChainAliasResponse},
+        client::url,
+    },
     utils,
 };
 
@@ -16,12 +18,10 @@ pub async fn alias_chain(
     chain: String,
     alias: String,
 ) -> Result<ChainAliasResponse> {
-    let (scheme, host, port, _, _) =
-        utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
-            Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
-                retryable: false,
-            }
+    let (scheme, host, port, ..) = utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc)
+        .map_err(|e| Error::Other {
+            message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+            retryable: false,
         })?;
 
     let url = url::try_create_url(url::Path::Admin, scheme.as_deref(), host.as_str(), port)?;
@@ -60,7 +60,7 @@ pub async fn alias_chain(
         .map_err(|e|
         // TODO: check retryable
         Error::API {
-            message: format!("failed reqwest::Client.send '{}'", e),
+            message: format!("failed reqwest::Client.send '{e}'"),
             retryable: false,
         })?;
 

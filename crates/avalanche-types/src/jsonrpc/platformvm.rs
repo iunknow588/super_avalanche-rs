@@ -554,7 +554,7 @@ fn test_get_balance() {
 {
     \"jsonrpc\": \"2.0\",
     \"result\": {
-        \"balance\": \"20000000000000000\",
+        \"balance\": \"200_000_000_00000000\",
         \"unlocked\": \"10000000000000000\",
         \"lockedStakeable\": \"10000000000000000\",
         \"lockedNotStakeable\": \"0\",
@@ -585,17 +585,17 @@ fn test_get_balance() {
     let mut h = HashMap::new();
     h.insert(
         "2ZKbwERx36B5WrYesQGAeTV4NTo4dx6j8svkjwAEix89ZPencR".to_string(),
-        147573952589676412_u64,
+        147_573_952_589_676_412_u64,
     );
 
     let expected = GetBalanceResponse {
         jsonrpc: "2.0".to_string(),
         id: 1,
         result: Some(GetBalanceResult {
-            balance: 20000000000000000,
-            unlocked: 10000000000000000,
+            balance: 20_000_000_000_000_000,
+            unlocked: 10_000_000_000_000_000,
 
-            locked_stakeable: Some(10000000000000000),
+            locked_stakeable: Some(10_000_000_000_000_000),
             locked_not_stakeable: Some(0),
 
             balances: Some(h.clone()),
@@ -913,9 +913,9 @@ fn test_get_current_validators() {
                 ApiPrimaryValidator {
                     tx_id: ids::Id::from_str("KPkPo9EerKZhSwrA8NfLTVWsgr16Ntu8Ei4ci7GF7t75szrcQ")
                         .unwrap(),
-                    start_time: 1648312635,
-                    end_time: 1679843235,
-                    stake_amount: Some(100000000000000000),
+                    start_time: 1_648_312_635,
+                    end_time: 1_679_843_235,
+                    stake_amount: Some(100_000_000_000_000_000),
                     node_id: node::Id::from_str("NodeID-5wVq6KkSK3p4wQFmiVHCDq2zdg8unchaE")
                         .unwrap(),
                     validation_reward_owner: Some(ApiOwner {
@@ -932,7 +932,7 @@ fn test_get_current_validators() {
                             "P-custom1vkzy5p2qtumx9svjs9pvds48s0hcw80f962vrs".to_string()
                         ],
                     }),
-                    potential_reward: Some(79984390135364555),
+                    potential_reward: Some(79_984_390_135_364_555),
                     delegation_fee: Some(6.25),
                     uptime: Some(100.0),
                     connected: true,
@@ -944,9 +944,9 @@ fn test_get_current_validators() {
                     tx_id: ids::Id::from_str("EjKZm5eEajWu151cfPms7PvMjyaQk36qTSz1MfnZRU5x5bNxz")
                         .unwrap(),
 
-                    start_time: 1648312635,
-                    end_time: 1679848635,
-                    stake_amount: Some(100000000000000000),
+                    start_time: 1_648_312_635,
+                    end_time: 1_679_848_635,
+                    stake_amount: Some(100_000_000_000_000_000),
                     node_id: node::Id::from_str("NodeID-JLR7d6z9cwCbkoPcPsnjkm6gq4xz7c4oT")
                         .unwrap(),
                     validation_reward_owner: Some(ApiOwner {
@@ -963,7 +963,7 @@ fn test_get_current_validators() {
                             "P-custom1vkzy5p2qtumx9svjs9pvds48s0hcw80f962vrs".to_string()
                         ],
                     }),
-                    potential_reward: Some(77148186230865960),
+                    potential_reward: Some(77_148_186_230_865_960),
                     delegation_fee: Some(6.25),
                     uptime: Some(100.0),
                     connected: true,
@@ -994,8 +994,8 @@ fn test_get_pending_validators() {
       {
         "txID": "2NNkpYTGfTFLSGXJcHtVv6drwVU2cczhmjK2uhvwDyxwsjzZMm",
         "startTime": "1600368632",
-        "endTime": "1602960455",
-        "stakeAmount": "200000000000",
+        "endTime": "1_602_960_455",
+        "stakeAmount": "200_000_000_000",
         "nodeID": "NodeID-5mb46qkSBj81k9g9e4VFjGGSbaaSLFRzD",
         "delegationFee": "10.0000",
         "connected": false
@@ -1004,8 +1004,8 @@ fn test_get_pending_validators() {
     "delegators": [
       {
         "txID": "Bbai8nzGVcyn2VmeYcbS74zfjJLjDacGNVuzuvAQkHn1uWfoV",
-        "startTime": "1600368523",
-        "endTime": "1602960342",
+        "startTime": "1_600_368_523",
+        "endTime": "1_602_960_342",
         "stakeAmount": "20000000000",
         "nodeID": "NodeID-7Xhw2mDxuDS44j42TCB6U5579esbSt3Lg"
       }
@@ -1024,9 +1024,9 @@ fn test_get_pending_validators() {
             validators: <Vec<ApiPrimaryValidator>>::from([ApiPrimaryValidator {
                 tx_id: ids::Id::from_str("2NNkpYTGfTFLSGXJcHtVv6drwVU2cczhmjK2uhvwDyxwsjzZMm")
                     .unwrap(),
-                start_time: 1600368632,
-                end_time: 1602960455,
-                stake_amount: Some(200000000000),
+                start_time: 1_600_368_632,
+                end_time: 1_602_960_455,
+                stake_amount: Some(200_000_000_000),
                 node_id: node::Id::from_str("NodeID-5mb46qkSBj81k9g9e4VFjGGSbaaSLFRzD").unwrap(),
                 delegation_fee: Some(10.0),
                 connected: false,
@@ -1035,9 +1035,9 @@ fn test_get_pending_validators() {
             delegators: <Vec<ApiPrimaryDelegator>>::from([ApiPrimaryDelegator {
                 tx_id: ids::Id::from_str("Bbai8nzGVcyn2VmeYcbS74zfjJLjDacGNVuzuvAQkHn1uWfoV")
                     .unwrap(),
-                start_time: 1600368523,
-                end_time: 1602960342,
-                stake_amount: 20000000000,
+                start_time: 1_600_368_523,
+                end_time: 1_602_960_342,
+                stake_amount: 20_000_000_000,
                 node_id: node::Id::from_str("NodeID-7Xhw2mDxuDS44j42TCB6U5579esbSt3Lg").unwrap(),
                 ..ApiPrimaryDelegator::default()
             }]),

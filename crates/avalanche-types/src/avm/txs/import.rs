@@ -96,12 +96,12 @@ impl Tx {
 
                 // decide the type
                 // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableInput
-                if transferable_input.transfer_input.is_none() &&
-                    transferable_input.stakeable_lock_in.is_none()
+                if transferable_input.transfer_input.is_none()
+                    && transferable_input.stakeable_lock_in.is_none()
                 {
                     return Err(Error::Other {
                         message: "unexpected Nones in TransferableInput transfer_input and \
-                                 stakeable_lock_in"
+                                  stakeable_lock_in"
                             .to_string(),
                         retryable: false,
                     });
@@ -147,10 +147,10 @@ impl Tx {
                         // marshal "platformvm::txs::StakeableLockIn.locktime" field
                         packer.pack_u64(stakeable_lock_in.locktime)?;
 
-                        // "platformvm.StakeableLockIn.TransferableIn" is struct and serialize:"true"
-                        // but embedded inline in the struct "StakeableLockIn"
-                        // so no need to encode type ID
-                        // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockIn
+                        // "platformvm.StakeableLockIn.TransferableIn" is struct and
+                        // serialize:"true" but embedded inline in the
+                        // struct "StakeableLockIn" so no need to encode
+                        // type ID ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockIn
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#Input
                         //

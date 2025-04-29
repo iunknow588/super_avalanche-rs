@@ -3,17 +3,16 @@ use std::{sync::Arc, time::Duration};
 
 use crate::{
     errors::{Error, Result},
-    jsonrpc::client::url,
-    jsonrpc::health,
+    jsonrpc::{client::url, health},
     utils::urls::extract_scheme_host_port_path_chain_alias,
 };
 use reqwest::ClientBuilder;
 
 /// "If a single piece of data must be accessible from more than one task
-/// concurrently, then it must be shared using synchronization primitives such as Arc."
-/// ref. <https://tokio.rs/tokio/tutorial/spawning>
+/// concurrently, then it must be shared using synchronization primitives such
+/// as Arc." ref. <https://tokio.rs/tokio/tutorial/spawning>
 pub async fn check(http_rpc: Arc<String>, liveness: bool) -> Result<health::Response> {
-    let (scheme, host, port, _, _) =
+    let (scheme, host, port, ..) =
         extract_scheme_host_port_path_chain_alias(&http_rpc).map_err(|e| Error::Other {
             message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
             retryable: false,
@@ -45,7 +44,7 @@ pub async fn check(http_rpc: Arc<String>, liveness: bool) -> Result<health::Resp
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {

@@ -86,7 +86,7 @@ fn test_get_network_id() {
         jsonrpc: "2.0".to_string(),
         id: 1,
         result: Some(GetNetworkIdResult {
-            network_id: 9999999_u32,
+            network_id: 9_999_999_u32,
         }),
         error: None,
     };
@@ -462,15 +462,15 @@ fn test_get_tx_fee() {
 {
     \"jsonrpc\": \"2.0\",
     \"result\": {
-        \"txFee\": \"1000000\",
-        \"createAssetTxFee\": \"1000000\",
-        \"createSubnetTxFee\": \"100000000\",
-        \"transformSubnetTxFee\": \"100000000\",
-        \"createBlockchainTxFee\": \"100000000\",
+        \"txFee\": \"1_000_000\",
+        \"createAssetTxFee\": \"1_000_000\",
+        \"createSubnetTxFee\": \"100_000_000\",
+        \"transformSubnetTxFee\": \"100_000_000\",
+        \"createBlockchainTxFee\": \"100_000_000\",
         \"addPrimaryNetworkValidatorFee\": \"0\",
-        \"addPrimaryNetworkDelegatorFee\": \"1000000\",
-        \"addSubnetValidatorFee\": \"1000000\",
-        \"addSubnetDelegatorFee\": \"1000000\"
+        \"addPrimaryNetworkDelegatorFee\": \"1_000_000\",
+        \"addSubnetValidatorFee\": \"1_000_000\",
+        \"addSubnetDelegatorFee\": \"1_000_000\"
     },
     \"id\": 1
 }
@@ -483,15 +483,15 @@ fn test_get_tx_fee() {
         jsonrpc: "2.0".to_string(),
         id: 1,
         result: Some(GetTxFeeResult {
-            tx_fee: 1000000,
-            create_asset_tx_fee: 1000000,
-            create_subnet_tx_fee: 100000000,
-            transform_subnet_tx_fee: 100000000,
-            create_blockchain_tx_fee: 100000000,
+            tx_fee: 1_000_000,
+            create_asset_tx_fee: 1_000_000,
+            create_subnet_tx_fee: 100_000_000,
+            transform_subnet_tx_fee: 100_000_000,
+            create_blockchain_tx_fee: 100_000_000,
             add_primary_network_validator_fee: 0,
-            add_primary_network_delegator_fee: 1000000,
-            add_subnet_validator_fee: 1000000,
-            add_subnet_delegator_fee: 1000000,
+            add_primary_network_delegator_fee: 1_000_000,
+            add_subnet_validator_fee: 1_000_000,
+            add_subnet_delegator_fee: 1_000_000,
         }),
         error: None,
     };

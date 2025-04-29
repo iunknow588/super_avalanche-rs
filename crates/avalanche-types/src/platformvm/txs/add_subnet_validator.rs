@@ -167,7 +167,7 @@ fn test_add_subnet_validator_tx_serialization_with_one_signer() {
 
     let mut tx = Tx {
         base_tx: txs::Tx {
-            network_id: 1000000,
+            network_id: 1_000_000,
             transferable_outputs: Some(vec![txs::transferable::Output {
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
                     0x88, 0xee, 0xc2, 0xe0, 0x99, 0xc6, 0xa5, 0x28, //
@@ -176,7 +176,7 @@ fn test_add_subnet_validator_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2c6874d5c56f500,
+                    amount: 0x02c6_874d_5c56_f500,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0x00,
                         threshold: 0x01,
@@ -206,7 +206,7 @@ fn test_add_subnet_validator_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 0x2c6874d5c663740,
+                    amount: 0x02c6_874d_5c66_3740,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()
@@ -219,8 +219,8 @@ fn test_add_subnet_validator_tx_serialization_with_one_signer() {
                     0xca, 0xc3, 0x1b, 0x23, 0x7f, 0x96, 0x40, 0xd5, 0x01, 0x11, //
                     0xbe, 0x86, 0xb9, 0x58, 0x73, 0x0a, 0xfb, 0x70, 0x5e, 0x0f, //
                 ])),
-                start: 0x623d424b,
-                end: 0x641e6651,
+                start: 0x623d_424b,
+                end: 0x641e_6651,
                 weight: 0x3e8,
             },
             subnet_id: ids::Id::from_slice(&<Vec<u8>>::from([

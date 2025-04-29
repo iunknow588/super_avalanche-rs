@@ -12,7 +12,7 @@ pub struct Message {
 
 impl Default for Message {
     fn default() -> Self {
-        Message {
+        Self {
             msg: p2p::Ping {
                 uptime: 0,
                 subnet_uptimes: vec![p2p::SubnetUptime {
@@ -27,11 +27,15 @@ impl Default for Message {
 
 impl Message {
     #[must_use]
-    pub fn gzip_compress(mut self, gzip_compress: bool) -> Self {
+    pub const fn gzip_compress(mut self, gzip_compress: bool) -> Self {
         self.gzip_compress = gzip_compress;
         self
     }
 
+    /// 序列化消息为字节数组。
+    ///
+    /// # Errors
+    /// 如果序列化失败，会返回 io::Error。
     pub fn serialize(&self) -> io::Result<Vec<u8>> {
         let msg = p2p::Message {
             message: Some(p2p::message::Message::Ping(self.msg.clone())),

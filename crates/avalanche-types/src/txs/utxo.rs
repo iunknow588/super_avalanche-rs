@@ -116,7 +116,7 @@ fn test_utxo_id() {
         0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
         0x1e, 0x1f,
     ];
-    let utxo_id = Id::new(&tx_id, 0x20212223, false).unwrap();
+    let utxo_id = Id::new(&tx_id, 0x2021_2223, false).unwrap();
 
     let expected_id: Vec<u8> = vec![
         42, 202, 101, 108, 44, 18, 156, 140, 88, 220, 97, 33, 177, 172, 79, 57, 207, 131, 41, 102,
@@ -351,7 +351,7 @@ fn test_utxo_unpack_hex() {
             165, 116, 199, 161, 90, 121, 104, 100, 77, 20, 213, 71, 128, 20,
         ])),
         transfer_output: Some(key::secp256k1::txs::transfer::Output {
-            amount: 200000000000000000,
+            amount: 200_000_000_000_000_000,
             output_owners: key::secp256k1::txs::OutputOwners {
                 locktime: 0,
                 threshold: 1,

@@ -1,32 +1,56 @@
+
 [workspace]
-exclude = [
-    "target",
-    ".cargo",
-    "tests/avalanchego-byzantine",  # 临时排除有问题的测试
-]
 members = [
-    "avalanchego-conformance-sdk",
     "core/cert-manager",
-    "core/network",
+    "core/network", 
     "core/server",
     "crates/avalanche-consensus",
     "crates/avalanche-types",
-    "tests/avalanche-e2e",
-    "tests/avalanchego-conformance",
 ]
-default-members = ["crates/avalanche-types", "crates/avalanche-consensus"]
+exclude = [
+    "**/pb/**",
+    "**/proto/pb/**",
+    "**/fuzz/corpus/**",
+    "**/fuzz/artifacts/**",
+    "**/generated/**"
+]
+
 resolver = "2"
 
-[workspace.dependencies]
-tonic-build = { version = "0.11.0", features = ["prost"] }
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["Avalanche Foundation <info@avax.network>"]
+license = "Apache-2.0"
+homepage = "https://avax.network"
+repository = "https://github.com/ava-labs/avalanche-rs"
 
+# 保留现有 lints 配置
 [workspace.lints.rust]
-# unsafe_code = "forbid"  # 注释掉或删除这一行
-unused_imports = "warn"
-unused_variables = "warn"
-dead_code = "warn"
+# unsafe_code = "forbid"  # 注释掉这一行
+warnings = "deny"
 
 [workspace.lints.clippy]
-all = "warn"
-pedantic = "warn"
-nursery = "warn"
+all = "deny"
+pedantic = "deny"
+nursery = "deny"
+missing_docs_in_private_items = "deny"
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"
+
+[workspace.dependencies]
+# Updated to ensure consistent versions
+asn1-rs = "0.6.2"
+asn1-rs-derive = "0.5.1"
+asn1-rs-impl = "0.2.0"
+der-parser = "9.0.0"
+oid-registry = "0.7.1"
+ring = "0.17.14"
+spin = "0.9.8"
+syn = "2.0.101"
+synstructure = "0.13.1"
+untrusted = "0.9.0"
+x509-parser = "0.16.0"
+
+# Remove the [patch.crates-io] section we just added

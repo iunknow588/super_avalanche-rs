@@ -1,0 +1,6 @@
+这是一个基于avalanche-rs开发的虚拟机VM.
+这个项目是使用rust开发的.
+这个项目的目的是开发一个新的共识机制.   
+这个项目的源代码在github上。
+有关问题的GO语言实现可以参考https://github.com/ava-labs
+

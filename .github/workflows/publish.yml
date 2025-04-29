@@ -9,25 +9,31 @@ jobs:
   publish-avalanche-types-crate:
     name: publish-avalanche-types
     runs-on: ubuntu-latest
-    if: "startsWith(github.event.release.tag_name, 'avalanche-types-v')"
+    if: startsWith(github.event.release.tag_name, 'avalanche-types-v')
     steps:
       - uses: actions/checkout@v1
       - uses: dtolnay/rust-toolchain@stable
       - name: publish avalanche-types crate
-        shell: bash
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
         run: |
-          cargo login ${{ secrets.CARGO_TOKEN }}
+          # 必须在仓库设置中添加 CARGO_TOKEN 密钥
+          # 这个令牌应该是具有发布权限的有效 cargo API 令牌
+          cargo login "$CARGO_TOKEN"
           cargo publish -p avalanche-types
   publish-avalanche-consensus-crate:
     name: publish-avalanche-consensus
     runs-on: ubuntu-latest
-    if: "startsWith(github.event.release.tag_name, 'avalanche-consensus-v')"
+    if: startsWith(github.event.release.tag_name, 'avalanche-consensus-v')
     steps:
       - uses: actions/checkout@v1
       - uses: dtolnay/rust-toolchain@stable
       - name: publish avalanche-consensus crate
-        shell: bash
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
         run: |
-          cargo login ${{ secrets.CARGO_TOKEN }}
+          # 必须在仓库设置中添加 CARGO_TOKEN 密钥
+          # 这个令牌应该是具有发布权限的有效 cargo API 令牌
+          cargo login "$CARGO_TOKEN"
           cargo publish -p avalanche-consensus
 

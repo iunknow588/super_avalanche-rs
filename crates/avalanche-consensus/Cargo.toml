@@ -9,6 +9,8 @@ description = "Avalanche consensus"
 license-file = "LICENSE"
 homepage = "https://avax.network"
 repository = "https://github.com/ava-labs/avalanche-rs/tree/main/crates/avalanche-consensus"
+keywords = ["avalanche", "blockchain", "consensus", "distributed-systems"]
+categories = ["cryptography", "algorithms", "blockchain"]
 
 [lints]
 workspace = true

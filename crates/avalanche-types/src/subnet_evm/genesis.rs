@@ -235,7 +235,7 @@ impl Default for ChainConfig {
             // don't use local ID "43112" to avoid config override
             // ref. <https://github.com/ava-labs/coreth/blob/v0.8.6/plugin/evm/vm.go#L326-L328>
             // ref. <https://github.com/ava-labs/avalanche-ops/issues/8>
-            chain_id: Some(2000777),
+            chain_id: Some(2_000_777),
 
             fee_config: Some(FeeConfig::default()),
             allow_fee_recipients: None,

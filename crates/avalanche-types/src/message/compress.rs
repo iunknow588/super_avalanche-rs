@@ -6,7 +6,6 @@ use flate2::{
 };
 
 /// Compress the input bytes.
-
 pub fn pack_gzip<S>(d: S) -> io::Result<Vec<u8>>
 where
     S: AsRef<[u8]>,
@@ -20,7 +19,6 @@ where
 }
 
 /// Decompress the input bytes.
-
 pub fn unpack_gzip<S>(d: S) -> io::Result<Vec<u8>>
 where
     S: AsRef<[u8]>,

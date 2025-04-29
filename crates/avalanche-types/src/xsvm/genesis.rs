@@ -32,7 +32,7 @@ impl Default for Genesis {
 }
 
 pub const CODEC_VERSION: u16 = 0;
-pub const DEFAULT_INITIAL_AMOUNT: u64 = 1000000000;
+pub const DEFAULT_INITIAL_AMOUNT: u64 = 1_000_000_000;
 
 impl Genesis {
     /// Creates a new Genesis object with "keys" number of generated pre-funded keys.
@@ -146,12 +146,12 @@ fn test_encode_packer_bytes() {
             Allocation {
                 // ref. https://github.com/ava-labs/subnet-evm/blob/master/networks/11111/genesis.json
                 address: short::Id::from_str("6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV").unwrap(),
-                balance: 1000000000,
+                balance: 1_000_000_000,
             },
             Allocation {
                 // ref. https://github.com/ava-labs/subnet-evm/blob/master/networks/11111/genesis.json
                 address: short::Id::from_str("LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c").unwrap(),
-                balance: 3000000000,
+                balance: 3_000_000_000,
             },
         ]),
     };
@@ -182,8 +182,8 @@ fn test_parse() {
     "timestamp": 123,
 
         "allocations": [
-            {"address": "6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV", "balance": 2000000000},
-            {"address": "LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c", "balance": 3000000000}
+            {"address": "6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV", "balance": 2_000_000_000},
+            {"address": "LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c", "balance": 3_000_000_000}
         ]
 }
 "#,
@@ -196,12 +196,12 @@ fn test_parse() {
             Allocation {
                 // ref. https://github.com/ava-labs/subnet-evm/blob/master/networks/11111/genesis.json
                 address: short::Id::from_str("6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV").unwrap(),
-                balance: 2000000000,
+                balance: 2_000_000_000,
             },
             Allocation {
                 // ref. https://github.com/ava-labs/subnet-evm/blob/master/networks/11111/genesis.json
                 address: short::Id::from_str("LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c").unwrap(),
-                balance: 3000000000,
+                balance: 3_000_000_000,
             },
         ]),
     };

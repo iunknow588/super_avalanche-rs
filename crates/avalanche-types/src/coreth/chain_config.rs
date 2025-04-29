@@ -202,7 +202,7 @@ impl Default for Config {
 
             // ref. <https://pkg.go.dev/github.com/ava-labs/coreth/core#DefaultTxPoolConfig>
             tx_pool_journal: Some(String::from("transactions.rlp")),
-            tx_pool_rejournal: Some(3600000000000), // 1-hour
+            tx_pool_rejournal: Some(3_600_000_000_000), // 1-hour
             tx_pool_price_limit: Some(1),
             tx_pool_price_bump: Some(10),
             tx_pool_account_slots: Some(16),

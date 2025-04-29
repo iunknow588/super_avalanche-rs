@@ -288,8 +288,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -332,8 +332,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -374,8 +374,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }

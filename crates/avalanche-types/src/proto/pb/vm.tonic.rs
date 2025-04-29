@@ -104,7 +104,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Initialize");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Initialize"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn set_state(
             &mut self,
@@ -126,7 +127,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/SetState");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "SetState"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn shutdown(
             &mut self,
@@ -148,7 +150,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Shutdown");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Shutdown"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn create_handlers(
             &mut self,
@@ -170,7 +173,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/CreateHandlers");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "CreateHandlers"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn connected(
             &mut self,
@@ -192,7 +196,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Connected");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Connected"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn disconnected(
             &mut self,
@@ -214,7 +219,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Disconnected");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Disconnected"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn build_block(
             &mut self,
@@ -236,7 +242,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BuildBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BuildBlock"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn parse_block(
             &mut self,
@@ -258,7 +265,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/ParseBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "ParseBlock"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_block(
             &mut self,
@@ -280,7 +288,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetBlock"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn set_preference(
             &mut self,
@@ -302,7 +311,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/SetPreference");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "SetPreference"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn health(
             &mut self,
@@ -321,15 +331,13 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Health");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Health"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn version(
             &mut self,
             request: impl tonic::IntoRequest<super::super::google::protobuf::Empty>,
-        ) -> std::result::Result<
-            tonic::Response<super::VersionResponse>,
-            tonic::Status,
-        > {
+        ) -> std::result::Result<tonic::Response<super::VersionResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -343,7 +351,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Version");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Version"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn app_request(
             &mut self,
@@ -365,7 +374,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppRequest");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppRequest"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn app_request_failed(
             &mut self,
@@ -387,7 +397,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppRequestFailed");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppRequestFailed"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn app_response(
             &mut self,
@@ -409,7 +420,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppResponse");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppResponse"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn app_gossip(
             &mut self,
@@ -431,7 +443,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppGossip");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppGossip"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn gather(
             &mut self,
@@ -450,7 +463,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Gather");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Gather"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn cross_chain_app_request(
             &mut self,
@@ -475,7 +489,8 @@ pub mod vm_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("vm.VM", "CrossChainAppRequest"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn cross_chain_app_request_failed(
             &mut self,
@@ -500,7 +515,8 @@ pub mod vm_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("vm.VM", "CrossChainAppRequestFailed"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn cross_chain_app_response(
             &mut self,
@@ -525,7 +541,8 @@ pub mod vm_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("vm.VM", "CrossChainAppResponse"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_ancestors(
             &mut self,
@@ -547,7 +564,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetAncestors");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetAncestors"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn batched_parse_block(
             &mut self,
@@ -569,7 +587,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BatchedParseBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BatchedParseBlock"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn verify_height_index(
             &mut self,
@@ -591,7 +610,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/VerifyHeightIndex");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "VerifyHeightIndex"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_block_id_at_height(
             &mut self,
@@ -613,7 +633,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetBlockIDAtHeight");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetBlockIDAtHeight"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn state_sync_enabled(
             &mut self,
@@ -635,7 +656,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/StateSyncEnabled");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "StateSyncEnabled"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_ongoing_sync_state_summary(
             &mut self,
@@ -660,7 +682,8 @@ pub mod vm_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("vm.VM", "GetOngoingSyncStateSummary"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_last_state_summary(
             &mut self,
@@ -684,7 +707,8 @@ pub mod vm_client {
             );
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetLastStateSummary"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn parse_state_summary(
             &mut self,
@@ -706,7 +730,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/ParseStateSummary");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "ParseStateSummary"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn get_state_summary(
             &mut self,
@@ -728,7 +753,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetStateSummary");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetStateSummary"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn block_verify(
             &mut self,
@@ -750,7 +776,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockVerify");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockVerify"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn block_accept(
             &mut self,
@@ -772,7 +799,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockAccept");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockAccept"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn block_reject(
             &mut self,
@@ -794,7 +822,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockReject");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockReject"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
         pub async fn state_summary_accept(
             &mut self,
@@ -816,7 +845,8 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/StateSummaryAccept");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "StateSummaryAccept"));
-            self.inner.unary(req, path, codec).await
+            let unary_res = self.inner.unary(req, path, codec).await;
+            unary_res
         }
     }
 }
@@ -1166,8 +1196,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1208,8 +1238,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1254,8 +1284,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1302,8 +1332,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1344,8 +1374,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1388,8 +1418,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1430,8 +1460,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1472,8 +1502,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1514,8 +1544,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1558,8 +1588,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1604,8 +1634,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1650,8 +1680,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1692,8 +1722,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1736,8 +1766,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1780,8 +1810,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1822,8 +1852,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1868,8 +1898,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1914,8 +1944,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -1960,8 +1990,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2006,8 +2036,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2050,8 +2080,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2096,8 +2126,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2144,8 +2174,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2190,8 +2220,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2238,8 +2268,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2286,8 +2316,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2334,8 +2364,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2380,8 +2410,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2426,8 +2456,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2470,8 +2500,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2514,8 +2544,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2558,8 +2588,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }
@@ -2604,8 +2634,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }

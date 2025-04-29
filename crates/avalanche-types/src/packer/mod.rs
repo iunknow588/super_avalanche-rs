@@ -808,9 +808,9 @@ fn test_pack_u32() {
         header: false,
         offset: Cell::new(0),
     };
-    packer.pack_u32(0x01020304).unwrap();
+    packer.pack_u32(0x0102_0304).unwrap();
     assert_eq!(packer.bytes_len(), U32_LEN);
-    assert!(packer.pack_u32(0x05060708).is_err());
+    assert!(packer.pack_u32(0x0506_0708).is_err());
 
     let b = packer.take_bytes();
     assert_eq!(&b[..], b"\x01\x02\x03\x04");
@@ -830,7 +830,7 @@ fn test_unpack_u32() {
         header: false,
         offset: Cell::new(0),
     };
-    assert_eq!(packer.unpack_u32().unwrap(), 0x01020304);
+    assert_eq!(packer.unpack_u32().unwrap(), 0x0102_0304);
     assert_eq!(packer.get_offset(), U32_LEN);
     assert!(packer.unpack_u32().is_err());
 }
@@ -845,11 +845,11 @@ fn test_pack_u64() {
         header: false,
         offset: Cell::new(0),
     };
-    packer.pack_u64(0x0102030405060708).unwrap();
+    packer.pack_u64(0x0102_030405060708).unwrap();
     assert_eq!(packer.bytes_len(), U64_LEN);
 
     // beyond max size
-    assert!(packer.pack_u64(0x090a0b0c0d0e0f00).is_err());
+    assert!(packer.pack_u64(0x090a_0b0c_0d0e_0f00).is_err());
 
     let b = packer.take_bytes();
     assert_eq!(&b[..], b"\x01\x02\x03\x04\x05\x06\x07\x08");
@@ -857,7 +857,7 @@ fn test_pack_u64() {
     assert_eq!(&b[..], &expected[..]);
 
     let packer = Packer::new_with_header(4 + U64_LEN, 0);
-    packer.pack_u64(0x0102030405060708).unwrap();
+    packer.pack_u64(0x0102_030405060708).unwrap();
     let expected = [
         0x00, 0x00, 0x00, 0x08, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     ];
@@ -876,7 +876,7 @@ fn test_unpack_u64() {
         header: false,
         offset: Cell::new(0),
     };
-    assert_eq!(packer.unpack_u64().unwrap(), 0x0102030405060708);
+    assert_eq!(packer.unpack_u64().unwrap(), 0x0102_030405060708);
     assert_eq!(packer.get_offset(), U64_LEN);
     assert!(packer.unpack_u64().is_err());
 }

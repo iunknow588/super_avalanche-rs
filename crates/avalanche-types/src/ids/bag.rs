@@ -192,8 +192,8 @@ impl Bag {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_bag_add --exact --show-output
-/// ref. "TestBagAdd"
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_bag_add --exact --show-output ref. "TestBagAdd"
 #[test]
 fn test_bag_add() {
     let id0 = Id::empty();
@@ -241,7 +241,8 @@ fn test_bag_add() {
     assert_eq!(bag.met_threshold().len(), 2);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_bag_set_threshold --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_bag_set_threshold --exact --show-output
 /// ref. "TestBagSetThreshold"
 #[test]
 fn test_bag_set_threshold() {
@@ -274,8 +275,8 @@ fn test_bag_set_threshold() {
     assert!(bag.met_threshold().contains(&id1));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_bag_filter --exact --show-output
-/// ref. "TestBagFilter"
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_bag_filter --exact --show-output ref. "TestBagFilter"
 #[test]
 fn test_bag_filter() {
     let id0 = Id::empty();
@@ -294,8 +295,8 @@ fn test_bag_filter() {
     assert_eq!(even.count(&id2), 5);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_bag_split --exact --show-output
-/// ref. "TestBagSplit"
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_bag_split --exact --show-output ref. "TestBagSplit"
 #[test]
 fn test_bag_split() {
     let id0 = Id::empty();
@@ -418,8 +419,8 @@ impl std::fmt::Display for Unique {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_unique_bag --exact --show-output
-/// ref. "TestUniqueBag"
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_unique_bag --exact --show-output ref. "TestUniqueBag"
 #[test]
 fn test_unique_bag() {
     let ub1 = Unique::new();
@@ -488,7 +489,8 @@ fn test_unique_bag() {
     assert!(ub6_id1.contains(2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bag::test_unique_bag_clear --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bag::test_unique_bag_clear --exact --show-output
 /// ref. "TestUniqueBagClear"
 #[test]
 fn test_unique_bag_clear() {

@@ -59,7 +59,7 @@ impl Manager for DatabaseManager {
         for db in dbs.iter() {
             let db = &db.db;
             match db.close().await {
-                Ok(_) => continue,
+                Ok(_) => {}
                 Err(e) => errors.push(e.to_string()),
             }
         }

@@ -8,6 +8,15 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Backing errors for all consensus operations.
 #[derive(Clone, Debug, Error)]
 pub enum Error {
+    /// GetUtxosResult 结果为 None
+    #[error("GetUtxosResult 结果为 None")]
+    UnexpectedNoneGetUtxosResult,
+    /// Utxos from GetUtxosResult 结果为 None
+    #[error("Utxos from GetUtxosResult 结果为 None")]
+    UnexpectedNoneUtxosFromGetUtxosResult,
+    /// 通用 None 错误
+    #[error("Unexpected None: {0}")]
+    UnexpectedNone(String),
     #[error("failed API (message: {message:?}, retryable: {retryable:?})")]
     API { message: String, retryable: bool },
     #[error("failed for other reasons (message: {message:?}, retryable: {retryable:?})")]
@@ -20,6 +29,11 @@ impl Error {
     pub fn message(&self) -> String {
         match self {
             Error::API { message, .. } | Error::Other { message, .. } => message.clone(),
+            Error::UnexpectedNoneGetUtxosResult => "GetUtxosResult is None".to_string(),
+            Error::UnexpectedNoneUtxosFromGetUtxosResult => {
+                "Utxos from GetUtxosResult is None".to_string()
+            }
+            Error::UnexpectedNone(msg) => format!("Unexpected None: {}", msg),
         }
     }
 
@@ -28,6 +42,9 @@ impl Error {
     pub fn retryable(&self) -> bool {
         match self {
             Error::API { retryable, .. } | Error::Other { retryable, .. } => *retryable,
+            Error::UnexpectedNoneGetUtxosResult => false,
+            Error::UnexpectedNoneUtxosFromGetUtxosResult => false,
+            Error::UnexpectedNone(_) => false,
         }
     }
 }

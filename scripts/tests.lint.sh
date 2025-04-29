@@ -1,43 +1,30 @@
 #!/usr/bin/env bash
 set -xue
 
-if ! [[ "$0" =~ scripts/tests.lint.sh ]]; then
-  echo "must be run from repository root"
-  exit 255
-fi
-
-# https://rust-lang.github.io/rustup/installation/index.html
-# rustup toolchain install nightly --allow-downgrade --profile minimal --component clippy
-#
-# https://github.com/rust-lang/rustfmt
-# rustup component add rustfmt
-# rustup component add rustfmt --toolchain nightly
-# rustup component add clippy
-# rustup component add clippy --toolchain nightly
-
+# fmt check
 rustup default stable
-cargo fmt --all --verbose -- --check
+find . -name "*.rs" ! -path "./target/*" ! -path "**/pb/*" ! -path "**/proto/pb/*" ! -path "**/proto/tmp/*" ! -path "**/generated/*" ! -path "**/proto/generated/*" -print0 | \
+xargs -0 cargo fmt -- --config-path .rustfmt.toml --verbose --check
 
-# TODO: enable nightly fmt
-rustup default nightly
-cargo +nightly fmt --all -- --config-path .rustfmt.nightly.toml --verbose --check || true
-
-# TODO: enable this
-# cargo +nightly clippy --all --all-features -- -D warnings || true
-
-# ref. https://github.com/rust-lang/rust-clippy
-cargo +nightly clippy --all --all-features -- \
+# clippy check with specific lints instead of restriction group
+# Removed -D clippy::cargo and added individual cargo lints except multiple_crate_versions
+cargo clippy --all --all-features --tests --benches --examples -- \
 -D clippy::suspicious \
 -D clippy::style \
 -D clippy::complexity \
 -D clippy::perf \
 -D clippy::pedantic \
--D clippy::restriction \
 -D clippy::nursery \
--D clippy::cargo \
-|| true
-
-rustup default stable
+-D clippy::missing_docs_in_private_items \
+-D clippy::missing_errors_doc \
+-D clippy::missing_panics_doc \
+-D warnings \
+-D clippy::large_stack_arrays \
+-D clippy::missing_safety_doc \
+-D clippy::redundant_pub_crate \
+-D clippy::unwrap_in_result \
+-D clippy::wildcard_dependencies \
+-A clippy::multiple_crate_versions
 
 cargo clean
 

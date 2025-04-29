@@ -75,7 +75,7 @@ impl Tx {
             let destination_chain_outs = self
                 .destination_chain_transferable_outputs
                 .as_ref()
-                .unwrap();
+                .expect("Option is None in test_export_tx_serialization_with_one_signer");
             packer.pack_u32(destination_chain_outs.len() as u32)?;
 
             for transferable_output in destination_chain_outs.iter() {
@@ -279,7 +279,7 @@ fn test_export_tx_serialization_with_one_signer() {
                 },
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([0x79, 0x65, 0x65, 0x74])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 500000000,
+                    amount: 500_000_000,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()
@@ -295,7 +295,7 @@ fn test_export_tx_serialization_with_one_signer() {
         destination_chain_transferable_outputs: Some(vec![txs::transferable::Output {
             asset_id: ids::Id::from_slice(&<Vec<u8>>::from([0x79, 0x65, 0x65, 0x74])),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: 499999900,
+                amount: 499_999_900,
                 output_owners: key::secp256k1::txs::OutputOwners {
                     locktime: 0,
                     threshold: 1,

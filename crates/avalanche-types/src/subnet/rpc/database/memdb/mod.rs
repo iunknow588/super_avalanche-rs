@@ -181,34 +181,34 @@ impl crate::subnet::rpc::database::Database for Database {}
 #[tokio::test]
 async fn test_memdb() {
     let mut db = Database::new_boxed();
-    let _ = db.put("foo".as_bytes(), "bar".as_bytes()).await;
-    let resp = db.get("notfound".as_bytes()).await;
+    let _ = db.put(b"foo", b"bar").await;
+    let resp = db.get(b"notfound").await;
     assert!(resp.is_err());
     assert_eq!(resp.err().unwrap().kind(), io::ErrorKind::NotFound);
 
     let mut db = Database::new_boxed();
     let _ = db.close().await;
-    let resp = db.put("foo".as_bytes(), "bar".as_bytes()).await;
+    let resp = db.put(b"foo", b"bar").await;
     assert!(resp.is_err());
     assert_eq!(resp.err().unwrap().to_string(), "database closed");
 
     let db = Database::new_boxed();
     let _ = db.close().await;
-    let resp = db.get("foo".as_bytes()).await;
+    let resp = db.get(b"foo").await;
     print!("found {:?}", resp);
     assert!(resp.is_err());
     assert_eq!(resp.err().unwrap().to_string(), "database closed");
 
     let mut db = Database::new_boxed();
-    let _ = db.put("foo".as_bytes(), "bar".as_bytes()).await;
-    let resp = db.has("foo".as_bytes()).await;
+    let _ = db.put(b"foo", b"bar").await;
+    let resp = db.has(b"foo").await;
     assert!(resp.is_ok());
     assert!(resp.unwrap());
 
     let mut db = Database::new_boxed();
-    let _ = db.put("foo".as_bytes(), "bar".as_bytes()).await;
-    let _ = db.delete("foo".as_bytes()).await;
-    let resp = db.has("foo".as_bytes()).await;
+    let _ = db.put(b"foo", b"bar").await;
+    let _ = db.delete(b"foo").await;
+    let resp = db.has(b"foo").await;
     assert!(resp.is_ok());
     assert!(!resp.unwrap());
 

@@ -278,7 +278,7 @@ fn test_add_validator_tx_serialization_with_one_signer() {
 
     let mut tx = Tx {
         base_tx: txs::Tx {
-            network_id: 1000000,
+            network_id: 1_000_000,
             transferable_outputs: Some(vec![txs::transferable::Output {
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
                     0x88, 0xee, 0xc2, 0xe0, 0x99, 0xc6, 0xa5, 0x28, //
@@ -287,7 +287,7 @@ fn test_add_validator_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2c6874d687fc000,
+                    amount: 0x02c6_874d_687f_c000,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0x00,
                         threshold: 0x01,
@@ -317,7 +317,7 @@ fn test_add_validator_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 0x2c6891f11c9e000,
+                    amount: 0x02c6_891f_11c9_e000,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()
@@ -329,9 +329,9 @@ fn test_add_validator_tx_serialization_with_one_signer() {
                 0x9c, 0xd7, 0xb3, 0xe4, 0x79, 0x04, 0xf6, 0x7c, 0xc4, 0x8e, //
                 0xb5, 0xb9, 0xaf, 0xdb, 0x03, 0xe6, 0xd1, 0x8a, 0xcf, 0x6c, //
             ])),
-            start: 0x623d7267,
-            end: 0x63c91062,
-            weight: 0x1d1a94a2000,
+            start: 0x623d_7267,
+            end: 0x63c9_1062,
+            weight: 0x01d1_a94a_2000,
         },
         stake_transferable_outputs: Some(vec![txs::transferable::Output {
             asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
@@ -341,7 +341,7 @@ fn test_add_validator_tx_serialization_with_one_signer() {
                 0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
             ])),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: 0x1d1a94a2000,
+                amount: 0x01d1_a94a_2000,
                 output_owners: key::secp256k1::txs::OutputOwners {
                     locktime: 0x00,
                     threshold: 0x01,

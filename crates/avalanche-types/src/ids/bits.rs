@@ -54,7 +54,8 @@ pub fn equal_subset(start: usize, stop: usize, id1: &Id, id2: &Id) -> bool {
     start1 == start2 && stop1 == stop2
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_equal_subset --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_equal_subset --exact --show-output
 #[test]
 fn test_equal_subset() {
     // ref. TestEqualSubsetEarlyStop
@@ -98,7 +99,8 @@ fn test_equal_subset() {
     assert!(!equal_subset(4, 13, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_equal_subset_same_byte --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_equal_subset_same_byte --exact --show-output
 /// ref. "TestEqualSubsetSameByte"
 #[test]
 fn test_equal_subset_same_byte() {
@@ -123,7 +125,8 @@ fn test_equal_subset_same_byte() {
     assert!(!equal_subset(3, 6, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_equal_subset_bad_middle --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_equal_subset_bad_middle --exact --show-output
 /// ref. "TestEqualSubsetBadMiddle"
 #[test]
 fn test_equal_subset_bad_middle() {
@@ -146,7 +149,8 @@ fn test_equal_subset_bad_middle() {
     assert!(!equal_subset(0, 8 * 3, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_equal_subset_out_of_bounds --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_equal_subset_out_of_bounds --exact --show-output
 /// ref. "TestEqualSubsetOutOfBounds"
 #[test]
 fn test_equal_subset_out_of_bounds() {
@@ -155,8 +159,8 @@ fn test_equal_subset_out_of_bounds() {
     assert!(!equal_subset(0, 500, &id1, &id2));
 }
 
-/// Returns the "id1" index of the first different bit in the range [start, stop).
-/// This does bit-per-bit comparison for the Id type of [u8; ID_LEN].
+/// Returns the "id1" index of the first different bit in the range [start,
+/// stop). This does bit-per-bit comparison for the Id type of [u8; ID_LEN].
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/ids#FirstDifferenceSubset>
 pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) -> (usize, bool) {
     if stop == 0 {
@@ -230,7 +234,8 @@ pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) ->
     (0, false) // no difference found
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_first_difference_subset --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_first_difference_subset --exact --show-output
 #[test]
 fn test_first_difference_subset() {
     // ref. TestFirstDifferenceSubsetEarlyStop
@@ -274,7 +279,8 @@ fn test_first_difference_subset() {
     assert_eq!(first_difference_subset(0, 5, &id1, &id2), (4, true));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_first_difference_equal_byte_5 --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_first_difference_equal_byte_5 --exact --show-output
 /// ref. TestFirstDifferenceEqualByte5
 #[test]
 fn test_first_difference_equal_byte_5() {
@@ -298,7 +304,8 @@ fn test_first_difference_equal_byte_5() {
     assert_eq!(first_difference_subset(0, 6, &id1, &id2), (5, true));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_first_difference_subset_middle --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_first_difference_subset_middle --exact --show-output
 /// ref. TestFirstDifferenceSubsetMiddle
 #[test]
 fn test_first_difference_subset_middle() {
@@ -322,7 +329,8 @@ fn test_first_difference_subset_middle() {
     assert_eq!(first_difference_subset(0, 12, &id1, &id2), (0, false));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_first_difference_vacuous --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_first_difference_vacuous --exact --show-output
 /// ref. TestFirstDifferenceVacuous
 #[test]
 fn test_first_difference_vacuous() {
@@ -455,7 +463,8 @@ impl std::fmt::Display for Set64 {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::bits::test_bit_set --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::bits::test_bit_set --exact --show-output
 #[test]
 fn test_bit_set() {
     let mut bs1 = Set64::new();

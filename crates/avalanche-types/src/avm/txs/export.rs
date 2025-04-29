@@ -78,7 +78,7 @@ impl Tx {
             let destination_chain_transferable_outputs = self
                 .destination_chain_transferable_outputs
                 .as_ref()
-                .unwrap();
+                .expect("Option is None in test_export_tx_serialization_with_two_signers");
             packer.pack_u32(destination_chain_transferable_outputs.len() as u32)?;
 
             for transferable_output in destination_chain_transferable_outputs.iter() {
@@ -97,7 +97,9 @@ impl Tx {
                     && transferable_output.stakeable_lock_out.is_none()
                 {
                     return Err(Error::Other {
-                        message:  "unexpected Nones in TransferableOutput transfer_output and stakeable_lock_out".to_string(),
+                        message: "unexpected Nones in TransferableOutput transfer_output and \
+                                  stakeable_lock_out"
+                            .to_string(),
                         retryable: false,
                     });
                 }
@@ -108,7 +110,8 @@ impl Tx {
                         platformvm::txs::StakeableLockOut::type_id()
                     }
                 };
-                // marshal type ID for "key::secp256k1::txs::transfer::Output" or "platformvm::txs::StakeableLockOut"
+                // marshal type ID for "key::secp256k1::txs::transfer::Output" or
+                // "platformvm::txs::StakeableLockOut"
                 packer.pack_u32(type_id_transferable_out)?;
 
                 match type_id_transferable_out {
@@ -144,9 +147,10 @@ impl Tx {
                         // secp256k1fx.TransferOutput type ID
                         packer.pack_u32(7)?;
 
-                        // "platformvm.StakeableLockOut.TransferOutput" is struct and serialize:"true"
-                        // but embedded inline in the struct "StakeableLockOut"
-                        // so no need to encode type ID
+                        // "platformvm.StakeableLockOut.TransferOutput" is struct and
+                        // serialize:"true" but embedded inline in the
+                        // struct "StakeableLockOut" so no need to encode
+                        // type ID
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockOut
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferOutput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#OutputOwners
@@ -213,9 +217,7 @@ impl Tx {
                 sigs.push(Vec::from(sig));
             }
 
-            let cred = key::secp256k1::txs::Credential {
-                signatures: sigs,
-            };
+            let cred = key::secp256k1::txs::Credential { signatures: sigs };
 
             let fx_cred = fx::Credential {
                 cred,
@@ -366,13 +368,16 @@ fn test_export_tx_serialization_with_two_signers() {
         // "Tx.destination_chain_outs[0]" secp256k1fx.TransferInput type ID
         0x00, 0x00, 0x00, 0x05, //
         //
-        // "Tx.destination_chain_outs[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.amount
+        // "Tx.destination_chain_outs[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.amount
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xe8, //
         //
-        // "Tx.destination_chain_outs[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices.len()
+        // "Tx.destination_chain_outs[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices.len()
         0x00, 0x00, 0x00, 0x01, //
         //
-        // "Tx.destination_chain_outs[0]" TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices[0]
+        // "Tx.destination_chain_outs[0]"
+        // TransferableInput.input.key::secp256k1::txs::transfer::Input.sig_indices[0]
         0x00, 0x00, 0x00, 0x00, //
         //
         // memo.len()

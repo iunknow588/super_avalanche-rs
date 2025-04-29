@@ -174,7 +174,7 @@ fn test_gather_process() {
             if let Some(name) = &metric_families[i].name {
                 assert_eq!(name, family);
             } else {
-                panic!("expected some {} found none", family)
+                panic!("expected some {family} found none")
             }
         }
     }

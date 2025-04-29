@@ -156,7 +156,7 @@ fn test_create_subnet_tx_serialization_with_one_signer() {
                     0xcb, 0xc3, 0xe7, 0xee, 0x88, 0x11, 0xfe, 0x2f, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2386f269cb1f00,
+                    amount: 0x0023_86f2_69cb_1f00,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0x00,
                         threshold: 0x01,
@@ -180,7 +180,7 @@ fn test_create_subnet_tx_serialization_with_one_signer() {
                     0xcb, 0xc3, 0xe7, 0xee, 0x88, 0x11, 0xfe, 0x2f, //
                 ])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 0x2386f26fc10000,
+                    amount: 0x0023_86f2_6fc1_0000,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()
@@ -350,7 +350,7 @@ fn test_create_subnet_tx_serialization_with_custom_network() {
 
     let mut tx = Tx {
         base_tx: txs::Tx {
-            network_id: 1000000,
+            network_id: 1_000_000,
             transferable_outputs: Some(vec![txs::transferable::Output {
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
                     0x88, 0xee, 0xc2, 0xe0, 0x99, 0xc6, 0xa5, 0x28, //
@@ -359,7 +359,7 @@ fn test_create_subnet_tx_serialization_with_custom_network() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2c6874d5c663740,
+                    amount: 0x02c6_874d_5c66_3740,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0x00,
                         threshold: 0x01,
@@ -389,7 +389,7 @@ fn test_create_subnet_tx_serialization_with_custom_network() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 0x2c6874d625c1840,
+                    amount: 0x02c6_874d_625c_1840,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()

@@ -29,6 +29,10 @@ where
     T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
 {
     /// Fetches the current balance of the wallet owner from the specified HTTP endpoint.
+    /// 查询指定 endpoint 上 X 链余额。
+    ///
+    /// # Errors
+    /// 查询失败时返回错误。
     pub async fn balance_with_endpoint(&self, http_rpc: &str) -> Result<u64> {
         let resp = client_x::get_balance(http_rpc, &self.inner.x_address).await?;
         let cur_balance = resp
@@ -40,6 +44,10 @@ where
 
     /// Fetches the current balance of the wallet owner from all endpoints
     /// in the same order of "self.http_rpcs".
+    /// 获取 X 链所有资产余额。
+    ///
+    /// # Errors
+    /// 查询失败时返回错误。
     pub async fn balances(&self) -> Result<Vec<u64>> {
         let mut balances = Vec::new();
         for http_rpc in self.inner.base_http_urls.iter() {
@@ -50,6 +58,10 @@ where
     }
 
     /// Fetches the current balance of the wallet owner.
+    /// 获取 X 链 AVAX 余额。
+    ///
+    /// # Errors
+    /// 查询失败时返回错误。
     pub async fn balance(&self) -> Result<u64> {
         self.balance_with_endpoint(&self.inner.pick_base_http_url().1)
             .await
@@ -57,6 +69,10 @@ where
 
     /// Fetches UTXOs for "X" chain.
     /// TODO: cache this like avalanchego
+    /// 获取 X 链的 UTXOs。
+    ///
+    /// # Errors
+    /// 获取失败时返回错误。
     pub async fn utxos(&self) -> Result<Vec<txs::utxo::Utxo>> {
         // ref. https://github.com/ava-labs/avalanchego/blob/v1.7.9/wallet/chain/p/builder.go
         // ref. https://github.com/ava-labs/avalanchego/blob/v1.7.9/vms/platformvm/add_validator_tx.go#L263
@@ -67,22 +83,27 @@ where
             client_x::get_utxos(&self.inner.pick_base_http_url().1, &self.inner.p_address).await?;
         let utxos = resp
             .result
-            .expect("unexpected None GetUtxosResult")
+            .ok_or_else(|| crate::errors::Error::UnexpectedNone("GetUtxosResult".to_string()))?
             .utxos
-            .expect("unexpected None Utxos");
+            .ok_or_else(|| {
+                crate::errors::Error::UnexpectedNone("Utxos from GetUtxosResult".to_string())
+            })?;
         Ok(utxos)
     }
 
+    /// 构建 X 链转账交易。
     #[must_use]
     pub fn transfer(&self) -> transfer::Tx<T> {
         transfer::Tx::new(self)
     }
 
+    /// 构建 X 链跨链导出交易。
     #[must_use]
     pub fn export(&self) -> export::Tx<T> {
         export::Tx::new(self)
     }
 
+    /// 构建 X 链跨链导入交易。
     #[must_use]
     pub fn import(&self) -> import::Tx<T> {
         import::Tx::new(self)

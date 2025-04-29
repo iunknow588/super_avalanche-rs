@@ -99,9 +99,9 @@ pub mod signer_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static("/warp.Signer/Sign");
-            let mut req = request.into_request();
-            req.extensions_mut().insert(GrpcMethod::new("warp.Signer", "Sign"));
-            self.inner.unary(req, path, codec).await
+            let mut unary_res = request.into_request();
+            unary_res.extensions_mut().insert(GrpcMethod::new("warp.Signer", "Sign"));
+            self.inner.unary(unary_res, path, codec).await
         }
     }
 }
@@ -233,8 +233,8 @@ pub mod signer_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
+                        let unary_res = grpc.unary(method, req).await;
+                        Ok(unary_res)
                     };
                     Box::pin(fut)
                 }

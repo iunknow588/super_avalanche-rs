@@ -38,7 +38,7 @@ pub fn cast_xp_navax_to_avax(navax: U256) -> u64 {
 #[test]
 fn test_cast_xp_navax_to_avax() {
     assert_eq!(cast_xp_navax_to_avax(U256::max_value()), u64::MAX);
-    assert_eq!(cast_xp_navax_to_avax(U256::from(u64::MAX)), 18446744073);
+    assert_eq!(cast_xp_navax_to_avax(U256::from(u64::MAX)), 18_446_744_073);
     assert_eq!(cast_xp_navax_to_avax(U256::from(100)), 0);
 }
 

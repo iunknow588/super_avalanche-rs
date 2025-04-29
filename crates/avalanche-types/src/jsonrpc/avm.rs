@@ -397,7 +397,7 @@ fn test_get_balance() {
         jsonrpc: "2.0".to_string(),
         id: 1,
         result: Some(GetBalanceResult {
-            balance: 299999999999900,
+            balance: 299_999_999_999_900,
             utxo_ids: Some(vec![txs::utxo::Id {
                 tx_id: ids::Id::from_str("WPQdyLNqHfiEKp4zcCpayRHYDVYuh1hqs9c1RqgZXS4VPgdvo")
                     .unwrap(),

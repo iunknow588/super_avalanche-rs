@@ -1,0 +1,6 @@
+# Stable features only
+max_width = 100
+tab_spaces = 4
+merge_derives = true
+reorder_imports = true
+reorder_modules = true

@@ -258,10 +258,10 @@ async fn iterate_test() {
     let batch = base_db.new_batch().await.unwrap();
     let mut db = Database::new(base_db, batch);
 
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
-    let key2 = "z".as_bytes();
-    let value2 = "world2".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
+    let key2 = b"z";
+    let value2 = b"world2";
 
     db.put(key1, value1).await.unwrap();
     db.commit().await.unwrap();

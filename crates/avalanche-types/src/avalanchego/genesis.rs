@@ -88,7 +88,7 @@ struct GenesisFile {
     message: Option<String>,
 }
 
-pub const DEFAULT_INITIAL_STAKE_DURATION: u64 = 31536000; // 1 year
+pub const DEFAULT_INITIAL_STAKE_DURATION: u64 = 31_536_000; // 1 year
 pub const DEFAULT_INITIAL_STAKE_DURATION_OFFSET: u64 = 5400; // 1.5 hour
 
 impl Default for Genesis {
@@ -295,14 +295,14 @@ pub struct Allocation {
 /// On the C-Chain, one AVAX is 10^18 units.
 /// 300,000,000 AVAX.
 /// ref. <https://snowtrace.io/unitconverter>
-pub const DEFAULT_INITIAL_AMOUNT_X_CHAIN: u64 = 300000000000000000;
+pub const DEFAULT_INITIAL_AMOUNT_X_CHAIN: u64 = 300_000_000_000_000_000;
 
 /// On the X-Chain, one AVAX is 10^9  units.
 /// On the P-Chain, one AVAX is 10^9  units.
 /// On the C-Chain, one AVAX is 10^18 units.
 /// 200,000,000 AVAX.
 /// ref. <https://snowtrace.io/unitconverter>
-pub const DEFAULT_LOCKED_AMOUNT_P_CHAIN: u64 = 200000000000000000;
+pub const DEFAULT_LOCKED_AMOUNT_P_CHAIN: u64 = 200_000_000_000_000_000;
 
 impl Default for Allocation {
     fn default() -> Self {
@@ -412,8 +412,8 @@ fn test_genesis() {
                 )),
                 initial_amount: Some(0),
                 unlock_schedule: Some(vec![LockedAmount {
-                    amount: Some(10000000000000000),
-                    locktime: Some(1633824000),
+                    amount: Some(10_000_000_000_000_000),
+                    locktime: Some(1_633_824_000),
                 }]),
             },
             Allocation {
@@ -421,15 +421,15 @@ fn test_genesis() {
                 avax_addr: Some(String::from(
                     "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
                 )),
-                initial_amount: Some(300000000000000000),
+                initial_amount: Some(300_000_000_000_000_000),
                 unlock_schedule: Some(vec![
                     LockedAmount {
-                        amount: Some(20000000000000000),
+                        amount: Some(20_000_000_000_000_000),
                         locktime: None,
                     },
                     LockedAmount {
-                        amount: Some(10000000000000000),
-                        locktime: Some(1633824000),
+                        amount: Some(10_000_000_000_000_000),
+                        locktime: Some(1_633_824_000),
                     },
                 ]),
             },
@@ -438,16 +438,16 @@ fn test_genesis() {
                 avax_addr: Some(String::from(
                     "X-custom16045mxr3s2cjycqe2xfluk304xv3ezhkhsvkpr",
                 )),
-                initial_amount: Some(10000000000000000),
+                initial_amount: Some(10_000_000_000_000_000),
                 unlock_schedule: Some(vec![LockedAmount {
-                    amount: Some(10000000000000000),
-                    locktime: Some(1633824000),
+                    amount: Some(10_000_000_000_000_000),
+                    locktime: Some(1_633_824_000),
                 }]),
             },
         ]),
 
-        start_time: Some(1630987200),
-        initial_stake_duration: Some(31536000),
+        start_time: Some(1_630_987_200),
+        initial_stake_duration: Some(31_536_000),
         initial_stake_duration_offset: Some(5400),
         initial_staked_funds: Some(vec![String::from(
             "X-custom1g65uqn6t77p656w64023nh8nd9updzmxwd59gh",
@@ -458,28 +458,28 @@ fn test_genesis() {
                 reward_address: Some(String::from(
                     "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
                 )),
-                delegation_fee: Some(1000000),
+                delegation_fee: Some(1_000_000),
             },
             Staker {
                 node_id: Some(String::from("NodeID-MFrZFVCXPv5iCn6M9K6XduxGTYp891xXZ")),
                 reward_address: Some(String::from(
                     "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
                 )),
-                delegation_fee: Some(500000),
+                delegation_fee: Some(500_000),
             },
             Staker {
                 node_id: Some(String::from("NodeID-NFBbbJ4qCmNaCzeW7sxErhvWqvEQMnYcN")),
                 reward_address: Some(String::from(
                     "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
                 )),
-                delegation_fee: Some(250000),
+                delegation_fee: Some(250_000),
             },
             Staker {
                 node_id: Some(String::from("NodeID-GWPcbFJZFfZreETSoWjPimr846mXEKCtu")),
                 reward_address: Some(String::from(
                     "X-custom18jma8ppw3nhx5r4ap8clazz0dps7rv5u9xde7p",
                 )),
-                delegation_fee: Some(125000),
+                delegation_fee: Some(125_000),
             },
             Staker {
                 node_id: Some(String::from("NodeID-P7oB2McjBGgW2NXXWVYjV8JEDFoW9xDE5")),
@@ -530,15 +530,15 @@ fn test_genesis() {
             gas_limit: primitive_types::U256::from_str_radix("0x5f5e100", 16).unwrap(),
             difficulty: primitive_types::U256::zero(),
             mix_hash: Some(String::from(
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x10_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_000",
             )),
-            coinbase: Some(String::from("0x0000000000000000000000000000000000000000")),
+            coinbase: Some(String::from("0x10_000_000_000_000_00010_000_000_000_000_00000000000")),
             alloc: Some(alloc),
 
             number: primitive_types::U256::zero(),
             gas_used: primitive_types::U256::zero(),
             parent_hash: Some(String::from(
-                "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "0x10_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_000",
             )),
             base_fee: None,
         },

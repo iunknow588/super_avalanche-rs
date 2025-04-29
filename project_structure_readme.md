@@ -110,7 +110,22 @@ brew install protobuf
 cargo install cargo-nextest
 ```
 
-## 2. 项目编译
+## 2. 代码检查
+
+###  运行代码格式化检查 ,运行 clippy 静态分析, 代码质量检查
+```bash
+./scripts/tests.lint.sh
+```
+ 
+其中, cargo fmt:
+专注于代码格式化,处理空格、缩进、换行等排版问题,确保代码风格统一,基于 rustfmt 规则 ,不涉及代码逻辑和质量检查
+
+  cargo clippy:
+关注代码质量和最佳实践,检查潜在的 bug,性能优化建议,代码复杂度分析,安全性检查,包含对测试代码的检查
+
+
+
+## 3. 项目编译
 
 ### 开发版本编译
 ```bash
@@ -127,7 +142,7 @@ cargo build --all-features
 ./scripts/build.release.sh
 ```
 
-## 3. 运行测试
+## 4. 运行测试
 
 ### 单元测试
 ```bash
@@ -139,14 +154,6 @@ cargo build --all-features
 ./crates/avalanche-consensus/tests.unit.sh
 ```
 
-### 代码质量检查
-```bash
-# 运行代码格式化检查
-./scripts/tests.lint.sh
-
-# 运行 clippy 静态分析
-cargo clippy --all --all-features --tests --benches --examples -- -D warnings
-```
 
 ### 文档测试
 ```bash

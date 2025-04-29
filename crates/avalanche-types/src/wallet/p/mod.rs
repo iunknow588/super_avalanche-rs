@@ -73,9 +73,9 @@ where
             client_p::get_utxos(&self.inner.pick_base_http_url().1, &self.inner.p_address).await?;
         let utxos = resp
             .result
-            .expect("unexpected None GetUtxosResult")
+            .ok_or(Error::UnexpectedNoneGetUtxosResult)?
             .utxos
-            .expect("unexpected None Utxos");
+            .ok_or(Error::UnexpectedNoneUtxosFromGetUtxosResult)?;
         Ok(utxos)
     }
 

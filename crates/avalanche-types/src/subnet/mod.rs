@@ -23,7 +23,7 @@ pub fn vm_name_to_id(s: impl AsRef<[u8]>) -> io::Result<ids::Id> {
     Ok(ids::Id::from_slice(d))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- subnet::test_vm_name_to_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `subnet::test_vm_name_to_id` --exact --show-output
 #[test]
 fn test_vm_name_to_id() {
     let id = vm_name_to_id("timestampvm").unwrap();

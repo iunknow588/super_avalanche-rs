@@ -3,7 +3,10 @@
 //! ```
 //! use avalanche_types::ids;
 //!
-//! assert_eq!(format!("{}", ids::Id::default()), "11111111111111111111111111111111LpoYY");
+//! assert_eq!(
+//!     format!("{}", ids::Id::default()),
+//!     "11111111111111111111111111111111LpoYY"
+//! );
 //! ```
 
 pub mod bag;
@@ -190,7 +193,8 @@ impl<'de> Deserialize<'de> for Id {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_custom_de_serializer --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::test_custom_de_serializer --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -254,8 +258,8 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "ids::must_deserialize_id")] to serde without derive.
-/// ref. <https://serde.rs/impl-deserialize.html>
+/// Use #[serde(deserialize_with = "ids::must_deserialize_id")] to serde without
+/// derive. ref. <https://serde.rs/impl-deserialize.html>
 pub fn must_deserialize_id<'de, D>(deserializer: D) -> std::result::Result<Id, D::Error>
 where
     D: Deserializer<'de>,
@@ -282,8 +286,8 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "short::must_deserialize_ids")] to serde with derive.
-/// ref. <https://serde.rs/impl-deserialize.html>
+/// Use #[serde(deserialize_with = "short::must_deserialize_ids")] to serde with
+/// derive. ref. <https://serde.rs/impl-deserialize.html>
 pub fn must_deserialize_ids<'de, D>(deserializer: D) -> std::result::Result<Vec<Id>, D::Error>
 where
     D: Deserializer<'de>,
@@ -316,7 +320,8 @@ where
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_serialize --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// ids::test_serialize --exact --show-output
 #[test]
 fn test_serialize() {
     let id = Id::from_slice(&<Vec<u8>>::from([
@@ -365,8 +370,8 @@ pub fn new_set(size: usize) -> Set {
     set
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_id --exact --show-output
-/// ref. "avalanchego/ids.TestIDMarshalJSON"
+/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_id
+/// --exact --show-output ref. "avalanchego/ids.TestIDMarshalJSON"
 #[test]
 fn test_id() {
     let id = Id::from_slice(&<Vec<u8>>::from([
@@ -389,7 +394,8 @@ fn test_id() {
         ])
     );
 
-    let id_from_str = Id::from_str("TtF4d2QWbk5vzQGTEPrN48x6vwgAoAmKQ9cbp79inpQmcRKES").unwrap();
+    let id_from_str = Id::from_str("TtF4d2QWbk5vzQGTEPrN48x6vwgAoAmKQ9cbp79inpQmcRKES")
+        .expect("Id::from_str failed");
     assert_eq!(id, id_from_str);
 
     let id = Id::from_slice(&<Vec<u8>>::from([
@@ -399,7 +405,8 @@ fn test_id() {
         0x00, 0x00,
     ]));
     assert_eq!(id.to_string(), "11111111111111111111111111111111LpoYY");
-    let id_from_str = Id::from_str("11111111111111111111111111111111LpoYY").unwrap();
+    let id_from_str =
+        Id::from_str("11111111111111111111111111111111LpoYY").expect("Id::from_str failed");
     assert_eq!(id, id_from_str);
 }
 
@@ -468,7 +475,8 @@ impl PartialEq for Ids {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_sort --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_sort
+/// --exact --show-output
 #[test]
 fn test_sort() {
     let id1 = Id::from_slice(&<Vec<u8>>::from([0x01]));
@@ -494,84 +502,84 @@ fn test_sort() {
     assert!(id1 > id2);
 
     // lengths of Ids matter
-    let ids1 = Ids(vec![
+    let id_group_first = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
     ]);
-    let ids2 = Ids(vec![
+    let id_group_second = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
     ]);
-    assert!(ids1 == ids2);
+    assert!(id_group_first == id_group_second);
 
     // lengths of Ids matter
-    let ids1 = Ids(vec![
+    let id_collection_first = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x05])),
         Id::from_slice(&<Vec<u8>>::from([0x06])),
         Id::from_slice(&<Vec<u8>>::from([0x07])),
     ]);
-    let ids2 = Ids(vec![
+    let id_collection_second = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
         Id::from_slice(&<Vec<u8>>::from([0x04])),
     ]);
-    assert!(ids1 < ids2);
+    assert!(id_collection_first < id_collection_second);
 
     // lengths of Ids matter
-    let ids1 = Ids(vec![
+    let id_group_first = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
         Id::from_slice(&<Vec<u8>>::from([0x04])),
     ]);
-    let ids2 = Ids(vec![
+    let id_group_second = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x09])),
         Id::from_slice(&<Vec<u8>>::from([0x09])),
         Id::from_slice(&<Vec<u8>>::from([0x09])),
     ]);
-    assert!(ids1 > ids2);
+    assert!(id_group_first > id_group_second);
 
     // lengths of Ids matter
-    let ids1 = Ids(vec![
+    let id_group_first = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
     ]);
-    let ids2 = Ids(vec![
+    let id_group_second = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x05])),
     ]);
-    assert!(ids1 < ids2);
+    assert!(id_group_first < id_group_second);
 
-    let mut ids1 = Ids(vec![
+    let mut id_group_first = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x03])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x01])),
     ]);
-    ids1.0.sort();
-    let ids2 = Ids(vec![
+    id_group_first.0.sort();
+    let id_group_second = Ids(vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
     ]);
-    assert!(ids1 == ids2);
+    assert!(id_group_first == id_group_second);
 
-    let mut ids1 = vec![
+    let mut id_collection_first = vec![
         Id::from_slice(&<Vec<u8>>::from([0x03])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x01])),
     ];
-    ids1.sort();
-    let ids2 = vec![
+    id_collection_first.sort();
+    let id_collection_second = vec![
         Id::from_slice(&<Vec<u8>>::from([0x01])),
         Id::from_slice(&<Vec<u8>>::from([0x02])),
         Id::from_slice(&<Vec<u8>>::from([0x03])),
     ];
-    assert!(ids1 == ids2);
+    assert!(id_collection_first == id_collection_second);
 }
 
 /// Generates VM ID based on the name.
@@ -588,7 +596,8 @@ pub fn encode_vm_name_to_id(name: &str) -> Result<Id> {
     Ok(Id::from_slice(&input))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_vm_id --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib -- ids::test_vm_id
+/// --exact --show-output
 #[test]
 fn test_vm_id() {
     use log::info;

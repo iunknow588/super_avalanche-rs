@@ -233,7 +233,7 @@ fn test_transaction() {
     let signer_nonce = U256::from(random_manager::u64() % 10);
     let gas_limit = U256::from(random_manager::u64() % 10000);
     let max_fee_per_gas = U256::from(random_manager::u64() % 10000);
-    let value = U256::from(random_manager::u64() % 100000);
+    let value = U256::from(random_manager::u64() % 100_000);
 
     let tx = Transaction::new()
         .chain_id(chain_id)

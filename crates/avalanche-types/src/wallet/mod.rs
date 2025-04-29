@@ -251,32 +251,40 @@ where
             )
         };
 
+        // 先获取所有依赖变量，避免 let/await 嵌套在结构体初始化内
+        let x_address = self
+            .key
+            .hrp_address(network_id, "X")
+            .expect("hrp_address X failed");
+        let p_address = self
+            .key
+            .hrp_address(network_id, "P")
+            .expect("hrp_address P failed");
+        let short_address = self.key.short_address().expect("short_address failed");
+
         let w = Wallet {
             key_type: self.key.key_type(),
             keychain,
 
             base_http_urls: self.base_http_urls.clone(),
-            base_http_url_cursor: Arc::new(Mutex::new(0)),
-
-            network_id,
-            network_name,
-
-            x_address: self.key.hrp_address(network_id, "X").unwrap(),
-            p_address: self.key.hrp_address(network_id, "P").unwrap(),
-            short_address: self.key.short_address().unwrap(),
+            base_http_url_cursor: std::sync::Arc::new(std::sync::Mutex::new(0)),
             eth_address: self.key.eth_address(),
             h160_address,
 
+            network_id,
+            network_name,
+            x_address,
+            p_address,
+            short_address,
             blockchain_id_x,
             blockchain_id_p,
-
             avax_asset_id,
-
             tx_fee,
             add_primary_network_validator_fee: ADD_PRIMARY_NETWORK_VALIDATOR_FEE,
             create_subnet_tx_fee,
             create_blockchain_tx_fee,
         };
+
         log::info!("initiated the wallet:\n{}", w);
 
         Ok(w)

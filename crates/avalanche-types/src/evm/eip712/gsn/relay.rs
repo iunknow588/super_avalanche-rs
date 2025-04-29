@@ -121,7 +121,7 @@ impl super::Tx {
                     }
 
                     sleep(retry_interval).await;
-                    continue;
+
                 }
             }
         }

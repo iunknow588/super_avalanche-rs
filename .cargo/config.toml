@@ -1,3 +1,16 @@
 [env]
 PROTOC_FLAGS = "--experimental_allow_proto3_optional"
 PROTOC_ARG = "--experimental_allow_proto3_optional"
+
+[build]
+# 根据CPU核心数设置并行任务数
+# 建议设置为 CPU核心数 - 1 或 CPU核心数 - 2
+jobs = 2
+
+[target.x86_64-unknown-linux-gnu]
+rustflags = [
+    "-C", "link-arg=-Wl,--no-as-needed",
+    "-C", "link-arg=-Wl,--gc-sections",
+    "-C", "opt-level=3",  # 恢复到最高优化级别
+    "-C", "target-cpu=native"  # 针对当前CPU优化
+]

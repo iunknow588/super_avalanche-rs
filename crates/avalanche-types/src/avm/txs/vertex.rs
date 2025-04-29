@@ -86,7 +86,8 @@ impl Packer {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- avm::txs::vertex::test_pack_and_unpack --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// avm::txs::vertex::test_pack_and_unpack --exact --show-output
 #[test]
 fn test_pack_and_unpack() {
     use bytes::BytesMut;
@@ -99,7 +100,7 @@ fn test_pack_and_unpack() {
             0xc3, 0x2b, 0xff, 0x1d, 0x6d, 0xec, 0x47, 0x2b, 0x25, 0xcf, //
             0x59, 0xa7,
         ])),
-        height: 1234567_u64,
+        height: 1_234_567_u64,
         epoch: 0,
 
         // to be sorted
@@ -143,7 +144,7 @@ fn test_pack_and_unpack() {
             0xc3, 0x2b, 0xff, 0x1d, 0x6d, 0xec, 0x47, 0x2b, 0x25, 0xcf, //
             0x59, 0xa7,
         ])),
-        height: 1234567_u64,
+        height: 1_234_567_u64,
         epoch: 0,
 
         // sorted

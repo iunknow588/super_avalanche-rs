@@ -70,7 +70,7 @@ fn test_json_deserialize() {
     
     {
         \"unsignedTx\": {
-            \"networkID\": 1000000,
+            \"networkID\": 1_000_000,
             \"blockchainID\": \"11111111111111111111111111111111LpoYY\",
             \"outputs\": [
                 {
@@ -80,7 +80,7 @@ fn test_json_deserialize() {
                         \"addresses\": [
                             \"P-custom12szthht8tnl455u4mz3ns3nvvkel8ezvw2n8cx\"
                         ],
-                        \"amount\": 245952587549460688,
+                        \"amount\": 245_952_587_549_460_688,
                         \"locktime\": 0,
                         \"threshold\": 1
                     }
@@ -124,14 +124,14 @@ fn test_json_deserialize() {
 
     println!("{:?}", parsed_tx);
 
-    assert_eq!(parsed_tx.unsigned_tx.network_id, 1000000);
+    assert_eq!(parsed_tx.unsigned_tx.network_id, 1_000_000);
     assert_eq!(
         parsed_tx.unsigned_tx.transferable_outputs.clone().unwrap()[0]
             .transfer_output
             .clone()
             .unwrap()
             .amount,
-        245952587549460688
+        245_952_587_549_460_688
     );
     assert_eq!(
         parsed_tx.unsigned_tx.transferable_outputs.clone().unwrap()[0]

@@ -190,7 +190,7 @@ fn test_create_chain_tx_serialization_with_one_signer() {
 
     let mut tx = Tx {
         base_tx: txs::Tx {
-            network_id: 1000000,
+            network_id: 1_000_000,
             transferable_outputs: Some(vec![txs::transferable::Output {
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
                     0x88, 0xee, 0xc2, 0xe0, 0x99, 0xc6, 0xa5, 0x28, //
@@ -199,7 +199,7 @@ fn test_create_chain_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2c6874d5c56f500,
+                    amount: 0x02c6_874d_5c56_f500,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0x00,
                         threshold: 0x01,
@@ -229,7 +229,7 @@ fn test_create_chain_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_input: Some(key::secp256k1::txs::transfer::Input {
-                    amount: 0x2c6874d624cd600,
+                    amount: 0x02c6_874d_624c_d600,
                     sig_indices: vec![0],
                 }),
                 ..txs::transferable::Input::default()

@@ -230,7 +230,7 @@ where
         tx.sign(signers).await?;
 
         if self.dry_mode {
-            return Ok(tx.base_tx.metadata.unwrap().id);
+            return Ok(tx.base_tx.metadata.expect("tx.base_tx.metadata is None").id);
         }
 
         let tx_bytes_with_signatures = tx

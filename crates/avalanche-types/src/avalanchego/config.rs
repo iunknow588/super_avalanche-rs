@@ -423,11 +423,11 @@ impl Config {
             profile_continuous_max_files: None,
 
             proposervm_use_current_height: Some(true),
-            throttler_inbound_node_max_processing_msgs: Some(100000),
-            throttler_inbound_bandwidth_refill_rate: Some(1073741824),
-            throttler_inbound_bandwidth_max_burst_size: Some(1073741824),
-            throttler_inbound_cpu_validator_alloc: Some(100000),
-            throttler_inbound_disk_validator_alloc: Some(10737418240000),
+            throttler_inbound_node_max_processing_msgs: Some(100_000),
+            throttler_inbound_bandwidth_refill_rate: Some(1_073_741_824),
+            throttler_inbound_bandwidth_max_burst_size: Some(1_073_741_824),
+            throttler_inbound_cpu_validator_alloc: Some(100_000),
+            throttler_inbound_disk_validator_alloc: Some(10_737_418_240_000),
 
             throttler_inbound_at_large_alloc_size: Some(
                 DEFAULT_THROTTLER_INBOUND_AT_LARGE_ALLOC_SIZE,
@@ -441,7 +441,7 @@ impl Config {
 
             snow_mixed_query_num_push_vdr: Some(10),
 
-            consensus_accepted_frontier_gossip_frequency: Some(10000000000), // 10-second
+            consensus_accepted_frontier_gossip_frequency: Some(10_000_000_000), // 10-second
             consensus_app_concurrency: Some(2),
 
             consensus_on_accept_gossip_validator_size: Some(0),

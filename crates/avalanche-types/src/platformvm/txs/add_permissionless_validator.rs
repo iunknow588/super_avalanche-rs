@@ -345,7 +345,7 @@ fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
 
     let mut tx = Tx {
         base_tx: txs::Tx {
-            network_id: 1000000,
+            network_id: 1_000_000,
             transferable_outputs: Some(vec![txs::transferable::Output {
                 asset_id: ids::Id::from_slice(&<Vec<u8>>::from([
                     0x88, 0xee, 0xc2, 0xe0, 0x99, 0xc6, 0xa5, 0x28, //
@@ -354,7 +354,7 @@ fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
                     0x68, 0x64, 0x4d, 0x14, 0xd5, 0x47, 0x80, 0x14, //
                 ])),
                 transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                    amount: 0x2c6874d687fc000,
+                    amount: 0x02c6_874d_687f_c000,
                     output_owners: key::secp256k1::txs::OutputOwners {
                         locktime: 0,
                         threshold: 1,
@@ -390,8 +390,8 @@ fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
                 0x9c, 0xd7, 0xb3, 0xe4, 0x79, 0x04, 0xf6, 0x7c, 0xc4, 0x8e, //
                 0xb5, 0xb9, 0xaf, 0xdb, 0x03, 0xe6, 0xd1, 0x8a, 0xcf, 0x6c, //
             ])),
-            start: 0x623d7267,
-            end: 0x63c91062,
+            start: 0x623d_7267,
+            end: 0x63c9_1062,
             weight: 0x7e7,
         },
         subnet_id: ids::Id::from_str("2u5EYNkXMDFNi4pL9eGBt2F5DnXLGriecu7Ctje8jK155FFkPx").unwrap(),

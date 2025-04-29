@@ -141,7 +141,8 @@ impl AsRef<str> for Status {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- choices::status::test_bytes --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// choices::status::test_bytes --exact --show-output
 #[test]
 fn test_bytes() {
     let sb = Status::Processing.bytes().unwrap().to_vec();
@@ -157,7 +158,8 @@ fn test_bytes() {
     assert!(cmp_manager::eq_vectors(&sb, &[0x00, 0x00, 0x00, 0x00]));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- choices::status::test_to_u32 --exact --show-output
+/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// choices::status::test_to_u32 --exact --show-output
 #[test]
 fn test_to_u32() {
     assert_eq!(Status::Unknown("hello".to_string()).to_u32(), 0);

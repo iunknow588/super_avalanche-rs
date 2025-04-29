@@ -224,7 +224,7 @@ impl Default for Config {
             ]),
 
             continuous_profiler_dir: None,
-            continuous_profiler_frequency: Some(900000000000), // 15-minute
+            continuous_profiler_frequency: Some(900_000_000_000), // 15-minute
             continuous_profiler_max_files: Some(5),
 
             rpc_gas_cap: Some(50_000_000), // default to 50M gas limit
@@ -255,7 +255,7 @@ impl Default for Config {
 
             // ref. <https://pkg.go.dev/github.com/ava-labs/subnet-evm/core#DefaultTxPoolConfig>
             tx_pool_journal: Some(String::from("transactions.rlp")),
-            tx_pool_rejournal: Some(3600000000000), // 1-hour
+            tx_pool_rejournal: Some(3_600_000_000_000), // 1-hour
             tx_pool_price_limit: Some(1),
             tx_pool_price_bump: Some(10),
             tx_pool_account_slots: Some(64),
@@ -275,10 +275,10 @@ impl Default for Config {
             keystore_insecure_unlock_allowed: None,
 
             remote_gossip_only_enabled: None,
-            regossip_frequency: Some(60000000000), // 1-minute
+            regossip_frequency: Some(60_000_000_000), // 1-minute
             regossip_max_txs: Some(16),
             regossip_txs_per_address: Some(1),
-            priority_regossip_frequency: Some(60000000000), // 1-minute
+            priority_regossip_frequency: Some(60_000_000_000), // 1-minute
             priority_regossip_max_txs: Some(16),
             priority_regossip_txs_per_address: Some(1),
             priority_regossip_addresses: Some(vec![

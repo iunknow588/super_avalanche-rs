@@ -11,6 +11,7 @@
 //! avalanche-types can also be used to build Rust clients and tooling within
 //! the Avalanche ecosystem.
 
+#![allow(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 pub mod avm;
 pub mod choices;

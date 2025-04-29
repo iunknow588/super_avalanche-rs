@@ -65,9 +65,9 @@ async fn clone_box_test() {
 
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
+    let client_conn = Channel::builder(format!("http://{addr}").parse().unwrap())
         .connect()
         .await
         .unwrap();
-    let _app_sender = AppSenderClient::new(client_conn).clone();
+    let _app_sender = AppSenderClient::new(client_conn);
 }
