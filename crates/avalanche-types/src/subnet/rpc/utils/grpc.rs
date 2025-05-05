@@ -24,7 +24,7 @@ use tower_service::Service;
 /// Sets the [`SETTINGS_MAX_CONCURRENT_STREAMS`][spec] option for HTTP2
 /// connections.
 ///
-/// Tonic default is no limit (`None`) which is the same as u32::MAX.
+/// Tonic default is no limit (`None`) which is the same as `u32::MAX`..
 ///
 /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_MAX_CONCURRENT_STREAMS
 pub const DEFAULT_MAX_CONCURRENT_STREAMS: u32 = u32::MAX;
@@ -32,7 +32,7 @@ pub const DEFAULT_MAX_CONCURRENT_STREAMS: u32 = u32::MAX;
 /// Sets a timeout for receiving an acknowledgement of the keepalive ping.
 ///
 /// If the ping is not acknowledged within the timeout, the connection will be closed.
-/// Does nothing if http2_keep_alive_interval is disabled.
+/// Does nothing if `http2_keep_alive_interval` is disabled.
 ///
 /// Tonic default is 20 seconds.
 pub const DEFAULT_KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(20);
@@ -59,6 +59,7 @@ pub const DEFAULT_KEEP_ALIVE_INTERVAL: Duration = Duration::from_secs(2 * 60 * 6
 pub const DEFAULT_KEEP_ALIVE_MIN_TIME: Duration = Duration::from_secs(5);
 
 /// Creates a tonic gRPC server with avalanche defaults.
+#[must_use]
 pub fn default_server() -> tonic::transport::Server {
     tonic::transport::Server::builder()
         .max_concurrent_streams(DEFAULT_MAX_CONCURRENT_STREAMS)
@@ -69,9 +70,12 @@ pub fn default_server() -> tonic::transport::Server {
 
 /// Creates a tonic Endpoint with avalanche defaults. The endpoint input is
 /// expected in `<ip>:<port>` format.
+///
+/// # Errors
+/// Returns error if the endpoint string is invalid.
 pub fn default_client(endpoint: &str) -> Result<Endpoint> {
     let endpoint = Channel::from_shared(format!("http://{endpoint}"))
-        .map_err(|e| Error::new(ErrorKind::Other, format!("invalid endpoint: {e}")))?
+        .map_err(|e| Error::new(ErrorKind::Other, format!("invalid endpoint: {e:?}")))?
         .keep_alive_timeout(DEFAULT_KEEP_ALIVE_TIMEOUT)
         .http2_keep_alive_interval(DEFAULT_KEEP_ALIVE_INTERVAL)
         .tcp_keepalive(Some(DEFAULT_KEEP_ALIVE_MIN_TIME));
@@ -89,7 +93,9 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(addr: SocketAddr, stop_ch: Receiver<()>) -> Self {
+    /// 创建一个新的 gRPC Server。
+    #[must_use]
+    pub const fn new(addr: SocketAddr, stop_ch: Receiver<()>) -> Self {
         Self { stop_ch, addr }
     }
 }
@@ -98,6 +104,10 @@ impl Server {
 impl Server {
     /// Attempts to start a gRPC server for the provided service which can be
     /// shutdown by a broadcast channel.
+    /// 启动 gRPC 服务。
+    ///
+    /// # Errors
+    /// 如果服务启动失败，返回错误。
     pub fn serve<S>(mut self, svc: S) -> Result<()>
     where
         S: Service<Request<Body>, Response = Response<BoxBody>, Error = Infallible>
@@ -112,7 +122,7 @@ impl Server {
                 .add_service(svc)
                 .serve_with_shutdown(self.addr, self.stop_ch.recv().map(|_| ()))
                 .await
-                .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {:?}", e)))
+                .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {e:?}")))
         });
         log::info!("gRPC server started: {}", self.addr);
 
@@ -120,10 +130,14 @@ impl Server {
     }
 }
 
-/// Converts DataTime to a google::protobuf::Timestamp
+/// Converts `DateTime` to a `google::protobuf::Timestamp`
+///
+/// # 注意
+/// 仅适用于 UTC 时间。
+#[must_use]
 pub fn timestamp_from_time(dt: &DateTime<Utc>) -> Timestamp {
     Timestamp {
         seconds: dt.timestamp(),
-        nanos: dt.timestamp_subsec_nanos() as i32,
+        nanos: i32::try_from(dt.timestamp_subsec_nanos()).unwrap_or(0),
     }
 }

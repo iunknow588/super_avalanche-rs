@@ -14,5 +14,5 @@ fn test_aliases_json() {
             .get("q2aTwKuyzgs8pynF7UXBZCU7DejbZbZ6EUyHr3JQzYgwNPUPi")
             .unwrap(),
         &vec!["DFK".to_string()]
-    )
+    );
 }

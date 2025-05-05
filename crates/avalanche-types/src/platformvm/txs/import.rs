@@ -5,6 +5,8 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+/// `ImportTx` is a transaction that imports an asset from the X-Chain to the P-Chain.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#ImportTx>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#UnsignedTx>
@@ -13,7 +15,7 @@ pub struct Tx {
     /// The transaction ID is empty for unsigned tx
     /// as long as "avax.BaseTx.Metadata" is "None".
     /// Once Metadata is updated with signing and "Tx.Initialize",
-    /// Tx.ID() is non-empty.
+    /// `Tx.ID()` is non-empty.
     pub base_tx: txs::Tx,
     pub source_chain_id: ids::Id,
     pub source_chain_transferable_inputs: Option<Vec<txs::transferable::Input>>,
@@ -23,6 +25,7 @@ pub struct Tx {
 }
 
 impl Tx {
+    #[must_use]
     pub fn new(base_tx: txs::Tx) -> Self {
         Self {
             base_tx,
@@ -33,6 +36,11 @@ impl Tx {
     /// Returns the transaction ID.
     /// Only non-empty if the embedded metadata is updated
     /// with the signing process.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.base_tx.metadata` is `Some` but cannot be unwrapped.
+    #[must_use]
     pub fn tx_id(&self) -> ids::Id {
         if self.base_tx.metadata.is_some() {
             let m = self.base_tx.metadata.clone().unwrap();
@@ -42,17 +50,37 @@ impl Tx {
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "platformvm.ImportTx".to_string()
     }
 
+    /// Returns the type ID for this transaction.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec registry.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::P_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::P_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx.Sign>
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/crypto#PrivateKeyED25519.SignHash>
-    pub async fn sign<T: key::secp256k1::SignOnly>(&mut self, signers: Vec<Vec<T>>) -> Result<()> {
+    /// Signs the transaction with the provided signers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.source_chain_transferable_inputs` is `Some` but cannot be unwrapped.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signing process fails.
+    #[allow(clippy::too_many_lines)]
+    pub async fn sign<T: key::secp256k1::SignOnly + Send + Sync>(
+        &mut self,
+        signers: Vec<Vec<T>>,
+    ) -> Result<()> {
         // marshal "unsigned tx" with the codec version
         let type_id = Self::type_id();
         let packer = self.base_tx.pack(codec::VERSION, type_id)?;
@@ -73,9 +101,9 @@ impl Tx {
         // pack the third field in the struct
         if self.source_chain_transferable_inputs.is_some() {
             let source_chain_ins = self.source_chain_transferable_inputs.as_ref().unwrap();
-            packer.pack_u32(source_chain_ins.len() as u32)?;
+            packer.pack_u32(u32::try_from(source_chain_ins.len()).unwrap())?;
 
-            for transferable_input in source_chain_ins.iter() {
+            for transferable_input in source_chain_ins {
                 // "TransferableInput.UTXOID" is struct and serialize:"true"
                 // but embedded inline in the struct "TransferableInput"
                 // so no need to encode type ID
@@ -127,8 +155,9 @@ impl Tx {
                         // so no need to encode type ID
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#Input
-                        packer.pack_u32(transfer_input.sig_indices.len() as u32)?;
-                        for idx in transfer_input.sig_indices.iter() {
+                        packer
+                            .pack_u32(u32::try_from(transfer_input.sig_indices.len()).unwrap())?;
+                        for idx in &transfer_input.sig_indices {
                             packer.pack_u32(*idx)?;
                         }
                     }
@@ -156,18 +185,17 @@ impl Tx {
                         // so no need to encode type ID
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#Input
-                        packer
-                            .pack_u32(stakeable_lock_in.transfer_input.sig_indices.len() as u32)?;
-                        for idx in stakeable_lock_in.transfer_input.sig_indices.iter() {
+                        packer.pack_u32(
+                            u32::try_from(stakeable_lock_in.transfer_input.sig_indices.len())
+                                .unwrap(),
+                        )?;
+                        for idx in &stakeable_lock_in.transfer_input.sig_indices {
                             packer.pack_u32(*idx)?;
                         }
                     }
                     _ => {
                         return Err(Error::Other {
-                            message: format!(
-                                "unexpected type ID {} for TransferableInput",
-                                type_id_transferable_in
-                            ),
+                            message: format!("unexpected type ID {type_id_transferable_in} for TransferableInput"),
                             retryable: false,
                         });
                     }
@@ -188,16 +216,16 @@ impl Tx {
         let tx_bytes_hash = hash::sha256(&tx_bytes_with_no_signature);
 
         // number of of credentials
-        let creds_len = signers.len() as u32;
+        let creds_len = u32::try_from(signers.len()).unwrap();
         // pack the fourth field in the struct
         packer.pack_u32(creds_len)?;
 
         // sign the hash with the signers (in case of multi-sig)
         // and combine all signatures into a secp256k1fx credential
         self.creds = Vec::new();
-        for keys in signers.iter() {
+        for keys in &signers {
             let mut sigs: Vec<Vec<u8>> = Vec::new();
-            for k in keys.iter() {
+            for k in keys {
                 let sig = k.sign_digest(&tx_bytes_hash).await?;
                 sigs.push(Vec::from(sig));
             }
@@ -211,13 +239,13 @@ impl Tx {
             // pack each "cred" which is "secp256k1fx.Credential"
             // marshal type ID for "secp256k1fx.Credential"
             let cred_type_id = key::secp256k1::txs::Credential::type_id();
-            for cred in self.creds.iter() {
+            for cred in &self.creds {
                 // marshal type ID for "secp256k1fx.Credential"
                 packer.pack_u32(cred_type_id)?;
 
                 // marshal fields for "secp256k1fx.Credential"
-                packer.pack_u32(cred.signatures.len() as u32)?;
-                for sig in cred.signatures.iter() {
+                packer.pack_u32(u32::try_from(cred.signatures.len()).unwrap())?;
+                for sig in &cred.signatures {
                     packer.pack_bytes(sig)?;
                 }
             }
@@ -238,7 +266,7 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::import::test_import_tx_serialization_with_one_signer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::import::test_import_tx_serialization_with_one_signer` --exact --show-output
 /// ref. "avalanchego/vms/platformvm.TestNewImportTx"
 #[test]
 fn test_import_tx_serialization_with_one_signer() {

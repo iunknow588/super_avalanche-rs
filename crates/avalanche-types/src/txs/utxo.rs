@@ -35,9 +35,14 @@ impl Default for Id {
 }
 
 impl Id {
+    /// 创建一个新的 UTXO ID。
+    ///
+    /// # Errors
+    ///
+    /// 如果无法创建前缀，则返回错误。
     pub fn new(tx_id: &[u8], output_index: u32, symbol: bool) -> Result<Self> {
         let tx_id = ids::Id::from_slice(tx_id);
-        let prefixes: Vec<u64> = vec![output_index as u64];
+        let prefixes: Vec<u64> = vec![u64::from(output_index)];
         let id = tx_id.prefix(&prefixes)?;
         Ok(Self {
             tx_id,
@@ -49,7 +54,7 @@ impl Id {
 }
 
 impl Ord for Id {
-    fn cmp(&self, other: &Id) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.tx_id
             .cmp(&(other.tx_id)) // returns when "tx_id"s are not Equal
             .then_with(
@@ -59,31 +64,31 @@ impl Ord for Id {
 }
 
 impl PartialOrd for Id {
-    fn partial_cmp(&self, other: &Id) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Id {
-    fn eq(&self, other: &Id) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortUTXOIDs>
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::utxo::test_sort_utxo_ids --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- txs::utxo::test_sort_utxo_ids --exact --show-output
 #[test]
 fn test_sort_utxo_ids() {
     let mut utxos: Vec<Id> = Vec::new();
-    for i in (0..10).rev() {
+    for i in 0..10 {
         utxos.push(Id {
-            tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-            output_index: (i + 1) as u32,
+            tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            output_index: u32::from(i + 1),
             ..Id::default()
         });
         utxos.push(Id {
-            tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-            output_index: i as u32,
+            tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            output_index: u32::from(i),
             ..Id::default()
         });
     }
@@ -93,13 +98,13 @@ fn test_sort_utxo_ids() {
     let mut sorted_utxos: Vec<Id> = Vec::new();
     for i in 0..10 {
         sorted_utxos.push(Id {
-            tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-            output_index: i as u32,
+            tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            output_index: u32::from(i),
             ..Id::default()
         });
         sorted_utxos.push(Id {
-            tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-            output_index: (i + 1) as u32,
+            tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            output_index: u32::from(i + 1),
             ..Id::default()
         });
     }
@@ -107,7 +112,7 @@ fn test_sort_utxo_ids() {
     assert_eq!(utxos, sorted_utxos);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::utxo::test_utxo_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- txs::utxo::test_utxo_id --exact --show-output
 /// ref. "avalanchego/vms/components/avax.TestUTXOID"
 #[test]
 fn test_utxo_id() {
@@ -134,7 +139,7 @@ pub struct Utxo {
     pub utxo_id: Id,
     pub asset_id: ids::Id,
 
-    /// AvalancheGo loads "avax.UTXO" object from the db and
+    /// `AvalancheGo` loads "avax.UTXO" object from the db and
     /// defines the "out" field as an interface "Out verify.State".
     ///
     /// The underlying type is one of the following:
@@ -163,28 +168,40 @@ impl Default for Utxo {
 
 impl Utxo {
     /// Hex-encodes the Utxo with the prepended "0x".
+    ///
+    /// # Errors
+    ///
+    /// 如果打包失败，则返回错误。
     pub fn to_hex(&self) -> Result<String> {
         let packer = self.pack(codec::VERSION)?;
         let b = packer.take_bytes();
 
         let d = formatting::encode_hex_with_checksum(&b);
-        Ok(format!("0x{}", d))
+        Ok(format!("0x{d}"))
     }
 
     /// Parses the raw hex-encoded data from the "getUTXOs" API.
+    ///
+    /// # Errors
+    ///
+    /// 如果解析失败，则返回错误。
     pub fn from_hex(d: &str) -> Result<Self> {
         // ref. "utils/formatting.encode" prepends "0x" for "Hex" encoding
         let d = d.trim_start_matches("0x");
 
         let decoded =
             formatting::decode_hex_with_checksum(d.as_bytes()).map_err(|e| Error::Other {
-                message: format!("failed formatting::decode_hex_with_checksum '{}'", e),
+                message: format!("failed formatting::decode_hex_with_checksum '{e}'"),
                 retryable: false,
             })?;
         Self::unpack(&decoded)
     }
 
     /// Packes the Utxo.
+    ///
+    /// # Errors
+    ///
+    /// 如果打包失败，则返回错误。
     pub fn pack(&self, codec_version: u16) -> Result<packer::Packer> {
         // ref. "avalanchego/codec.manager.Marshal", "vms/avm.newCustomCodecs"
         // ref. "math.MaxInt32" and "constants.DefaultByteSliceCap" in Go
@@ -206,8 +223,8 @@ impl Utxo {
             packer.pack_u64(out.output_owners.locktime)?;
             packer.pack_u32(out.output_owners.threshold)?;
 
-            packer.pack_u32(out.output_owners.addresses.len() as u32)?;
-            for addr in out.output_owners.addresses.iter() {
+            packer.pack_u32(u32::try_from(out.output_owners.addresses.len())?)?;
+            for addr in &out.output_owners.addresses {
                 packer.pack_bytes(addr.as_ref())?;
             }
         } else if let Some(lock_out) = &self.stakeable_lock_out {
@@ -220,8 +237,10 @@ impl Utxo {
             packer.pack_u64(lock_out.transfer_output.output_owners.locktime)?;
             packer.pack_u32(lock_out.transfer_output.output_owners.threshold)?;
 
-            packer.pack_u32(lock_out.transfer_output.output_owners.addresses.len() as u32)?;
-            for addr in lock_out.transfer_output.output_owners.addresses.iter() {
+            packer.pack_u32(u32::try_from(
+                lock_out.transfer_output.output_owners.addresses.len(),
+            )?)?;
+            for addr in &lock_out.transfer_output.output_owners.addresses {
                 packer.pack_bytes(addr.as_ref())?;
             }
         }
@@ -232,6 +251,10 @@ impl Utxo {
     /// Parses raw bytes to "Utxo".
     /// It assumes the data are already decoded from "hex".
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#UTXO>
+    ///
+    /// # Errors
+    ///
+    /// 如果解析失败，则返回错误。
     pub fn unpack(d: &[u8]) -> Result<Self> {
         let packer = packer::Packer::load_bytes_for_unpack(d.len() + 1024, d);
 
@@ -256,11 +279,10 @@ impl Utxo {
         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockOut
         let type_id_verify_state = packer.unpack_u32()?;
         match type_id_verify_state {
-            7 => {}
-            22 => {}
+            7 | 22 => {}
             _ => {
                 return Err(Error::Other {
-                    message: format!("unknown type ID for verify.State {}", type_id_verify_state),
+                    message: format!("unknown type ID for verify.State {type_id_verify_state}"),
                     retryable: false,
                 })
             }
@@ -309,7 +331,7 @@ impl Utxo {
         let utxo = {
             if let Some(mut stakeable_lock_out) = stakeable_lock_out {
                 stakeable_lock_out.transfer_output = transfer_output;
-                Utxo {
+                Self {
                     utxo_id: Id {
                         tx_id,
                         output_index,
@@ -317,10 +339,10 @@ impl Utxo {
                     },
                     asset_id,
                     stakeable_lock_out: Some(stakeable_lock_out),
-                    ..Utxo::default()
+                    ..Self::default()
                 }
             } else {
-                Utxo {
+                Self {
                     utxo_id: Id {
                         tx_id,
                         output_index,
@@ -328,7 +350,7 @@ impl Utxo {
                     },
                     asset_id,
                     transfer_output: Some(transfer_output),
-                    ..Utxo::default()
+                    ..Self::default()
                 }
             }
         };
@@ -336,7 +358,7 @@ impl Utxo {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::utxo::test_utxo_unpack_hex --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- txs::utxo::test_utxo_unpack_hex --exact --show-output
 #[test]
 fn test_utxo_unpack_hex() {
     let utxo_hex_1 = "0x000000000000000000000000000000000000000000000000000000000000000000000000000088eec2e099c6a528e689618e8721e04ae85ea574c7a15a7968644d14d54780140000000702c68af0bb1400000000000000000000000000010000000165844a05405f3662c1928142c6c2a783ef871de939b564db";
@@ -365,5 +387,5 @@ fn test_utxo_unpack_hex() {
     };
     assert_eq!(utxo, expected);
 
-    println!("{:?}", utxo);
+    println!("{utxo:?}");
 }

@@ -11,7 +11,19 @@ use std::io::{self, Error, ErrorKind};
 
 use crate::ids;
 
+/// ref. <https://docs.avax.network/build/avalanchego-apis/platform/#platformgetblockchains>
+///
 /// Convert a given Vm name to an encoded Vm Id.
+///
+/// # Errors
+/// 如果解析 VM 名称失败，返回 `io::Error`。
+/// 将虚拟机名称转换为ID
+///
+/// # Arguments
+/// * `s` - 虚拟机名称
+///
+/// # Errors
+/// 当名称转换失败时返回错误
 pub fn vm_name_to_id(s: impl AsRef<[u8]>) -> io::Result<ids::Id> {
     let d = s.as_ref();
     if d.len() > ids::LEN {

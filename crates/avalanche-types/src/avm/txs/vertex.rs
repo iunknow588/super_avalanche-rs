@@ -18,6 +18,10 @@ impl Packer {
     /// Encodes vertex fields with codec version and packer.
     ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/engine/avalanche/vertex#Build>
+    ///
+    /// # Errors
+    ///
+    /// 当序列化失败时返回错误。
     pub fn pack_vertex(&self, vtx: &mut Vertex) -> Result<()> {
         // sort "parent_ids"
         // ref. "ids.SortIDs"
@@ -34,13 +38,15 @@ impl Packer {
         self.pack_u64(vtx.height)?;
         self.pack_u32(vtx.epoch)?;
 
-        self.pack_u32(vtx.parent_ids.len() as u32)?;
-        for id in vtx.parent_ids.iter() {
+        let parent_ids_len = u32::try_from(vtx.parent_ids.len())?;
+        self.pack_u32(parent_ids_len)?;
+        for id in &vtx.parent_ids {
             self.pack_bytes(id.as_ref())?;
         }
 
-        self.pack_u32(vtx.txs.len() as u32)?;
-        for tx in vtx.txs.iter() {
+        let txs_len = u32::try_from(vtx.txs.len())?;
+        self.pack_u32(txs_len)?;
+        for tx in &vtx.txs {
             self.pack_bytes_with_header(tx.as_ref())?;
         }
 
@@ -50,6 +56,10 @@ impl Packer {
     /// Unpacks the vertex.
     ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/engine/avalanche/vertex#Build>
+    ///
+    /// # Errors
+    ///
+    /// 当反序列化失败时返回错误。
     pub fn unpack_vertex(&self) -> Result<Vertex> {
         let codec_version = self.unpack_u16()?;
 
@@ -86,8 +96,8 @@ impl Packer {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// avm::txs::vertex::test_pack_and_unpack --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `avm::txs::vertex::test_pack_and_unpack` --exact --show-output
 #[test]
 fn test_pack_and_unpack() {
     use bytes::BytesMut;

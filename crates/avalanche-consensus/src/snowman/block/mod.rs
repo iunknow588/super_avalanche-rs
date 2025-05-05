@@ -16,13 +16,13 @@ use avalanche_types::{
 use bytes::Bytes;
 
 /// Represents a block as a unit of consensus, a possible decision in the chain.
-/// "verify" is only called when its parent block has been verified.
+/// `verify` is only called when its parent block has been verified.
 /// A block can only be accepted when its parent has already been accepted.
 /// A block can be rejected when its parent has already been accepted or rejected.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Block>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Block>.
 ///
-/// For instance, "avalanchego/vms/rpcchainvm/vm_client.go#blockClient" implements
-/// this "Decidable" and "Block" interface to use snowman consensus.
+/// For instance, `avalanchego/vms/rpcchainvm/vm_client.go#blockClient` implements
+/// this `Decidable` and `Block` interface to use Snowman consensus.
 ///
 /// Invariants are:
 /// - accept or reject on a block will be called at most once
@@ -104,31 +104,19 @@ where
     /// Returns the Id of the inner block.
     /// If the inner block is None (genesis), then it returns None.
     pub fn id(&self) -> Option<Id> {
-        if self.blk.is_none() {
-            None
-        } else {
-            Some(self.blk.as_ref().unwrap().borrow().id())
-        }
+        self.blk.as_ref().map(|blk| blk.borrow().id())
     }
 
     /// Returns the height of the inner block.
     /// If the inner block is None (genesis), then it returns None.
     pub fn height(&self) -> Option<u64> {
-        if self.blk.is_none() {
-            None
-        } else {
-            Some(self.blk.as_ref().unwrap().borrow().height())
-        }
+        self.blk.as_ref().map(|blk| blk.borrow().height())
     }
 
     /// Returns the status of the inner block.
     /// If the inner block is None (genesis), then it returns None.
     pub fn status(&self) -> Option<Status> {
-        if self.blk.is_none() {
-            None
-        } else {
-            Some(self.blk.as_ref().unwrap().borrow().status())
-        }
+        self.blk.as_ref().map(|blk| blk.borrow().status())
     }
 
     pub fn accepted(&self) -> bool {

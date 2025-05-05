@@ -16,10 +16,11 @@ use ethers_core::{
     utils::keccak256,
 };
 
-/// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "GENERIC_PARAMS"
+/// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "`GENERIC_PARAMS`"
 pub const GENERIC_PARAMS: &str = "address from,address to,uint256 value,uint256 gas,uint256 nonce,bytes data,uint256 validUntilTime";
 
 /// Implements the "Eip712" trait for GSN.
+///
 /// ref. <https://eips.ethereum.org/EIPS/eip-712>
 /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol>
@@ -27,60 +28,60 @@ pub const GENERIC_PARAMS: &str = "address from,address to,uint256 value,uint256 
 pub struct Tx {
     /// EIP-712 domain name.
     /// Used for domain separator hash.
-    /// ref. "ethers_core::types::transaction::eip712::Eip712::domain_separator"
+    /// ref. "`ethers_core::types::transaction::eip712::Eip712::domain_separator`"
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "registerDomainSeparator"
     pub domain_name: String,
     /// EIP-712 domain version.
     /// Used for domain separator hash.
-    /// ref. "ethers_core::types::transaction::eip712::Eip712::domain_separator"
+    /// ref. "`ethers_core::types::transaction::eip712::Eip712::domain_separator`"
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "registerDomainSeparator"
     pub domain_version: String,
     /// EIP-712 domain chain id.
     /// Used for domain separator hash.
-    /// ref. "ethers_core::types::transaction::eip712::Eip712::domain_separator"
+    /// ref. "`ethers_core::types::transaction::eip712::Eip712::domain_separator`"
     pub domain_chain_id: U256,
     /// EIP-712 domain verifying contract name.
     /// Used for domain separator hash.
     /// Address of the contract that will verify the signature (e.g., trusted forwarder).
-    /// ref. "ethers_core::types::transaction::eip712::Eip712::domain_separator"
+    /// ref. "`ethers_core::types::transaction::eip712::Eip712::domain_separator`"
     pub domain_verifying_contract: H160,
 
     /// Forward request "from" field.
     /// An externally-owned account making the request.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub from: H160,
     /// Forward request "to" field.
     /// A destination address, normally a smart-contract.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub to: H160,
     /// Forward request "value" field.
     /// An amount of Ether to transfer to the destination.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub value: U256,
     /// Forward request "gas" field.
     /// An amount of gas limit to set for the execution.
     /// When an externally owned account (EOA) signs the transaction, it must estimate the required gas
     /// to provide enough for its execution.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub gas: U256,
     /// Forward request "nonce" field.
     /// An on-chain tracked nonce of a transaction.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub nonce: U256,
     /// Forward request "data" field.
     /// The data to be sent to the destination (recipient contract).
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub data: Vec<u8>,
     /// Forward request "validUntil" field.
     /// The highest block number the request can be forwarded in, or 0 if request validity is not time-limited.
     /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "ForwardRequest"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "`ForwardRequest`"
     pub valid_until_time: U256,
 
     /// The name of the request type.
@@ -94,7 +95,8 @@ pub struct Tx {
 }
 
 impl Tx {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             domain_name: String::new(),
             domain_version: String::new(),
@@ -206,16 +208,18 @@ impl Tx {
 
     /// Computes the domain separator hash.
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerDomainSeparator"
+    #[must_use]
     pub fn compute_domain_separator(&self) -> H256 {
         H256(self.eip712_domain().separator())
     }
 
     /// Hash of the struct, according to EIP-712 definition of `hashStruct`.
     /// Implements "_getEncoded" and "_verifySig" in GSN Forwarder.sol.
-    /// This method is used for "encode_eip712".
+    /// This method is used for "`encode_eip712`".
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_getEncoded"
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerDomainSeparator"
     /// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "EIP712Domain.separator"
+    #[must_use]
     pub fn compute_struct_hash(&self) -> H256 {
         // "requestTypeHash"
         // Implements "type_hash".
@@ -264,7 +268,7 @@ impl Tx {
 
         // solidity "abi.encodePacked" equals to string format/concatenation
         // solidity "abi.encode" equals to "ethabi::encode(&tokens)"
-        // solidity "keccak256" equals to "ethers_core::utils::keccak256(&bytes)"
+        // solidity "keccak256" equals to "ethers_core::utils::keccak256"
         // ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_getEncoded"
         let digest_input = [
             &request_type_hash[..],
@@ -284,15 +288,17 @@ impl Tx {
     }
 
     /// Returns the calldata based on the arguments to the forwarder "execute" function.
-    /// ref. "HumanReadableParser::parse_function"
+    /// ref. "`HumanReadableParser::parse_function`"
     /// ref. "execute((address,address,uint256,uint256,uint256,bytes,uint256) req,bytes32 domainSeparator,bytes32 requestTypeHash,bytes suffixData,bytes sig) (bool success, bytes memory ret)"
-    /// ref. ["(0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0,0,0,0x11,0)", "0x11", "0x11", "0x11", "0x11", "0x11"]
+    /// ref. [`(0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0x52C84043CD9c865236f11d9Fc9F56aa003c1f922,0,0,0,0x11,0)`, `0x11`, `0x11`, `0x11`, `0x11`, `0x11`]
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol>
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol>
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/RelayHub.sol> "innerRelayCall"
     /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/utils/GsnEip712Library.sol> "execute"
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/utils/GsnTypes.sol> "GsnTypes"
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/utils/GsnTypes.sol> "`GsnTypes`"
     /// ref. <https://eips.ethereum.org/EIPS/eip-712>
+    /// # Errors
+    /// Returns an error if the encoding fails.
     pub fn encode_execute_call(&self, sig: Vec<u8>) -> io::Result<Vec<u8>> {
         // Parsed function of "execute((address,address,uint256,uint256,uint256,bytes,uint256) req,bytes32 domainSeparator,bytes32 requestTypeHash,bytes suffixData,bytes sig) (bool success, bytes memory ret)".
         // ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> "execute"
@@ -350,10 +356,10 @@ impl Tx {
             state_mutability: StateMutability::Payable,
         };
 
-        // do not use "encode_args" from str
+        // do not use "`encode_args`" from str
         // "LenientTokenizer::tokenize" cannot handle hex encode
         // "Uint parse error: InvalidCharacter"
-        // ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/abi.rs> "encode_args"
+        // ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/abi.rs> "`encode_args`"
         let arg_tokens = vec![
             Token::Tuple(vec![
                 Token::Address(self.from),
@@ -374,12 +380,12 @@ impl Tx {
             Token::Bytes(sig),
         ];
 
-        evm_abi::encode_calldata(func, &arg_tokens)
+        evm_abi::encode_calldata(&func, &arg_tokens)
     }
 
-    /// Returns the default "TypedData" with its default "struct_hash" implementation.
-    /// "TypedData" implements "Eip712" trait.
-    /// THIS WOULD NOT work with GSN contracts that include "type_suffix_data" on its hash and signature.
+    /// Returns the default "`TypedData`" with its default "`struct_hash`" implementation.
+    /// "`TypedData`" implements "Eip712" trait.
+    /// THIS WOULD NOT work with GSN contracts that include "`type_suffix_data`" on its hash and signature.
     fn typed_data(&self) -> TypedData {
         let mut message = BTreeMap::new();
         message.insert(
@@ -420,77 +426,27 @@ impl Default for Tx {
     }
 }
 
-/// Implements "type_hash".
-/// ref. "ethers_core::types::transaction::eip712::EIP712_DOMAIN_TYPE_HASH"
+/// Implements "`type_hash`".
+///
+/// ref. "`ethers_core::types::transaction::eip712::EIP712_DOMAIN_TYPE_HASH`"
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerRequestType"
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerRequestTypeInternal"
+/// Computes the request type hash.
+///
+/// # Errors
+///
+/// Returns error if request validation fails.
+#[must_use]
 pub fn compute_request_type_hash(type_name: &str, type_suffix_data: &str) -> H256 {
     // solidity "abi.encodePacked" equals to string format/concatenation
     // solidity "abi.encode" equals to "ethabi::encode(&tokens)"
-    // solidity "keccak256" equals to "ethers_core::utils::keccak256(&bytes)"
+    // solidity "keccak256" equals to "ethers_core::utils::keccak256"
     //
     // e.g.,
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     // ref. ethers_core::types::transaction::eip712::EIP712_DOMAIN_TYPE_HASH
-    let request_type = keccak256(format!(
-        "{}({GENERIC_PARAMS},{}",
-        type_name, type_suffix_data
-    ));
+    let request_type = keccak256(format!("{type_name}({GENERIC_PARAMS},{type_suffix_data}",));
     H256::from_slice(&request_type)
-}
-
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "TypedData"
-impl Eip712 for Tx {
-    type Error = Eip712Error;
-
-    /// Default implementation of the domain separator;
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerDomainSeparator"
-    fn domain_separator(&self) -> Result<[u8; 32], Self::Error> {
-        // solidity "abi.encode" equals to "ethabi::encode(&tokens)"
-        // solidity "keccak256" equals to "ethers_core::utils::keccak256"
-        // ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "EIP712Domain.separator"
-        Ok(self.eip712_domain().separator())
-    }
-
-    /// Returns the current domain. The domain depends on the contract and unique domain
-    /// for which the user is targeting. In the derive macro, these attributes
-    /// are passed in as arguments to the macro. When manually deriving, the user
-    /// will need to know the name of the domain, version of the contract, chain ID of
-    /// where the contract lives and the address of the verifying contract.
-    fn domain(&self) -> Result<EIP712Domain, Self::Error> {
-        Ok(self.eip712_domain())
-    }
-
-    /// This method is used for calculating the hash of the type signature of the
-    /// struct. The field types of the struct must map to primitive
-    /// ethereum types or custom types defined in the contract.
-    fn type_hash() -> Result<[u8; 32], Self::Error> {
-        Err(Eip712Error::Message("dynamic type".to_string()))
-    }
-
-    /// Hash of the struct, according to EIP-712 definition of `hashStruct`.
-    fn struct_hash(&self) -> Result<[u8; 32], Self::Error> {
-        let struct_hash = self.compute_struct_hash();
-        Ok(struct_hash.to_fixed_bytes())
-    }
-
-    /// When using the derive macro, this is the primary method used for computing the final
-    /// EIP-712 encoded payload. This method relies on the aforementioned methods for computing
-    /// the final encoded payload.
-    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_getEncoded"
-    /// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "TypedData" "struct_hash"
-    fn encode_eip712(&self) -> Result<[u8; 32], Self::Error> {
-        let domain_separator = self.eip712_domain().separator();
-        let struct_hash = self.compute_struct_hash();
-
-        // "self.primary_type" here is "Message" for GSN
-        // if self.primary_type != "EIP712Domain"
-        // ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_verifySig" "abi.encodePacked"
-        // ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "TypedData"
-        let digest_input = [&[0x19, 0x01], &domain_separator[..], &struct_hash[..]].concat();
-
-        Ok(keccak256(digest_input))
-    }
 }
 
 /// ref. <https://eips.ethereum.org/EIPS/eip-2770>
@@ -552,4 +508,58 @@ fn foward_request_types() -> Types {
         ],
     );
     types
+}
+
+/// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/IForwarder.sol> `ForwardRequest`
+impl Eip712 for Tx {
+    type Error = Eip712Error;
+
+    /// Default implementation of the domain separator;
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerDomainSeparator"
+    fn domain_separator(&self) -> Result<[u8; 32], Self::Error> {
+        // solidity "abi.encode" equals to "ethabi::encode(&tokens)"
+        // solidity "keccak256" equals to "ethers_core::utils::keccak256"
+        // ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "EIP712Domain.separator"
+        Ok(self.eip712_domain().separator())
+    }
+
+    /// Returns the current domain. The domain depends on the contract and unique domain
+    /// for which the user is targeting. In the derive macro, these attributes
+    /// are passed in as arguments to the macro. When manually deriving, the user
+    /// will need to know the name of the domain, version of the contract, chain ID of
+    /// where the contract lives and the address of the verifying contract.
+    fn domain(&self) -> Result<EIP712Domain, Self::Error> {
+        Ok(self.eip712_domain())
+    }
+
+    /// This method is used for calculating the hash of the type signature of the
+    /// struct. The field types of the struct must map to primitive
+    /// ethereum types or custom types defined in the contract.
+    fn type_hash() -> Result<[u8; 32], Self::Error> {
+        Err(Eip712Error::Message("dynamic type".to_string()))
+    }
+
+    /// Hash of the struct, according to EIP-712 definition of `hashStruct`.
+    fn struct_hash(&self) -> Result<[u8; 32], Self::Error> {
+        let struct_hash = self.compute_struct_hash();
+        Ok(struct_hash.to_fixed_bytes())
+    }
+
+    /// When using the derive macro, this is the primary method used for computing the final
+    /// EIP-712 encoded payload. This method relies on the aforementioned methods for computing
+    /// the final encoded payload.
+    /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_getEncoded"
+    /// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "`TypedData`" "`struct_hash`"
+    fn encode_eip712(&self) -> Result<[u8; 32], Self::Error> {
+        let domain_separator = self.eip712_domain().separator();
+        let struct_hash = self.compute_struct_hash();
+
+        // "self.primary_type" here is "Message" for GSN
+        // if self.primary_type != "EIP712Domain"
+        // ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "_verifySig" "abi.encodePacked"
+        // ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip712.rs> "TypedData"
+        let digest_input = [&[0x19, 0x01], &domain_separator[..], &struct_hash[..]].concat();
+
+        Ok(keccak256(digest_input))
+    }
 }

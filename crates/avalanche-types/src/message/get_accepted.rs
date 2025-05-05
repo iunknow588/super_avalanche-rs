@@ -11,7 +11,7 @@ pub struct Message {
 
 impl Default for Message {
     fn default() -> Self {
-        Message {
+        Self {
             msg: p2p::GetAccepted {
                 chain_id: prost::bytes::Bytes::new(),
                 request_id: 0,
@@ -32,22 +32,22 @@ impl Message {
     }
 
     #[must_use]
-    pub fn request_id(mut self, request_id: u32) -> Self {
+    pub const fn request_id(mut self, request_id: u32) -> Self {
         self.msg.request_id = request_id;
         self
     }
 
     #[must_use]
-    pub fn deadline(mut self, deadline: u64) -> Self {
+    pub const fn deadline(mut self, deadline: u64) -> Self {
         self.msg.deadline = deadline;
         self
     }
 
     #[must_use]
-    pub fn container_ids(mut self, container_ids: Vec<ids::Id>) -> Self {
+    pub fn container_ids(mut self, container_ids: &[ids::Id]) -> Self {
         let mut container_ids_bytes: Vec<prost::bytes::Bytes> =
             Vec::with_capacity(container_ids.len());
-        for id in container_ids.iter() {
+        for id in container_ids {
             container_ids_bytes.push(prost::bytes::Bytes::from(id.to_vec()));
         }
         self.msg.container_ids = container_ids_bytes;
@@ -55,11 +55,16 @@ impl Message {
     }
 
     #[must_use]
-    pub fn gzip_compress(mut self, gzip_compress: bool) -> Self {
+    pub const fn gzip_compress(mut self, gzip_compress: bool) -> Self {
         self.gzip_compress = gzip_compress;
         self
     }
 
+    /// Serializes the message into bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails.
     pub fn serialize(&self) -> io::Result<Vec<u8>> {
         let msg = p2p::Message {
             message: Some(p2p::message::Message::GetAccepted(self.msg.clone())),
@@ -93,18 +98,30 @@ impl Message {
         Ok(ProstMessage::encode_to_vec(&msg))
     }
 
+    /// Deserializes the message from bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the deserialization fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the message field is None.
     pub fn deserialize(d: impl AsRef<[u8]>) -> io::Result<Self> {
         let buf = bytes::Bytes::from(d.as_ref().to_vec());
         let p2p_msg: p2p::Message = ProstMessage::decode(buf).map_err(|e| {
             Error::new(
                 ErrorKind::InvalidData,
-                format!("failed prost::Message::decode '{}'", e),
+                format!("failed prost::Message::decode '{e}'"),
             )
         })?;
 
-        match p2p_msg.message.unwrap() {
+        match p2p_msg
+            .message
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "message field is None"))?
+        {
             // was not compressed
-            p2p::message::Message::GetAccepted(msg) => Ok(Message {
+            p2p::message::Message::GetAccepted(msg) => Ok(Self {
                 msg,
                 gzip_compress: false,
             }),
@@ -116,11 +133,16 @@ impl Message {
                     ProstMessage::decode(prost::bytes::Bytes::from(decompressed)).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidData,
-                            format!("failed prost::Message::decode '{}'", e),
+                            format!("failed prost::Message::decode '{e}'"),
                         )
                     })?;
-                match decompressed_msg.message.unwrap() {
-                    p2p::message::Message::GetAccepted(msg) => Ok(Message {
+                match decompressed_msg.message.ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidData,
+                        "message field is None after decompression",
+                    )
+                })? {
+                    p2p::message::Message::GetAccepted(msg) => Ok(Self {
                         msg,
                         gzip_compress: false,
                     }),
@@ -137,7 +159,7 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- message::get_accepted::test_message --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `message::get_accepted::test_message` --exact --show-output
 #[test]
 fn test_message() {
     let _ = env_logger::builder()
@@ -151,7 +173,7 @@ fn test_message() {
         ))
         .request_id(random_manager::u32())
         .deadline(random_manager::u64())
-        .container_ids(vec![
+        .container_ids(&[
             ids::Id::empty(),
             ids::Id::empty(),
             ids::Id::empty(),

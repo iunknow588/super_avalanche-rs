@@ -12,7 +12,7 @@ use super::handle::Handle;
 
 #[derive(Clone)]
 pub struct Server<T> {
-    /// handler generated from create_handlers
+    /// handler generated from `create_handlers`
     handle: Arc<T>,
 }
 
@@ -21,7 +21,7 @@ where
     T: Handle + Send + Sync + 'static,
 {
     pub fn new(handler: T) -> Self {
-        Server {
+        Self {
             handle: Arc::new(handler),
         }
     }
@@ -50,7 +50,7 @@ where
         let (body, headers) = self.handle.request(&request.body, &request.headers).await?;
 
         Ok(tonic::Response::new(HandleSimpleHttpResponse {
-            code: http::StatusCode::OK.as_u16() as i32,
+            code: i32::from(http::StatusCode::OK.as_u16()),
             body,
             headers,
         }))

@@ -21,10 +21,10 @@ async fn main() -> io::Result<()> {
     );
 
     let url = args().nth(1).expect("no url given");
-    println!("{}", url);
+    println!("{url}");
 
     if let Some(paddr) = &args().nth(2) {
-        println!("{}", paddr);
+        println!("{paddr}");
         let resp = jsonrpc_client_p::get_balance(&url, paddr).await.unwrap();
         log::info!(
             "get_balance response: {}",

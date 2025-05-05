@@ -12,7 +12,17 @@ use crate::{
     utils,
 };
 
-/// Set an alias for a chain.
+/// Sets an alias for a blockchain.
+///
+/// This function allows setting a human-readable alias for a blockchain ID.
+///
+/// # Errors
+///
+/// Returns an error if the API request fails.
+///
+/// # Panics
+///
+/// Panics if JSON deserialization fails.
 pub async fn alias_chain(
     http_rpc: &str,
     chain: String,
@@ -20,11 +30,11 @@ pub async fn alias_chain(
 ) -> Result<ChainAliasResponse> {
     let (scheme, host, port, ..) = utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc)
         .map_err(|e| Error::Other {
-            message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+            message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
             retryable: false,
         })?;
 
-    let url = url::try_create_url(url::Path::Admin, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::Admin, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting network name for {url}");
 
     let data = ChainAliasRequest {
@@ -33,7 +43,7 @@ pub async fn alias_chain(
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -46,7 +56,7 @@ pub async fn alias_chain(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -67,14 +77,14 @@ pub async fn alias_chain(
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
 
     let response: ChainAliasResponse = serde_json::from_slice(out.as_ref())
         .map_err(|e| Error::Other {
-            message: format!("failed serde_json::from_slice '{}'", e),
+            message: format!("failed serde_json::from_slice '{e}'"),
             retryable: false,
         })
         .unwrap();

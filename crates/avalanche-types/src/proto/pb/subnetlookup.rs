@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SubnetIdRequest {

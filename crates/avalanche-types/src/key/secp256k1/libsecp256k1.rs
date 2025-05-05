@@ -8,12 +8,16 @@ use crate::{
 use async_trait::async_trait;
 use secp256k1 as libsecp256k1;
 
-/// Represents "libsecp256k1::SecretKey" to implement key traits.
+/// Represents "`libsecp256k1::SecretKey`" to implement key traits.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PrivateKey(libsecp256k1::SecretKey);
 
 impl PrivateKey {
     /// Loads the private key from the raw bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the raw bytes are not the correct length or if they cannot be parsed as a valid private key.
     pub fn from_bytes(raw: &[u8]) -> Result<Self> {
         if raw.len() != key::secp256k1::private_key::LEN {
             return Err(Error::Other {
@@ -27,22 +31,28 @@ impl PrivateKey {
         }
 
         let sk = libsecp256k1::SecretKey::from_slice(raw).map_err(|e| Error::Other {
-            message: format!("failed libsecp256k1::SecretKey::from_slice {}", e),
+            message: format!("failed libsecp256k1::SecretKey::from_slice {e}"),
             retryable: false,
         })?;
         Ok(Self(sk))
     }
 
+    /// Converts to a k256 signing key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion fails.
     pub fn signing_key(&self) -> Result<k256::ecdsa::SigningKey> {
         let b = self.to_bytes();
         let ga = k256::elliptic_curve::generic_array::GenericArray::from_slice(&b);
         k256::ecdsa::SigningKey::from_bytes(ga).map_err(|e| Error::Other {
-            message: format!("failed k256::ecdsa::SigningKey::from_bytes '{}'", e),
+            message: format!("failed k256::ecdsa::SigningKey::from_bytes '{e}'"),
             retryable: false,
         })
     }
 
     /// Converts the private key to raw bytes.
+    #[must_use]
     pub fn to_bytes(&self) -> [u8; key::secp256k1::private_key::LEN] {
         let b = self.0.secret_bytes();
 
@@ -52,6 +62,7 @@ impl PrivateKey {
     }
 
     /// Hex-encodes the raw private key to string with "0x" prefix (e.g., Ethereum).
+    #[must_use]
     pub fn to_hex(&self) -> String {
         // ref. https://github.com/rust-bitcoin/rust-secp256k1/pull/396
         let b = self.0.secret_bytes();
@@ -62,7 +73,8 @@ impl PrivateKey {
         s
     }
 
-    /// Encodes the raw private key to string with "PrivateKey-" prefix (e.g., Avalanche).
+    /// Encodes the raw private key to string with "`PrivateKey`-" prefix (e.g., Avalanche).
+    #[must_use]
     pub fn to_cb58(&self) -> String {
         let b = self.0.secret_bytes();
         let enc = formatting::encode_cb58_with_checksum_string(&b);
@@ -73,6 +85,7 @@ impl PrivateKey {
     }
 
     /// Derives the public key from this private key.
+    #[must_use]
     pub fn to_public_key(&self) -> PublicKey {
         let secp = libsecp256k1::Secp256k1::new();
         let pubkey = libsecp256k1::PublicKey::from_secret_key(&secp, &self.0);
@@ -83,13 +96,21 @@ impl PrivateKey {
     /// "github.com/decred/dcrd/dcrec/secp256k1/v3/ecdsa.SignCompact" outputs 65-byte signature.
     /// ref. "avalanchego/utils/crypto.PrivateKeySECP256K1R.SignHash"
     /// ref. <https://github.com/rust-bitcoin/rust-secp256k1/blob/master/src/ecdsa/recovery.rs>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the message cannot be parsed or if the signing operation fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the digest length is not equal to `SHA256_OUTPUT_LEN`.
     pub fn sign_digest(&self, digest: &[u8]) -> Result<key::secp256k1::signature::Sig> {
         // ref. "crypto/sha256.Size"
         assert_eq!(digest.len(), hash::SHA256_OUTPUT_LEN);
 
         let secp = libsecp256k1::Secp256k1::new();
         let m = libsecp256k1::Message::from_digest_slice(digest).map_err(|e| Error::Other {
-            message: format!("failed libsecp256k1::Message::from_slice {}", e),
+            message: format!("failed libsecp256k1::Message::from_slice {e}"),
             retryable: false,
         })?;
 
@@ -101,7 +122,10 @@ impl PrivateKey {
         let (rec_id, sig) = sig.serialize_compact();
 
         let mut sig = Vec::from(sig);
-        sig.push(rec_id.to_i32() as u8);
+        sig.push(u8::try_from(rec_id.to_i32()).map_err(|e| Error::Other {
+            message: format!("failed to convert recovery ID to u8: {e}"),
+            retryable: false,
+        })?);
         assert_eq!(sig.len(), key::secp256k1::signature::LEN);
 
         key::secp256k1::signature::Sig::from_bytes(&sig)
@@ -134,19 +158,20 @@ impl key::secp256k1::SignOnly for PrivateKey {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for PrivateKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", hex::encode(self.to_bytes()))
     }
 }
 
-/// Represents "secp256k1::PublicKey" to implement key traits.
+/// Represents "`secp256k1::PublicKey`" to implement key traits.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PublicKey(libsecp256k1::PublicKey);
 
 impl PublicKey {
     /// Converts the public key to compressed bytes.
+    #[must_use]
     pub fn to_compressed_bytes(&self) -> [u8; key::secp256k1::public_key::LEN] {
         let bb = self.0.serialize();
 
@@ -156,6 +181,7 @@ impl PublicKey {
     }
 
     /// Converts the public key to uncompressed bytes.
+    #[must_use]
     pub fn to_uncompressed_bytes(&self) -> [u8; key::secp256k1::public_key::UNCOMPRESSED_LEN] {
         let bb = self.0.serialize_uncompressed();
 
@@ -166,25 +192,34 @@ impl PublicKey {
 
     /// "hashing.PubkeyBytesToAddress" and "ids.ToShortID"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the hash operation fails.
     pub fn to_short_bytes(&self) -> Result<Vec<u8>> {
         let compressed = self.to_compressed_bytes();
         hash::sha256_ripemd160(compressed).map_err(|e| Error::Other {
-            message: format!("failed hash::sha256_ripemd160 ({})", e),
+            message: format!("failed hash::sha256_ripemd160 ({e})"),
             retryable: false,
         })
     }
 
     /// "hashing.PubkeyBytesToAddress"
-    /// ref. "pk.PublicKey().Address().Bytes()"
+    /// ref. "`pk.PublicKey().Address().Bytes()`"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the short ID cannot be created from the public key bytes.
     pub fn to_short_id(&self) -> Result<crate::ids::short::Id> {
         let compressed = self.to_compressed_bytes();
         short::Id::from_public_key_bytes(compressed).map_err(|e| Error::Other {
-            message: format!("failed short::Id::from_public_key_bytes ({})", e),
+            message: format!("failed short::Id::from_public_key_bytes ({e})"),
             retryable: false,
         })
     }
 
+    #[must_use]
     pub fn to_h160(&self) -> primitive_types::H160 {
         let uncompressed = self.to_uncompressed_bytes();
 
@@ -198,21 +233,26 @@ impl PublicKey {
     /// Encodes the public key in ETH address format.
     /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/crypto#PubkeyToAddress>
     /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/common#Address.Hex>
+    #[must_use]
     pub fn to_eth_address(&self) -> String {
         address::h160_to_eth_address(&self.to_h160(), None)
     }
 
+    /// Converts the public key to a human-readable address with the specified network ID and chain ID alias.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the address cannot be formatted.
     pub fn to_hrp_address(&self, network_id: u32, chain_id_alias: &str) -> Result<String> {
-        let hrp = match constants::NETWORK_ID_TO_HRP.get(&network_id) {
-            Some(v) => v,
-            None => constants::FALLBACK_HRP,
-        };
+        let hrp = constants::NETWORK_ID_TO_HRP
+            .get(&network_id)
+            .map_or(constants::FALLBACK_HRP, |v| v);
         // ref. "pk.PublicKey().Address().Bytes()"
         let short_address_bytes = self.to_short_bytes()?;
 
         // ref. "formatting.FormatAddress(chainIDAlias, hrp, pubBytes)"
         formatting::address(chain_id_alias, hrp, &short_address_bytes).map_err(|e| Error::Other {
-            message: format!("failed formatting::address ({})", e),
+            message: format!("failed formatting::address ({e})"),
             retryable: false,
         })
     }
@@ -232,7 +272,7 @@ impl From<PublicKey> for libsecp256k1::PublicKey {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", hex::encode(self.to_compressed_bytes()))
@@ -266,7 +306,7 @@ impl key::secp256k1::ReadOnly for PublicKey {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::libsecp256k1::test_key --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::libsecp256k1::test_key` --exact --show-output
 #[test]
 fn test_key() {
     let _ = env_logger::builder()
@@ -293,7 +333,7 @@ fn test_key() {
     let hex1 = pk1.to_hex();
     let hex2 = pk2.to_hex();
     assert_eq!(hex1, hex2);
-    log::info!("hex: {}", hex1);
+    log::info!("hex: {hex1}");
 
     let pk3 = key::secp256k1::private_key::Key::from_hex(hex1).unwrap();
     let pk3 = pk3.to_libsecp256k1().unwrap();
@@ -304,7 +344,7 @@ fn test_key() {
     let cb3 = pk3.to_cb58();
     assert_eq!(cb1, cb2);
     assert_eq!(cb2, cb3);
-    log::info!("cb58: {}", cb1);
+    log::info!("cb58: {cb1}");
 
     let pk4 = key::secp256k1::private_key::Key::from_cb58(cb1).unwrap();
     let pk4 = pk4.to_libsecp256k1().unwrap();

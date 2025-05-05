@@ -15,17 +15,18 @@ pub enum Message {
     /// syncing the requested state summary.
     StateSyncDone,
 
-    /// StopVertex notifies a consensus that it has a pending stop vertex.
+    /// `StopVertex` notifies a consensus that it has a pending stop vertex.
     StopVertex,
 }
 
 impl Message {
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/engine/common#Message.String>
-    pub fn as_str(&self) -> &str {
+    #[must_use]
+    pub const fn as_str(&self) -> &str {
         match self {
-            Message::PendingTxs => "Pending Transactions",
-            Message::StateSyncDone => "State Sync Done",
-            Message::StopVertex => "Pending Stop Vertex",
+            Self::PendingTxs => "Pending Transactions",
+            Self::StateSyncDone => "State Sync Done",
+            Self::StopVertex => "Pending Stop Vertex",
         }
     }
 }
@@ -34,9 +35,9 @@ impl TryFrom<u32> for Message {
     type Error = String;
     fn try_from(v: u32) -> Result<Self, Self::Error> {
         match v {
-            x if x == Message::PendingTxs as u32 => Ok(Message::PendingTxs),
-            x if x == Message::StateSyncDone as u32 => Ok(Message::StateSyncDone),
-            x if x == Message::StopVertex as u32 => Ok(Message::StopVertex),
+            x if x == Self::PendingTxs as u32 => Ok(Self::PendingTxs),
+            x if x == Self::StateSyncDone as u32 => Ok(Self::StateSyncDone),
+            x if x == Self::StopVertex as u32 => Ok(Self::StopVertex),
             _ => Err("invalid message enum".to_string()),
         }
     }

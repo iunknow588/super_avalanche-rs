@@ -13,7 +13,7 @@ pub struct ApplicationVersion {
 }
 
 impl Ord for ApplicationVersion {
-    fn cmp(&self, other: &ApplicationVersion) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.major
             .cmp(&other.major) // returns when major versions are not equal
             .then_with(
@@ -26,13 +26,13 @@ impl Ord for ApplicationVersion {
 }
 
 impl PartialOrd for ApplicationVersion {
-    fn partial_cmp(&self, other: &ApplicationVersion) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for ApplicationVersion {
-    fn eq(&self, other: &ApplicationVersion) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
@@ -48,7 +48,8 @@ impl Hash for ApplicationVersion {
 }
 
 impl ApplicationVersion {
-    pub fn before(&self, other: &ApplicationVersion) -> bool {
+    #[must_use]
+    pub fn before(&self, other: &Self) -> bool {
         if self.app != other.app {
             return false;
         }
@@ -56,7 +57,7 @@ impl ApplicationVersion {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- utils::version::test_version --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- utils::version::test_version --exact --show-output
 #[test]
 fn test_version() {
     // lengths of individual ids do not matter since all are fixed-sized

@@ -20,6 +20,7 @@ use tokio::time::Duration;
 /// cargo run --example evm_contract_voter_vote_a_forwarder_relay_eip712 --features="jsonrpc_client evm" -- [RELAY SERVER HTTP RPC ENDPOINT] [EVM HTTP RPC ENDPOINT] [FORWARDER CONTRACT ADDRESS] [DOMAIN NAME] [DOMAIN VERSION] [TYPE TYPE NAME] [TYPE SUFFIX DATA] [RECIPIENT CONTRACT ADDRESS]
 /// cargo run --example evm_contract_voter_vote_a_forwarder_relay_eip712 --features="jsonrpc_client evm" -- http://127.0.0.1:9876/rpc http://127.0.0.1:9650/ext/bc/C/rpc 0x52C84043CD9c865236f11d9Fc9F56aa003c1f922 "my domain name" "1" "my type name" "my suffix data" 0x5DB9A7629912EBF95876228C24A848de0bfB43A9
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     // ref. <https://github.com/env-logger-rs/env_logger/issues/47>
     env_logger::init_from_env(
@@ -68,7 +69,7 @@ async fn main() -> io::Result<()> {
 
     let no_gas_key = key::secp256k1::private_key::Key::generate().unwrap();
     let no_gas_key_info = no_gas_key.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", no_gas_key_info);
+    log::info!("created hot key:\n\n{no_gas_key_info}\n");
     let no_gas_key_signer: ethers_signers::LocalWallet =
         no_gas_key.to_ethers_core_signing_key().into();
 
@@ -96,7 +97,7 @@ async fn main() -> io::Result<()> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![];
-    let no_gas_recipient_contract_calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let no_gas_recipient_contract_calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!(
         "no gas recipient contract calldata: 0x{}",
         hex::encode(no_gas_recipient_contract_calldata.clone())
@@ -147,7 +148,7 @@ async fn main() -> io::Result<()> {
         )
         .await
         .unwrap();
-    log::info!("relay_tx_request: {:?}", relay_tx_request);
+    log::info!("relay_tx_request: {relay_tx_request:?}");
 
     let signed_bytes: ethers_core::types::Bytes =
         serde_json::to_vec(&relay_tx_request).unwrap().into();
@@ -183,5 +184,5 @@ fn get_nonce_calldata(addr: H160) -> Vec<u8> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::Address(addr)];
-    abi::encode_calldata(func, &arg_tokens).unwrap()
+    abi::encode_calldata(&func, &arg_tokens).unwrap()
 }

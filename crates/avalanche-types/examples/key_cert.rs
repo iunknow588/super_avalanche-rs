@@ -25,7 +25,7 @@ fn main() {
     // openssl x509 -in artifacts/staker1.insecure.crt -text -noout
 
     let node_id = node::Id::from_cert_pem_file(cert_path.as_str()).unwrap();
-    println!("Node ID: {}", node_id);
+    println!("Node ID: {node_id}");
 
     let (loaded_node_id, generated) =
         node::Id::load_or_generate_pem(&key_path, &cert_path).unwrap();

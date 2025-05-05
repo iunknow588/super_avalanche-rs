@@ -1,4 +1,4 @@
-//! Status enum that represents the possible statuses of an consensus operation.
+//! `Status` enum that represents the possible statuses of an consensus operation.
 use crate::{errors, packer::Packer};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -33,17 +33,17 @@ pub enum Status {
 
 impl Default for Status {
     fn default() -> Self {
-        Status::Unknown("default".to_owned())
+        Self::Unknown("default".to_owned())
     }
 }
 
 impl std::convert::From<&str> for Status {
     fn from(s: &str) -> Self {
         match s {
-            "Processing" => Status::Processing,
-            "Rejected" => Status::Rejected,
-            "Accepted" => Status::Accepted,
-            other => Status::Unknown(other.to_owned()),
+            "Processing" => Self::Processing,
+            "Rejected" => Self::Rejected,
+            "Accepted" => Self::Accepted,
+            other => Self::Unknown(other.to_owned()),
         }
     }
 }
@@ -52,13 +52,13 @@ impl std::str::FromStr for Status {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Status::from(s))
+        Ok(Self::from(s))
     }
 }
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Status {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -66,40 +66,48 @@ impl std::fmt::Display for Status {
 }
 
 impl Status {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
-            Status::Processing => "Processing",
-            Status::Rejected => "Rejected",
-            Status::Accepted => "Accepted",
-            Status::Unknown(s) => s.as_ref(),
+            Self::Processing => "Processing",
+            Self::Rejected => "Rejected",
+            Self::Accepted => "Accepted",
+            Self::Unknown(s) => s.as_ref(),
         }
     }
 
     /// Returns all the `&str` values of the enum members.
-    pub fn values() -> &'static [&'static str] {
+    #[must_use]
+    pub const fn values() -> &'static [&'static str] {
         &["Processing", "Rejected", "Accepted"]
     }
 
     /// Returns "true" if the status has been decided.
-    pub fn decided(&self) -> bool {
-        matches!(self, Status::Rejected | Status::Accepted)
+    #[must_use]
+    pub const fn decided(&self) -> bool {
+        matches!(self, Self::Rejected | Self::Accepted)
     }
 
     /// Returns "true" if the status has been set.
-    pub fn fetched(&self) -> bool {
+    #[must_use]
+    pub const fn fetched(&self) -> bool {
         match self {
-            Status::Processing => true,
+            Self::Processing => true,
             _ => self.decided(),
         }
     }
 
     /// Returns the bytes representation of this status.
+    ///
+    /// # Errors
+    ///
+    /// 当序列化失败时返回错误。
     pub fn bytes(&self) -> errors::Result<Bytes> {
         let iota = match self {
-            Status::Processing => 1_u32,
-            Status::Rejected => 2_u32,
-            Status::Accepted => 3_u32,
-            Status::Unknown(_) => 0_u32,
+            Self::Processing => 1_u32,
+            Self::Rejected => 2_u32,
+            Self::Accepted => 3_u32,
+            Self::Unknown(_) => 0_u32,
         };
 
         let packer = Packer::new(4, 4);
@@ -108,26 +116,33 @@ impl Status {
     }
 
     /// Returns the u32 primitive representation of this status.
-    pub fn to_u32(&self) -> u32 {
+    #[must_use]
+    pub const fn to_u32(&self) -> u32 {
         match self {
-            Status::Processing => 1,
-            Status::Rejected => 2,
-            Status::Accepted => 3,
-            Status::Unknown(_) => 0,
+            Self::Processing => 1,
+            Self::Rejected => 2,
+            Self::Accepted => 3,
+            Self::Unknown(_) => 0,
         }
     }
 
     /// Returns the i32 primitive representation of this status.
-    pub fn to_i32(&self) -> i32 {
+    #[must_use]
+    pub const fn to_i32(&self) -> i32 {
         match self {
-            Status::Processing => 1,
-            Status::Rejected => 2,
-            Status::Accepted => 3,
-            Status::Unknown(_) => 0,
+            Self::Processing => 1,
+            Self::Rejected => 2,
+            Self::Accepted => 3,
+            Self::Unknown(_) => 0,
         }
     }
 
     /// Returns native endian value from a slice if u8s.
+    ///
+    /// # Panics
+    ///
+    /// 当 `bytes` 长度大于 4 时会 panic。
+    #[must_use]
     pub fn u32_from_slice(bytes: &[u8]) -> u32 {
         assert!(bytes.len() <= 4);
         let d: [u8; 4] = bytes.try_into().unwrap();
@@ -141,8 +156,8 @@ impl AsRef<str> for Status {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// choices::status::test_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `choices::status::test_bytes` --exact --show-output
 #[test]
 fn test_bytes() {
     let sb = Status::Processing.bytes().unwrap().to_vec();
@@ -158,8 +173,8 @@ fn test_bytes() {
     assert!(cmp_manager::eq_vectors(&sb, &[0x00, 0x00, 0x00, 0x00]));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// choices::status::test_to_u32 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `choices::status::test_to_u32` --exact --show-output
 #[test]
 fn test_to_u32() {
     assert_eq!(Status::Unknown("hello".to_string()).to_u32(), 0);

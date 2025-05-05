@@ -1,2 +1,2 @@
-//! A server handler with various endpoints for avalanche nodes.
+//! A server handler with various endpoints for Avalanche nodes.
 pub mod handler;

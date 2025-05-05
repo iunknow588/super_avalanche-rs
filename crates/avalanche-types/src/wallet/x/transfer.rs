@@ -14,7 +14,7 @@ use tokio::time::{sleep, Duration, Instant};
 #[derive(Clone, Debug)]
 pub struct Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::x::X<T>,
 
@@ -40,8 +40,9 @@ where
 
 impl<T> Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
+    #[must_use]
     pub fn new(x: &crate::wallet::x::X<T>) -> Self {
         Self {
             inner: x.clone(),
@@ -57,54 +58,62 @@ where
 
     /// Sets the transfer fund receiver address.
     #[must_use]
-    pub fn receiver(mut self, receiver: short::Id) -> Self {
+    pub const fn receiver(mut self, receiver: short::Id) -> Self {
         self.receiver = receiver;
         self
     }
 
     /// Sets the transfer amount.
     #[must_use]
-    pub fn amount(mut self, amount: u64) -> Self {
+    pub const fn amount(mut self, amount: u64) -> Self {
         self.amount = amount;
         self
     }
 
     /// Sets the check acceptance boolean flag.
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         self.check_acceptance = check_acceptance;
         self
     }
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the transfer transaction and returns the transaction Id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if checking acceptance times out.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the UTXOs result or transaction result is None.
     pub async fn issue(&self) -> Result<ids::Id> {
         let picked_http_rpc = self.inner.inner.pick_base_http_url();
         log::info!(
@@ -158,7 +167,7 @@ where
             .expect("unexpected None duration_since")
             .as_secs();
 
-        for utxo in utxos.iter() {
+        for utxo in &utxos {
             if utxo.asset_id != self.inner.inner.avax_asset_id {
                 continue;
             }
@@ -199,7 +208,7 @@ where
                             },
                         }),
                         ..Default::default()
-                    })
+                    });
                 }
             }
         }
@@ -250,7 +259,7 @@ where
         }
 
         let tx_id = resp.result.unwrap().tx_id;
-        log::info!("{} successfully issued", tx_id);
+        log::info!("{tx_id} successfully issued");
 
         if !self.check_acceptance {
             log::debug!("skipping checking acceptance...");
@@ -273,7 +282,7 @@ where
 
             let status = resp.result.unwrap().status;
             if status == Status::Accepted {
-                log::info!("{} successfully accepted", tx_id);
+                log::info!("{tx_id} successfully accepted");
                 success = true;
                 break;
             }

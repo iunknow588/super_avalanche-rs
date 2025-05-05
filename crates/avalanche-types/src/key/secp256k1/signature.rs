@@ -9,11 +9,12 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use zerocopy::AsBytes;
 
 /// The length of recoverable ECDSA signature.
+///
 /// "github.com/decred/dcrd/dcrec/secp256k1/v3/ecdsa.SignCompact" outputs
 /// 65-byte signature -- see "compactSigSize"
 /// ref. "avalanchego/utils/crypto.PrivateKeySECP256K1R.SignHash"
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/crypto#SECP256K1RSigLen>
-/// ref. "secp256k1::constants::SCHNORR_SIGNATURE_SIZE" + 1
+/// ref. "`secp256k1::constants::SCHNORR_SIGNATURE_SIZE`" + 1
 pub const LEN: usize = 65;
 
 /// Represents Ethereum-style "recoverable signatures". By default
@@ -24,6 +25,10 @@ pub struct Sig(pub (Signature, RecoveryId));
 
 impl Sig {
     /// Loads the recoverable signature from the bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signature length is incorrect or if the underlying signature parsing fails.
     pub fn from_bytes(b: &[u8]) -> Result<Self> {
         if b.len() != LEN {
             return Err(Error::Other {
@@ -33,17 +38,18 @@ impl Sig {
         }
 
         let sig = Signature::try_from(&b[..64]).map_err(|e| Error::Other {
-            message: format!("failed to load recoverable signature {}", e),
+            message: format!("failed to load recoverable signature {e}"),
             retryable: false,
         })?;
         let recid = RecoveryId::try_from(b[64]).map_err(|e| Error::Other {
-            message: format!("failed to create recovery Id {}", e),
+            message: format!("failed to create recovery Id {e}"),
             retryable: false,
         })?;
         Ok(Self((sig, recid)))
     }
 
     /// Converts the signature to bytes.
+    #[must_use]
     pub fn to_bytes(&self) -> [u8; LEN] {
         // "elliptic_curve::generic_array::GenericArray"
         let bb = self.0 .0.to_bytes();
@@ -54,6 +60,10 @@ impl Sig {
     }
 
     /// Recovers the public key from the 32-byte SHA256 output message using its signature.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signature recovery fails.
     pub fn recover_public_key(
         &self,
         digest: &[u8],
@@ -61,20 +71,23 @@ impl Sig {
         recover_pubkeys(&self.0 .0, self.0 .1, digest)
     }
 
+    #[must_use]
     pub fn r(&self) -> primitive_types::U256 {
         let b = self.0 .0.to_vec();
         primitive_types::U256::from_big_endian(&b[0..32])
     }
 
+    #[must_use]
     pub fn s(&self) -> primitive_types::U256 {
         let b = self.0 .0.to_vec();
         primitive_types::U256::from_big_endian(&b[32..64])
     }
 
     /// Returns the recovery Id.
+    #[must_use]
     pub fn v(&self) -> u64 {
         // ref. <https://github.com/RustCrypto/elliptic-curves/blob/p384/v0.11.2/k256/src/ecdsa/recoverable.rs> "recovery_id"
-        u8::from(self.0 .1) as u64
+        u64::from(u8::from(self.0 .1))
     }
 }
 
@@ -100,6 +113,11 @@ impl Serialize for Sig {
     }
 }
 
+/// Recovers public keys from a signature, recovery ID, and message digest.
+///
+/// # Errors
+///
+/// Returns an error if the public key recovery fails.
 fn recover_pubkeys(
     rsig: &Signature,
     recid: RecoveryId,
@@ -109,7 +127,7 @@ fn recover_pubkeys(
     // ref. <https://github.com/RustCrypto/elliptic-curves/blob/p384/v0.11.2/k256/src/ecdsa/recoverable.rs> "recover_verifying_key_from_digest_bytes"
     let vkey =
         VerifyingKey::recover_from_prehash(digest, rsig, recid).map_err(|e| Error::Other {
-            message: format!("failed recover_verifying_key_from_digest_bytes {}", e),
+            message: format!("failed recover_verifying_key_from_digest_bytes {e}"),
             retryable: false,
         })?;
 
@@ -128,7 +146,7 @@ impl From<Sig> for [u8; LEN] {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::signature::test_signature --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::signature::test_signature` --exact --show-output
 #[test]
 fn test_signature() {
     let _ = env_logger::builder()
@@ -150,13 +168,18 @@ fn test_signature() {
     assert_eq!(pubkey, recovered_pubkey);
 }
 
-/// Loads the recoverable signature from the DER-encoded bytes,
-/// as defined by ANS X9.62–2005 and RFC 3279 Section 2.2.3.
+/// Loads the recoverable signature from the DER-encoded bytes.
+///
+/// As defined by ANS X9.62–2005 and RFC 3279 Section 2.2.3.
 /// ref. <https://docs.aws.amazon.com/kms/latest/APIReference/API_Sign.html#KMS-Sign-response-Signature>
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "decode_signature"
+/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "`decode_signature`"
+///
+/// # Errors
+///
+/// Returns an error if the signature cannot be decoded from DER format.
 pub fn decode_signature(b: &[u8]) -> Result<Signature> {
     let sig = Signature::from_der(b).map_err(|e| Error::Other {
-        message: format!("failed Signature::from_der {}", e),
+        message: format!("failed Signature::from_der {e}"),
         retryable: false,
     })?;
 
@@ -167,10 +190,15 @@ pub fn decode_signature(b: &[u8]) -> Result<Signature> {
 }
 
 /// Converts to recoverable signature of 65-byte.
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "rsig_from_digest_bytes_trial_recovery"
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "rsig_to_ethsig"
+///
+/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "`rsig_from_digest_bytes_trial_recovery`"
+/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "`rsig_to_ethsig`"
 /// ref. <https://github.com/gakonst/ethers-rs/pull/2260>
 /// ref. <https://docs.rs/ecdsa/latest/ecdsa/struct.RecoveryId.html#method.trial_recovery_from_prehash>
+///
+/// # Errors
+///
+/// Returns an error if the recovery ID cannot be determined.
 pub fn sig_from_digest_bytes_trial_recovery(
     sig: &KSig,
     digest: &[u8; 32],
@@ -182,7 +210,7 @@ pub fn sig_from_digest_bytes_trial_recovery(
     let recid =
         EcdsaRecoveryId::trial_recovery_from_prehash(vk, digest.as_bytes(), sig).map_err(|e| {
             Error::Other {
-                message: format!("failed EcdsaRecoveryId::trial_recovery_from_prehash {}", e),
+                message: format!("failed EcdsaRecoveryId::trial_recovery_from_prehash {e}"),
                 retryable: false,
             }
         })?;
@@ -196,19 +224,20 @@ pub fn sig_from_digest_bytes_trial_recovery(
     Ok(EthSig {
         r,
         s,
-        v: recid.to_byte() as u64,
+        v: u64::from(recid.to_byte()),
     })
 }
 
 /// Modify the v value of a signature to conform to eip155
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "apply_eip155"
+///
+/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-signers/src/aws/utils.rs> "`apply_eip155`"
 /// ref. <https://github.com/gakonst/ethers-rs/pull/2300>
 pub fn apply_eip155(sig: &mut ethers_core::types::Signature, chain_id: u64) {
     let v = (chain_id * 2 + 35) + sig.v;
     sig.v = v;
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::signature::test_signature_serialization --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::signature::test_signature_serialization` --exact --show-output
 #[test]
 fn test_signature_serialization() {
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -225,7 +254,7 @@ fn test_signature_serialization() {
     let d = Data { sig: sig.clone() };
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str::<Data>(&json_encoded).unwrap();
     assert_eq!(sig, json_decoded.sig);
 

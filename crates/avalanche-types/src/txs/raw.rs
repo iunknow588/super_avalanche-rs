@@ -7,6 +7,7 @@ use crate::hash;
 use serde::{self, Deserialize, Serialize};
 
 /// Represents raw transaction bytes.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/engine/avalanche/vertex#SortHashOf>
 /// ref. <https://docs.rs/zerocopy/latest/zerocopy/trait.AsBytes.html#safety>
 #[derive(Debug, Clone, Deserialize, Serialize, Eq)]
@@ -15,8 +16,9 @@ use serde::{self, Deserialize, Serialize};
 pub struct Data(Vec<u8>);
 
 impl Data {
+    #[must_use]
     pub fn from_slice(d: &[u8]) -> Self {
-        Data(Vec::from(d))
+        Self(Vec::from(d))
     }
 }
 
@@ -27,7 +29,7 @@ impl AsRef<[u8]> for Data {
 }
 
 impl Ord for Data {
-    fn cmp(&self, other: &Data) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         let h1 = hash::sha256(&self.0);
         let h2 = hash::sha256(&other.0);
         h1.cmp(&(h2))
@@ -35,13 +37,13 @@ impl Ord for Data {
 }
 
 impl PartialOrd for Data {
-    fn partial_cmp(&self, other: &Data) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Data {
-    fn eq(&self, other: &Data) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
@@ -59,30 +61,31 @@ impl Hash for Data {
 pub struct DataSlice(Vec<Data>);
 
 impl DataSlice {
+    #[must_use]
     pub fn new(txs: &[Data]) -> Self {
-        DataSlice(Vec::from(txs))
+        Self(Vec::from(txs))
     }
 }
 
 impl Ord for DataSlice {
-    fn cmp(&self, other: &DataSlice) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
     }
 }
 
 impl PartialOrd for DataSlice {
-    fn partial_cmp(&self, other: &DataSlice) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for DataSlice {
-    fn eq(&self, other: &DataSlice) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::raw::test_sort --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `txs::raw::test_sort` --exact --show-output
 #[test]
 fn test_sort() {
     let d1 = <Vec<u8>>::from([0x01, 0x00, 0x00, 0x00]);

@@ -16,7 +16,7 @@ use rustls::pki_types::{CertificateDer, UnixTime};
 use rustls::{pki_types::ServerName, ClientConfig, ClientConnection};
 type Certificate = rustls::pki_types::CertificateDer<'static>;
 
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/network/peer#Start>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/network/peer#Start>
 #[derive(std::clone::Clone)]
 pub struct Connector {
     /// The client configuration of the local/source node for outbound TLS connections.
@@ -43,7 +43,7 @@ impl Connector {
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("failed to create TLS client config '{}'", e),
+                    format!("failed to create TLS client config '{e}'"),
                 )
             })?;
 
@@ -58,11 +58,21 @@ impl Connector {
         info!("[rustls] connecting to {addr}");
 
         let server_name = ServerName::IpAddress(addr.ip().into());
-        let mut conn =
-            rustls::ClientConnection::new(self.client_config.clone(), server_name).unwrap();
+        let mut conn = rustls::ClientConnection::new(self.client_config.clone(), server_name)
+            .map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("failed to create client connection: {e}"),
+                )
+            })?;
 
         {
-            let mut sock = TcpStream::connect(addr).unwrap();
+            let mut sock = TcpStream::connect(addr).map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::ConnectionRefused,
+                    format!("failed to connect to {addr}: {e}"),
+                )
+            })?;
             let mut tls = rustls::Stream::new(&mut conn, &mut sock);
 
             let binding = format!("GET / HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\nAccept-Encoding: identity\r\n\r\n");
@@ -111,13 +121,12 @@ impl Connector {
 
         Ok(Stream {
             addr,
+            conn,
             peer_certificate,
             peer_node_id,
 
             #[cfg(feature = "pem_encoding")]
             peer_certificate_pem,
-
-            conn,
         })
     }
 }
@@ -171,7 +180,7 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
     }
 }
 
-/// RUST_LOG=debug cargo test --package network --lib -- peer::outbound::test_connector --exact --show-output
+/// `RUST_LOG=debug` cargo test --package network --lib -- peer::outbound::test_connector --exact --show-output
 #[test]
 fn test_connector() {
     let _ = env_logger::builder()

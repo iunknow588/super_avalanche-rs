@@ -8,8 +8,8 @@ use hyper::server::conn::AddrIncoming;
 use rustls::server::NoClientAuth;
 use tokio_rustls::rustls::ServerConfig;
 
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/network#Network> "Dispatch"
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.7.11/network/network.go>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/network#Network> "Dispatch"
+/// See: <https://github.com/ava-labs/avalanchego/blob/v1.7.11/network/network.go>
 #[derive(std::clone::Clone)]
 pub struct Listener {
     /// The server configuration of the local/source node for outbound TLS connections.
@@ -34,7 +34,7 @@ impl Listener {
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("failed to create TLS server config '{}'", e),
+                    format!("failed to create TLS server config '{e}'"),
                 )
             })?;
 
@@ -49,7 +49,7 @@ impl Listener {
         log::info!("[rustls] listening on {addr}");
 
         let incoming = AddrIncoming::bind(&addr)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to bind '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to bind '{e}'")))?;
         let local_addr = incoming.local_addr();
 
         Ok(Stream {
@@ -60,7 +60,7 @@ impl Listener {
     }
 }
 
-/// RUST_LOG=debug cargo test --package network --lib -- peer::inbound::test_listener --exact --show-output
+/// `RUST_LOG=debug` cargo test --package network --lib -- peer::inbound::test_listener --exact --show-output
 #[test]
 fn test_listener() {
     let _ = env_logger::builder()

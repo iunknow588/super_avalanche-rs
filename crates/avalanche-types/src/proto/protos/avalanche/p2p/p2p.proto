@@ -181,7 +181,7 @@ message PeerList {
   repeated ClaimedIpPort claimed_ip_ports = 1;
 }
 
-// GetStateSummaryFrontier requests a peer's most recently accepted state
+// `GetStateSummaryFrontier` requests a peer's most recently accepted state
 // summary
 message GetStateSummaryFrontier {
   // Chain being requested from
@@ -192,17 +192,17 @@ message GetStateSummaryFrontier {
   uint64 deadline = 3;
 }
 
-// StateSummaryFrontier is sent in response to a GetStateSummaryFrontier request
+// StateSummaryFrontier is sent in response to a `GetStateSummaryFrontier` request
 message StateSummaryFrontier {
   // Chain being responded from
   bytes chain_id = 1;
-  // Request id of the original GetStateSummaryFrontier request
+  // Request id of the original `GetStateSummaryFrontier` request
   uint32 request_id = 2;
   // The requested state summary
   bytes summary = 3;
 }
 
-// GetAcceptedStateSummary requests a set of state summaries at a set of
+// `GetAcceptedStateSummary` requests a set of state summaries at a set of
 // block heights
 message GetAcceptedStateSummary {
   // Chain bein requested from
@@ -215,11 +215,11 @@ message GetAcceptedStateSummary {
   repeated uint64 heights = 4;
 }
 
-// AcceptedStateSummary is sent in response to GetAcceptedStateSummary
+// `AcceptedStateSummary` is sent in response to GetAcceptedStateSummary
 message AcceptedStateSummary {
   // Chain being responded from
   bytes chain_id = 1;
-  // Request id of the original GetAcceptedStateSummary request
+  // Request id of the original `GetAcceptedStateSummary` request
   uint32 request_id = 2;
   // State summary ids
   repeated bytes summary_ids = 3;
@@ -233,9 +233,9 @@ enum EngineType {
   ENGINE_TYPE_SNOWMAN = 2;
 }
 
-// GetAcceptedFrontier requests the accepted frontier from a peer.
+// `GetAcceptedFrontier` requests the accepted frontier from a peer.
 //
-// Peers should respond to GetAcceptedFrontier with AcceptedFrontier.
+// Peers should respond to `GetAcceptedFrontier` with AcceptedFrontier.
 message GetAcceptedFrontier {
   // Chain being requested from
   bytes chain_id = 1;
@@ -247,9 +247,9 @@ message GetAcceptedFrontier {
   EngineType engine_type = 4;
 }
 
-// AcceptedFrontier contains the remote peer's last accepted frontier.
+// `AcceptedFrontier` contains the remote peer's last accepted frontier.
 //
-// AcceptedFrontier is sent in response to GetAcceptedFrontier.
+// `AcceptedFrontier` is sent in response to `GetAcceptedFrontier`.
 message AcceptedFrontier {
   reserved 4; // Until Cortina upgrade is activated
   // Chain being responded from
@@ -260,10 +260,10 @@ message AcceptedFrontier {
   bytes container_id = 3;
 }
 
-// GetAccepted sends a request with the sender's accepted frontier to a remote
+// `GetAccepted` sends a request with the sender's accepted frontier to a remote
 // peer.
 //
-// Peers should respond to GetAccepted with an Accepted message.
+// Peers should respond to `GetAccepted` with an Accepted message.
 message GetAccepted {
   // Chain being requested from
   bytes chain_id = 1;
@@ -277,16 +277,16 @@ message GetAccepted {
   EngineType engine_type = 5;
 }
 
-// Accepted is sent in response to GetAccepted. The sending peer responds with
-// a subset of container ids from the GetAccepted request that the sending peer
+// Accepted is sent in response to `GetAccepted`. The sending peer responds with
+// a subset of container ids from the `GetAccepted` request that the sending peer
 // has accepted.
 message Accepted {
   reserved 4; // Until Cortina upgrade is activated
   // Chain being responded from
   bytes chain_id = 1;
-  // Request id of the original GetAccepted request
+  // Request id of the original `GetAccepted` request
   uint32 request_id = 2;
-  // Subset of container ids from the GetAccepted request that the sender has
+  // Subset of container ids from the `GetAccepted` request that the sender has
   // accepted
   repeated bytes container_ids = 3;
 }

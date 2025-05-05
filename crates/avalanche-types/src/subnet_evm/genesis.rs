@@ -23,7 +23,7 @@ pub struct Genesis {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_data: Option<String>,
 
-    /// Make sure this is set equal to "ChainConfig.FeeConfig.gas_limit".
+    /// Make sure this is set equal to "`ChainConfig.FeeConfig.gas_limit`".
     /// ref. <https://github.com/ava-labs/subnet-evm/pull/63>
     ///
     /// Use <https://www.rapidtables.com/convert/number/decimal-to-hex.html> to convert.
@@ -61,6 +61,7 @@ pub struct Genesis {
 }
 
 /// On the X-Chain, one AVAX is 10^9  units.
+///
 /// On the P-Chain, one AVAX is 10^9  units.
 /// On the C-Chain, one AVAX is 10^18 units.
 /// "0x204FCE5E3E25026110000000" is "10000000000000000000000000000" (10,000,000,000 AVAX).
@@ -109,8 +110,12 @@ impl Default for Genesis {
 }
 
 impl Genesis {
-    /// Creates a new Genesis object with "keys" number of generated pre-funded keys.
-    pub fn new(seed_eth_addrs: Vec<String>) -> io::Result<Self> {
+    /// Creates a new Genesis object with the given seed Ethereum addresses.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the operation fails.
+    pub fn new(seed_eth_addrs: &[String]) -> io::Result<Self> {
         // maximize total supply
         let max_total_alloc = i128::MAX;
         let total_keys = seed_eth_addrs.len();
@@ -128,7 +133,7 @@ impl Genesis {
         };
 
         let mut allocs = BTreeMap::new();
-        for eth_addr in seed_eth_addrs.iter() {
+        for eth_addr in seed_eth_addrs {
             allocs.insert(
                 eth_addr.trim_start_matches("0x").to_string(),
                 default_alloc.clone(),
@@ -143,21 +148,33 @@ impl Genesis {
         Ok(subnet_evm_genesis)
     }
 
+    /// Encodes the genesis to JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
-    /// Encodes the genesis to bytes.
+    /// Converts the genesis to bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the conversion fails.
     pub fn to_bytes(&self) -> io::Result<Vec<u8>> {
         serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode JSON {e}")))
     }
 
-    /// Saves the current genesis to disk
-    /// and overwrites the file.
+    /// Syncs the genesis to a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be written.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing Genesis to '{}'", file_path);
+        log::info!("syncing Genesis to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -165,7 +182,7 @@ impl Genesis {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -271,7 +288,7 @@ impl Default for ChainConfig {
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FeeConfig {
-    /// Make sure this is set equal to "Genesis.gas_limit".
+    /// Make sure this is set equal to `Genesis.gas_limit`.
     /// ref. <https://github.com/ava-labs/subnet-evm/pull/63>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gas_limit: Option<u64>,
@@ -323,6 +340,8 @@ impl Default for FeeConfig {
     }
 }
 
+/// Contract deployer allow list configuration.
+///
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/contract_deployer_allow_list.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/upgradeable.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/params/precompile_config.go>
@@ -350,6 +369,8 @@ impl Default for ContractDeployerAllowListConfig {
     }
 }
 
+/// Contract native minter configuration.
+///
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/contract_native_minter.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/upgradeable.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/params/precompile_config.go>
@@ -378,6 +399,8 @@ impl Default for ContractNativeMinterConfig {
     }
 }
 
+/// Transaction allow list configuration.
+///
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/tx_allow_list.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/upgradeable.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/params/precompile_config.go>
@@ -405,6 +428,8 @@ impl Default for TxAllowListConfig {
     }
 }
 
+/// Fee manager configuration.
+///
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/fee_config_manager.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/precompile/upgradeable.go>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/master/params/precompile_config.go>
@@ -464,7 +489,7 @@ impl Default for AllocAccount {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- subnet_evm::genesis::test_parse --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- subnet_evm::genesis::test_parse --exact --show-output
 #[test]
 fn test_parse() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -525,5 +550,5 @@ fn test_parse() {
 
     let d = Genesis::default();
     let d = d.encode_json().unwrap();
-    log::info!("{}", d);
+    log::info!("{d}");
 }

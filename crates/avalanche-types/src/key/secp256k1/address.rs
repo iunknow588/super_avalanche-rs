@@ -4,14 +4,16 @@ use crate::hash;
 use primitive_types::H160;
 
 /// ref. <https://eips.ethereum.org/EIPS/eip-55>
+///
 /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/crypto#PubkeyToAddress>
 /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/common#Address.Hex>
-/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/utils/mod.rs> "to_checksum"
+/// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/utils/mod.rs> "`to_checksum`"
+#[must_use]
 pub fn h160_to_eth_address(h160_addr: &H160, chain_id: Option<u8>) -> String {
-    let prefixed_addr = match chain_id {
-        Some(chain_id) => format!("{chain_id}0x{h160_addr:x}"),
-        None => format!("{h160_addr:x}"),
-    };
+    let prefixed_addr = chain_id.map_or_else(
+        || format!("{h160_addr:x}"),
+        |chain_id| format!("{chain_id}0x{h160_addr:x}"),
+    );
 
     let hex_h256 = hex::encode(hash::keccak256(prefixed_addr));
     let hex_h256 = hex_h256.as_bytes();
@@ -32,7 +34,10 @@ pub fn h160_to_eth_address(h160_addr: &H160, chain_id: Option<u8>) -> String {
         })
 }
 
-/// Converts "bech32::encode"d AVAX address to the short address bytes (20-byte) and HRP for network name.
+/// Converts "`bech32::encode`"d AVAX address to the short address bytes (20-byte) and HRP for network name.
+///
+/// # Errors
+/// 如果地址bech32解码或bits转换失败，则返回错误。
 pub fn avax_address_to_short_bytes(chain_alias: &str, addr: &str) -> io::Result<(String, Vec<u8>)> {
     let trimmed = if chain_alias.is_empty() {
         addr.trim().to_string()
@@ -41,24 +46,24 @@ pub fn avax_address_to_short_bytes(chain_alias: &str, addr: &str) -> io::Result<
         let pfx = if chain_alias.ends_with('-') {
             chain_alias.to_string()
         } else {
-            format!("{}-", chain_alias)
+            format!("{chain_alias}-")
         };
         addr.trim_start_matches(&pfx).to_string()
     };
 
     let (hrp, data, _) = bech32::decode(&trimmed)
-        .map_err(|e| Error::new(ErrorKind::Other, format!("failed bech32::decode '{}'", e)))?;
+        .map_err(|e| Error::new(ErrorKind::Other, format!("failed bech32::decode '{e}'")))?;
 
     let convert = bech32::convert_bits(&data, 5, 8, false).map_err(|e| {
         Error::new(
             ErrorKind::Other,
-            format!("failed bech32::convert_bits '{}'", e),
+            format!("failed bech32::convert_bits '{e}'"),
         )
     })?;
     Ok((hrp, convert))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::address::test_avax_address_to_short_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::address::test_avax_address_to_short_bytes` --exact --show-output
 #[test]
 fn test_avax_address_to_short_bytes() {
     let _ = env_logger::builder()
@@ -72,8 +77,8 @@ fn test_avax_address_to_short_bytes() {
 
     let x_avax_addr = pubkey.to_hrp_address(1, "X").unwrap();
     let p_avax_addr = pubkey.to_hrp_address(1, "P").unwrap();
-    log::info!("AVAX X address: {}", x_avax_addr);
-    log::info!("AVAX P address: {}", p_avax_addr);
+    log::info!("AVAX X address: {x_avax_addr}");
+    log::info!("AVAX P address: {p_avax_addr}");
 
     let (hrp, parsed_short_addr) = avax_address_to_short_bytes("X", &x_avax_addr).unwrap();
     assert_eq!(hrp, "avax");

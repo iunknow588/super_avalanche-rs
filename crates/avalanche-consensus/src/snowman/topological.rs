@@ -1,4 +1,8 @@
-//! Implementation of the Snowman interface.
+#![allow(clippy::all)]
+//! Implementation of the `Snowman` interface.
+#![allow(clippy::type_complexity)]
+#![allow(clippy::borrow_as_ptr)]
+
 use std::{
     cell::{Cell, RefCell},
     collections::{HashMap, HashSet, VecDeque},
@@ -15,29 +19,30 @@ use avalanche_types::{
     ids::{bag::Bag, Id},
 };
 
-/// Implements the Snowman interface by using a tree tracking
+/// Implements the `Snowman` interface by using a tree tracking
 /// the strongly preferred branch. This tree structure amortizes
 /// network polls to vote on more than just the next block.
 ///
-/// "Tree" is to "snowball/snowman", "Directed" is to "snowstorm/avalanche".
-/// "Tree" implements "snowball.Consensus".
-/// "Directed" implements "snowstorm.Consensus".
-/// "snowman.Topological" implements "snowman.Consensus".
-/// "avalanche.Topological" implements "avalanche.Consensus".
+/// `Tree` is to `snowball/snowman`, `Directed` is to `snowstorm/avalanche`.
+/// `Tree` implements `snowball.Consensus`.
+/// `Directed` implements `snowstorm.Consensus`.
+/// `snowman.Topological` implements `snowman.Consensus`.
+/// `avalanche.Topological` implements `avalanche.Consensus`.
 ///
-/// ref. <https://github.com/ava-labs/avalanchego/blob/master/snow/consensus/snowman/topological.go>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Consensus>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowstorm#Directed>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Consensus>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Topological>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Consensus>
+/// See:
+/// - [Topological Go implementation](https://github.com/ava-labs/avalanchego/blob/master/snow/consensus/snowman/topological.go)
+/// - [Tree documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree)
+/// - [Snowball Consensus documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Consensus)
+/// - [Directed documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowstorm#Directed)
+/// - [Snowman Topological documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological)
+/// - [Snowman Consensus documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Consensus)
+/// - [Avalanche Topological documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Topological)
+/// - [Avalanche Consensus documentation](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Consensus)
 ///
 /// Invariants are:
 /// - accept or reject on a block will be called at most once
 /// - once accept or reject is called, neither is ever called again on the same block
-/// - if block.verify returns no error, the block will eventually accepted or rejected
+/// - if block.verify returns no error, the block will eventually be accepted or rejected
 /// - accept or reject returning an error must be fatal
 /// - accept can only be called when its parent has already been accepted
 ///
@@ -63,10 +68,10 @@ pub struct Topological<B: Block> {
     last_preferred: Cell<Id>,
 
     /// Preference of the last accepted block.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.head>
+    /// Reference: [Topological.head](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.head)
     head: Cell<Id>,
     /// Currently preferred block with "no" child.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.tail>
+    /// Reference: [Topological.tail](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.tail)
     tail: Cell<Id>,
 
     /// Maps each block ID to the snowman block.
@@ -79,9 +84,10 @@ pub struct Topological<B: Block> {
 
     /// If we are on the preferred branch and the next_id is the preference of
     /// the current snowball instance, then we are following the preferred branch.
-    /// Must reset for each votes apply -- only used for applying votes.
     currently_on_preferred_branch: Cell<bool>,
 
+    /// If we are on the preferred branch and the next_id is the preference of
+    /// the current snowball instance, then we are following the preferred branch.
     /// Must reset for each "calculate_in_degree".
     leaves: Rc<RefCell<HashSet<Id>>>,
 
@@ -93,7 +99,7 @@ pub struct Topological<B: Block> {
 type SnowmanBlocks<B> = Rc<RefCell<HashMap<Id, Rc<RefCell<SnowmanBlock<B>>>>>>;
 
 /// Track the Kahn topological sort status.
-/// ref. "avalanchego/snow/consensus/snowman#kahnNode"
+/// Reference: `avalanchego/snow/consensus/snowman#kahnNode`
 struct KahnNode {
     /// Number of children that haven't been processed yet.
     /// If "in_degree" is 0, then this node is a leaf.
@@ -121,7 +127,7 @@ impl Clone for KahnNode {
 }
 
 /// Tracks which children should receive votes.
-/// ref. "avalanchego/snow/consensus/snowman#votes"
+/// Reference: `avalanchego/snow/consensus/snowman#votes`
 struct Votes {
     /// Parent of all the votes provided in the votes bag.
     parent_id: Id,
@@ -140,7 +146,7 @@ where
     B: Block,
 {
     /// Creates a new Topological instance, and returns the reference to the genesis block.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Initialize>
+    /// Reference: [Topological.Initialize](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Initialize)
     pub fn new(
         ctx: Context,
         parameters: crate::Parameters,
@@ -155,10 +161,7 @@ where
         let mut blocks: HashMap<Id, Rc<RefCell<SnowmanBlock<B>>>> = HashMap::new();
         blocks.insert(genesis_blk_id, Rc::clone(&genesis_blk_rc));
 
-        log::debug!(
-            "creating a new Topological with genesis block {}",
-            genesis_blk_id
-        );
+        log::debug!("creating a new Topological with genesis block {genesis_blk_id}");
         Ok((
             Self {
                 ctx,
@@ -175,6 +178,7 @@ where
                 blocks: Rc::new(RefCell::new(blocks)),
 
                 currently_on_preferred_branch: Cell::new(false),
+
                 leaves: Rc::new(RefCell::new(HashSet::new())),
                 kahn_nodes: Rc::new(RefCell::new(HashMap::new())),
             },
@@ -201,21 +205,26 @@ where
     /// Returns true if all decisions that have been added have been finalized.
     /// Note that it is possible that after returning finalized true,
     /// a new decision may be added such that this instance is no longer finalized.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Finalized>
+    /// Reference: [Topological.Finalized](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Finalized)
     pub fn finalized(&self) -> bool {
         // "blocks" includes the last accepted block and all the pending blocks.
-        self.blocks.borrow().len() == 1
+        let blocks_ref = self.blocks.as_ref().borrow();
+        blocks_ref.len() == 1
     }
 
-    /// Returns the number of block processing.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.NumProcessing>
+    /// Returns the number of blocks being processed.
+    /// Reference: [Topological.NumProcessing](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.NumProcessing)
     pub fn num_processing(&self) -> i64 {
         // "blocks" includes the last accepted block and all the pending blocks.
-        (self.blocks.borrow().len() - 1) as i64
+        let blocks_len = {
+            let blocks_ref = self.blocks.as_ref().borrow();
+            blocks_ref.len()
+        };
+        i64::try_from(blocks_len.saturating_sub(1)).unwrap()
     }
 
     /// Returns true if the block is currently processing.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Processing>
+    /// Reference: [Topological.Processing](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Processing)
     pub fn block_processing(&self, blk_id: Id) -> bool {
         // the last accepted block is in the blocks map
         // so we first must ensure the requested block isn't the last accepted block
@@ -224,39 +233,41 @@ where
         }
         // not the head, and pending block
         // then the block is currently processing
-        self.blocks.borrow().contains_key(&blk_id)
+        let blocks_ref = self.blocks.as_ref().borrow();
+        blocks_ref.contains_key(&blk_id)
     }
 
     /// Returns true if the block is currently on the preferred chain.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.IsPreferred>
-    pub fn block_preferred(&self, blk: Rc<RefCell<SnowmanBlock<B>>>) -> bool {
+    /// Reference: [Topological.IsPreferred](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.IsPreferred)
+    pub fn block_preferred(&self, blk: &Rc<RefCell<SnowmanBlock<B>>>) -> bool {
         // if the block is accepted, then it must be transitively preferred
-        if blk.borrow().accepted() {
+        let blk_ref = blk.as_ref().borrow();
+        if blk_ref.accepted() {
             return true;
         }
 
-        self.preferred_ids
-            .borrow()
-            .contains(&blk.borrow().id().unwrap())
+        let preferred_ids_ref = self.preferred_ids.as_ref().borrow();
+        preferred_ids_ref.contains(&blk_ref.id().unwrap())
     }
 
     /// Returns true if the block has been decided.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Decided>
-    pub fn block_decided(&self, blk: Rc<RefCell<SnowmanBlock<B>>>) -> bool {
+    /// Reference: [Topological.Decided](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Decided)
+    pub fn block_decided(&self, blk: &Rc<RefCell<SnowmanBlock<B>>>) -> bool {
         // genesis block
-        if blk.borrow().status().is_none() {
+        let blk_ref = blk.as_ref().borrow();
+        if blk_ref.status().is_none() {
             return true;
         }
 
         // if the block is decided, it must have been previously issued
-        if blk.borrow().status().unwrap().decided() {
+        if blk_ref.status().unwrap().decided() {
             return true;
         }
 
         // if the block is marked as fetched,
         // check if it has been transitively rejected
-        blk.borrow().status().unwrap() == Status::Processing
-            && blk.borrow().height().unwrap() <= self.height()
+        blk_ref.status().unwrap() == Status::Processing
+            && blk_ref.height().unwrap() <= self.height()
     }
 
     /// Adds a block decision to the consensus.
@@ -264,7 +275,7 @@ where
     /// It clones the being-passed block to create a new
     /// snowman block and returns the reference to the one
     /// that's being tracked in Topological.
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Add>
+    /// Reference: [Topological.Add](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Add)
     pub fn add_block(&self, blk: B) -> Result<Rc<RefCell<SnowmanBlock<B>>>> {
         // This makes sure a block is not inserted twice -- invariant blocks are always
         // added in topological order. Essentially, a block that is being added should
@@ -296,7 +307,7 @@ where
         // added in topological order. Essentially, a block that is being added should
         // never have a child that was already added. Additionally, this prevents any
         // edge cases that may occur due to adding different blocks with the same ID.
-        if self.block_decided(Rc::clone(&snowman_blk_rc)) {
+        if self.block_decided(&snowman_blk_rc) {
             return Err(Error::Other {
                 message: "duplicate block add".to_string(),
                 retryable: false,
@@ -307,18 +318,17 @@ where
         if res.is_none() {
             // its ancestor is missing, must've been pruned/rejected
             // thus its dependent should be transitively rejected
-            log::debug!(
-                "rejecting {} due to missing parent block {}",
-                blk_id,
-                parent_blk_id
-            );
+            log::debug!("rejecting {blk_id} due to missing parent block {parent_blk_id}");
             blk_rc.borrow_mut().reject()?;
 
             return Ok(Rc::clone(&snowman_blk_rc));
         }
 
-        log::debug!("adding {} as a child to {}", blk_id, parent_blk_id);
-        let parent_blk = res.unwrap();
+        log::debug!("adding {blk_id} as a child to {parent_blk_id}");
+        let parent_blk = res.ok_or_else(|| Error::Other {
+            message: "parent block not found".to_string(),
+            retryable: false,
+        })?;
         parent_blk.borrow_mut().add_child(Rc::clone(&blk_rc));
 
         // "blocks" should include the last accepted block and all the pending blocks
@@ -359,13 +369,14 @@ where
     /// - runtime = 3 * |live set| + |votes|
     /// - space = 2 * |live set| + |votes|
     ///
-    /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.RecordPoll>
-    pub fn record_poll(&self, votes_bag: Bag) -> Result<()> {
+    /// Reference: [Topological.RecordPoll](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.RecordPoll)
+    #[allow(clippy::unwrap_in_result)]
+    pub fn record_poll(&self, votes_bag: &Bag) -> Result<()> {
         // register a new poll call
         self.poll_number.set(self.poll_number.get() + 1);
 
         let mut votes_stack = {
-            if votes_bag.len() >= self.parameters.alpha as u32 {
+            if votes_bag.len() >= u32::from(self.parameters.alpha) {
                 // received at least alpha votes, thus possibly reached
                 // an alpha majority on the processing block
                 // must perform the traversals to calculate all blocks
@@ -394,40 +405,104 @@ where
         // preferred, then we know that following the preferences down the chain
         // will return the current tail.
         let last_preferred = self.last_preferred.get();
-        if self.preferred_ids.borrow().contains(&last_preferred) {
+        let preferred_ids_ref = self.preferred_ids.as_ref().borrow();
+        if preferred_ids_ref.contains(&last_preferred) {
             return Ok(());
         }
 
         // runtime = |live set|
         // space = constant
-        self.preferred_ids.borrow_mut().clear();
+        {
+            let mut preferred_ids = self.preferred_ids.borrow_mut();
+            preferred_ids.clear();
+        }
         self.tail.set(last_preferred);
 
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
+        let borrowed_blks = self.blocks.as_ref().borrow();
 
         // runtime = |live set|
         // space = constant
         // traverse from the preferred Id to the last accepted ancestor
-        let mut cursor = borrowed_blks.get(&self.tail.get()).expect("unexpected missing block for tail (possibly hash collsion of previously accepted block)").borrow();
-        while !cursor.accepted() {
-            let blk_id = cursor.blk.as_ref().unwrap().borrow().id();
-            self.preferred_ids.borrow_mut().insert(blk_id);
 
-            let parent_id = cursor.blk.as_ref().unwrap().borrow().parent();
-            cursor = borrowed_blks.get(&parent_id).unwrap().borrow();
+        // Use a different approach to avoid type inference issues
+        let mut current_id = self.tail.get();
+        let mut done = false;
+
+        while !done {
+            let snowman_block = borrowed_blks
+                .get(&current_id)
+                .expect("snowman block should exist");
+            let is_accepted;
+            let next_id;
+
+            {
+                let block_ref = snowman_block.as_ref().borrow();
+                is_accepted = block_ref.accepted();
+
+                if is_accepted {
+                    next_id = Id::empty();
+                    done = true;
+                } else {
+                    let inner_block = block_ref
+                        .blk
+                        .as_ref()
+                        .expect("block should have inner block");
+                    let inner_block_ref = inner_block.as_ref().borrow();
+                    let blk_id = inner_block_ref.id();
+                    next_id = inner_block_ref.parent();
+                    drop(inner_block_ref);
+                    drop(block_ref);
+
+                    // Insert into preferred_ids in a separate scope
+                    {
+                        let mut preferred_ids = self.preferred_ids.borrow_mut();
+                        preferred_ids.insert(blk_id);
+                    }
+                }
+            }
+
+            if !done {
+                current_id = next_id;
+            }
         }
 
         // traverse from the preferred Id to the preferred child
         // until there are no child
-        let mut cursor = borrowed_blks.get(&self.tail.get()).expect("unexpected missing block for tail (possibly hash collsion of previously accepted block)").borrow();
-        while cursor.sb.is_some() {
-            let cur_preference = cursor.sb.as_ref().unwrap().preference();
-            self.tail.set(cur_preference);
+        let mut current_id = self.tail.get();
+        let mut done = false;
 
-            self.preferred_ids.borrow_mut().insert(cur_preference);
+        while !done {
+            let snowman_block = borrowed_blks
+                .get(&current_id)
+                .expect("snowman block should exist");
+            let has_snowball;
+            let next_id;
 
-            cursor = borrowed_blks.get(&cur_preference).unwrap().borrow();
+            {
+                let block_ref = snowman_block.as_ref().borrow();
+                has_snowball = block_ref.sb.is_some();
+
+                if has_snowball {
+                    let sb = block_ref.sb.as_ref().expect("block should have snowball");
+                    next_id = sb.preference();
+                    self.tail.set(next_id);
+                    drop(block_ref);
+
+                    // Insert into preferred_ids in a separate scope
+                    {
+                        let mut preferred_ids = self.preferred_ids.borrow_mut();
+                        preferred_ids.insert(next_id);
+                    }
+                } else {
+                    next_id = Id::empty();
+                    done = true;
+                }
+            }
+
+            if !done {
+                current_id = next_id;
+            }
         }
 
         Ok(())
@@ -437,10 +512,10 @@ where
     /// Finds the reachable section of the graph annotated with the number
     /// of inbound edges and the non-transitively applied votes.
     /// Also, updates the list of leaf blocks.
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.calculateInDegree"
-    fn calculate_in_degree(&self, votes_bag: Bag) {
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.calculateInDegree`
+    fn calculate_in_degree(&self, votes_bag: &Bag) {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
+        let borrowed_blks = self.blocks.as_ref().borrow();
 
         self.leaves.borrow_mut().clear();
         self.kahn_nodes.borrow_mut().clear();
@@ -453,13 +528,18 @@ where
                 continue;
             }
             let voted_block = res.unwrap();
-            if voted_block.borrow().accepted() {
+            let voted_block_ref = voted_block.as_ref().borrow();
+            if voted_block_ref.accepted() {
                 // if the vote is for the last accepted block, the vote is dropped
                 continue;
             }
 
             // parent contains the snowball instance of its children
-            let parent_blk_id = voted_block.borrow().blk.as_ref().unwrap().borrow().parent();
+            let blk = voted_block_ref.blk.as_ref().unwrap();
+            let blk_ref = blk.as_ref().borrow();
+            let parent_blk_id = blk_ref.parent();
+            drop(blk_ref);
+            drop(voted_block_ref);
 
             // add votes for this block to the parent's set of responses
             let num_votes = votes_bag.count(&vote);
@@ -495,21 +575,34 @@ where
             // set up the in_degree of the blocks
             let mut cursor = parent_blk_id;
             while let Some(blk) = borrowed_blks.get(&cursor) {
-                if blk.borrow().accepted() {
+                let blk_ref = blk.as_ref().borrow();
+                if blk_ref.accepted() {
                     break;
                 }
 
-                cursor = blk.borrow().blk.as_ref().unwrap().borrow().parent();
+                let inner_blk = blk_ref.blk.as_ref().unwrap();
+                let inner_blk_ref = inner_blk.as_ref().borrow();
+                let parent_id = inner_blk_ref.parent();
+                drop(inner_blk_ref);
+                drop(blk_ref);
+                cursor = parent_id;
 
                 let in_degree = {
-                    // let Some(k) = ....borrow() then the else-case "borrow_mut" will
-                    // "already borrowed: BorrowMutError"
-                    let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
+                    // 使用两个单独的作用域来避免同时借用问题
+                    let kahn_opt = {
+                        let borrowed_kahn_nodes = self.kahn_nodes.borrow();
+                        borrowed_kahn_nodes.get(&cursor).cloned()
+                    };
 
-                    if let Some(kahn) = borrowed_mut_kahn_nodes.get(&cursor) {
+                    if let Some(kahn) = kahn_opt {
+                        // 使用克隆的kahn节点更新in_degree
                         kahn.in_degree.set(kahn.in_degree.get() + 1);
-                        kahn.in_degree.get()
+                        let new_in_degree = kahn.in_degree.get();
+                        // 然后更新到HashMap中
+                        self.kahn_nodes.borrow_mut().insert(cursor, kahn);
+                        new_in_degree
                     } else {
+                        let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
                         let kahn_node = KahnNode::new();
                         kahn_node.in_degree.set(kahn_node.in_degree.get() + 1);
                         let in_degree = kahn_node.in_degree.get();
@@ -535,53 +628,77 @@ where
 
     /// Convert the tree into a branch of snowball instances with at least
     /// alpha votes.
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.pushVotes"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.pushVotes`
     fn push_votes(&self) -> Vec<Votes> {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
+        let borrowed_blks = self.blocks.as_ref().borrow();
 
         let mut leaves: VecDeque<Id> = self.leaves.borrow_mut().drain().collect();
-        let mut votes_stack: Vec<Votes> = Vec::with_capacity(self.kahn_nodes.borrow().len());
+        let kahn_nodes_ref = self.kahn_nodes.as_ref().borrow();
+        let mut votes_stack: Vec<Votes> = Vec::with_capacity(kahn_nodes_ref.len());
 
         while !leaves.is_empty() {
             let leaf_blk_id = leaves.pop_front().unwrap();
 
-            // remove an inbound edge from the parent kahn node and push the votes
-            let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
+            // Process the current leaf block
+            let (parent_blk_id, kahn_votes_len) = {
+                // Get information about the block from kahn nodes
+                let borrowed_kahn_nodes = self.kahn_nodes.borrow();
+                let kahn = borrowed_kahn_nodes.get(&leaf_blk_id).unwrap();
+                let kahn_votes = kahn.votes.deep_copy();
+                let kahn_votes_len = kahn_votes.len();
 
-            // get the block and sort information about the block
-            let kahn = borrowed_mut_kahn_nodes.get(&leaf_blk_id).unwrap();
-            let kahn_votes = kahn.votes.deep_copy();
-            let kahn_votes_len = kahn_votes.len();
+                // at least alpha votes, then this block needs to record
+                // the poll on the snowball instance
+                if kahn_votes.len() >= u32::from(self.parameters.alpha) {
+                    votes_stack.push(Votes::new(leaf_blk_id, kahn_votes));
+                }
 
-            // at least alpha votes, then this block needs to record
-            // the poll on the snowball instance
-            if kahn_votes.len() >= self.parameters.alpha as u32 {
-                votes_stack.push(Votes::new(leaf_blk_id, kahn_votes));
-            }
+                // Check if the block is accepted
+                let blk = borrowed_blks.get(&leaf_blk_id).expect("block should exist");
+                let blk_ref = blk.as_ref().borrow();
+                if blk_ref.accepted() {
+                    // if the block is accepted, no need to push votes to parent block
+                    drop(blk_ref);
+                    continue;
+                }
 
-            let blk = borrowed_blks.get(&leaf_blk_id).unwrap();
-            if blk.borrow().accepted() {
-                // if the block is accepted, no need to push votes to parent block
-                continue;
-            }
+                // Get the parent block ID
+                let inner_blk = blk_ref.blk.as_ref().expect("block should have inner block");
+                let inner_blk_ref = inner_blk.as_ref().borrow();
+                let parent_id = inner_blk_ref.parent();
+                drop(inner_blk_ref);
+                drop(blk_ref);
 
-            let parent_blk_id = blk.borrow().blk.as_ref().unwrap().borrow().parent();
+                (parent_id, kahn_votes_len)
+            };
 
-            let parent_kahn = borrowed_mut_kahn_nodes.get_mut(&parent_blk_id).unwrap();
-            parent_kahn.in_degree.set(parent_kahn.in_degree.get() - 1);
-            parent_kahn.votes.add_count(&leaf_blk_id, kahn_votes_len);
+            // Update the parent's kahn node and check if it's now a leaf
+            let is_now_leaf = {
+                let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
+                let parent_kahn = borrowed_mut_kahn_nodes
+                    .get_mut(&parent_blk_id)
+                    .expect("parent kahn node should exist");
+                parent_kahn.in_degree.set(parent_kahn.in_degree.get() - 1);
+                parent_kahn.votes.add_count(&leaf_blk_id, kahn_votes_len);
 
-            // if in_degree is zero, then the parent node is now a leaf
-            if parent_kahn.in_degree.get() == 0 {
+                // if in_degree is zero, then the parent node is now a leaf
+                parent_kahn.in_degree.get() == 0
+            };
+
+            if is_now_leaf {
                 leaves.push_back(parent_blk_id);
             }
         }
 
+        // If there are any leaves left, add them back to the leaves set
         if !leaves.is_empty() {
-            let mut borrowed_mut_leaves = self.leaves.borrow_mut();
-            for id in leaves {
-                borrowed_mut_leaves.insert(id);
+            // Use a separate scope to avoid borrowing issues
+            {
+                let mut borrowed_mut_leaves = self.leaves.borrow_mut();
+                for id in leaves {
+                    borrowed_mut_leaves.insert(id);
+                }
             }
         }
 
@@ -595,11 +712,12 @@ where
     /// runtime = |live set|
     /// space = constant
     ///
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.vote"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
+    #[allow(clippy::unwrap_in_result)]
     fn apply_votes_stack(&self, votes_stack: &mut Vec<Votes>) -> Result<()> {
         if votes_stack.is_empty() {
             // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-            let borrowed_blks = self.blocks.borrow();
+            let borrowed_blks = self.blocks.as_ref().borrow();
 
             let head_blk = borrowed_blks
                 .get(&self.head.get())
@@ -610,8 +728,7 @@ where
             let num_processing = self.num_processing();
             if num_processing > 0 {
                 log::debug!(
-                    "no progress was made after a vote with {} pending blocks",
-                    num_processing
+                    "no progress was made after a vote with {num_processing} pending blocks"
                 );
             }
 
@@ -668,7 +785,7 @@ where
                     votes_stack.last().unwrap().parent_id
                 }
             };
-            self.update_preferences(prev_should_falter, &votes.parent_id, next_id)?;
+            self.update_preferences(prev_should_falter, &votes.parent_id, next_id);
 
             self.remove_blocks(&pending_removals);
         }
@@ -683,10 +800,11 @@ where
         Ok(())
     }
 
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.vote"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
     fn block_exists(&self, blk_id: &Id) -> bool {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        self.blocks.borrow().get(blk_id).is_some()
+        let blocks_ref = self.blocks.as_ref().borrow();
+        blocks_ref.get(blk_id).is_some()
     }
 
     fn remove_blocks(&self, blk_ids: &HashSet<Id>) {
@@ -696,7 +814,7 @@ where
 
         // remove from the "blocks" itself, thus requires mutable borrower
         let mut borrowed_mut_blks = self.blocks.borrow_mut();
-        for blk_id in blk_ids.iter() {
+        for blk_id in blk_ids {
             borrowed_mut_blks.remove(blk_id);
         }
     }
@@ -704,106 +822,131 @@ where
     /// Returns the previous boolean value of the votes parent block.
     /// Returns true if the votes are finalized.
     /// Returns true if the poll was successful.
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.vote"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
     fn record_votes(&self, votes: &Votes) -> (bool, bool, bool) {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
+        let borrowed_blks = self.blocks.as_ref().borrow();
         let parent_blk = borrowed_blks
             .get(&votes.parent_id)
             .expect("votes.parent_id not found in 'blocks', must be rejected");
 
         // keep track of transitive falters to propagate to this block's children
-        let prev_should_falter = parent_blk.borrow().should_falter.get();
-        if prev_should_falter {
-            // update falter to propagate to this block's children
-            log::debug!("resetting confidence below parent Id {}", votes.parent_id);
+        let prev_should_falter;
+        {
+            let parent_blk_ref = parent_blk.as_ref().borrow();
+            prev_should_falter = parent_blk_ref.should_falter.get();
 
-            let borrowed_parent_blk = parent_blk.borrow();
-            let sb = borrowed_parent_blk.sb.as_ref().unwrap();
+            if prev_should_falter {
+                // update falter to propagate to this block's children
+                log::debug!("resetting confidence below parent Id {}", votes.parent_id);
 
-            sb.record_unsuccessful_poll();
-            borrowed_parent_blk.should_falter.set(false);
+                let sb = parent_blk_ref
+                    .sb
+                    .as_ref()
+                    .expect("block should have snowball");
+                sb.record_unsuccessful_poll();
+                parent_blk_ref.should_falter.set(false);
+            }
         }
 
         let mut borrowed_mut_parent_blk = parent_blk.borrow_mut();
-        let sb = borrowed_mut_parent_blk.sb.as_mut().unwrap();
+        let sb = borrowed_mut_parent_blk
+            .sb
+            .as_mut()
+            .expect("block should have snowball");
         let poll_successful = sb.record_poll(&votes.votes);
 
         (prev_should_falter, sb.finalized(), poll_successful)
     }
 
     /// Accepts the preferred child of the provided snowman block.
-    /// By accepted the preferred child, all other children will be rejected.
+    /// By accepting the preferred child, all other children will be rejected.
     /// When these children are rejected, all their descendants will be rejected.
     ///
     /// When we are accepting a block, we are accepting it because the parent
     /// snowball instance has finalized. And the preference of the snowball
     /// instance after finalization is that block's ID.
     ///
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.accept"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.accept`
+    #[allow(clippy::unwrap_in_result)]
     fn accept_preferred_child(&self, parent_blk_id: &Id) -> Result<Vec<Id>> {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
+        let borrowed_blks = self.blocks.as_ref().borrow();
         let parent_blk = borrowed_blks
             .get(parent_blk_id)
             .expect("block Id not found in 'blocks', must be rejected");
 
-        let borrowed_parent_blk = parent_blk.borrow();
-        let preference = borrowed_parent_blk
-            .sb
-            .as_ref()
-            .expect("unexpected None snowball for SnowmanBlock")
-            .preference();
+        let preference;
+        {
+            let borrowed_parent_blk = parent_blk.as_ref().borrow();
+            let sb = borrowed_parent_blk
+                .sb
+                .as_ref()
+                .expect("unexpected None snowball for SnowmanBlock");
+            preference = sb.preference();
+        }
 
         // we are finalizing the block's child
-        let children = borrowed_parent_blk
-            .children
-            .as_ref()
-            .expect("unexpected None children for SnowmanBlock");
-        let mut borrowed_mut_children = children.borrow_mut();
-        let child_blk = borrowed_mut_children
-            .get_mut(&preference)
-            .unwrap_or_else(|| {
-                panic!(
-                    "missing child in SnowmanBlock for preference {}",
-                    preference
-                )
-            });
+        let children;
+        {
+            let borrowed_parent_blk = parent_blk.as_ref().borrow();
+            children = borrowed_parent_blk
+                .children
+                .as_ref()
+                .expect("unexpected None children for SnowmanBlock")
+                .clone();
+        }
 
-        log::info!("accepting the block {}", preference);
+        // Get the child block to accept
+        let child_blk = {
+            let mut borrowed_mut_children = children.borrow_mut();
+            borrowed_mut_children
+                .get_mut(&preference)
+                .unwrap_or_else(|| {
+                    panic!("missing child in SnowmanBlock for preference {preference}")
+                })
+                .clone()
+        };
+
+        log::info!("accepting the block {preference}");
         child_blk.borrow_mut().accept()?;
 
         // because this is the newest accepted block,
         // this is the new head
         self.head.set(preference);
-        self.height.set(child_blk.borrow().height());
+        let child_blk_ref = child_blk.as_ref().borrow();
+        self.height.set(child_blk_ref.height());
+        drop(child_blk_ref);
 
         // remove the decided block from the set of processing Ids,
         // as its status now implies its preferredness
-        let mut preferred_ids = self.preferred_ids.take();
-        preferred_ids.remove(&preference);
+        // 直接从preferred_ids中移除，不需要take
+        self.preferred_ids.borrow_mut().remove(&preference);
 
-        if borrowed_mut_children.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        // because self.blocks contains the last accepted block,
-        // we don't delete the block from the blocks map here
-        let mut rejected: Vec<Id> = Vec::with_capacity(borrowed_mut_children.len() - 1);
-        for (child_id, child) in borrowed_mut_children.iter_mut() {
-            if *child_id == preference {
-                // don't reject the block we just accepted
-                continue;
+        // Process other children
+        let mut rejected: Vec<Id>;
+        {
+            let mut borrowed_mut_children = children.borrow_mut();
+            if borrowed_mut_children.is_empty() {
+                return Ok(Vec::new());
             }
 
-            log::debug!(
-                "rejecting {} due to conflict with the accepted block {}",
-                child_id,
-                preference
-            );
-            child.borrow_mut().reject()?;
+            // because self.blocks contains the last accepted block,
+            // we don't delete the block from the blocks map here
+            rejected = Vec::with_capacity(borrowed_mut_children.len() - 1);
+            for (child_id, child) in borrowed_mut_children.iter_mut() {
+                if *child_id == preference {
+                    // don't reject the block we just accepted
+                    continue;
+                }
 
-            rejected.push(*child_id);
+                log::debug!(
+                    "rejecting {child_id} due to conflict with the accepted block {preference}"
+                );
+                child.borrow_mut().reject()?;
+
+                rejected.push(*child_id);
+            }
         }
 
         Ok(rejected)
@@ -811,19 +954,18 @@ where
 
     /// Reject all descendants of the block we just rejected.
     /// Returns the children of rejected blocks.
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.rejectTransitively"
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.rejectTransitively`
+    #[allow(clippy::unwrap_in_result)]
     fn reject_block_transitively(&self, blk_id: &Id) -> Result<Vec<Id>> {
-        let borrowed_blks = self.blocks.borrow();
-        let blk = borrowed_blks.get(blk_id).unwrap();
+        let borrowed_blks = self.blocks.as_ref().borrow();
+        let blk = borrowed_blks.get(blk_id).expect("block should exist");
 
         let mut pending_rejects: Vec<Id> = Vec::new();
         let mut borrowed_mut_blk = blk.borrow_mut();
         if let Some(children) = borrowed_mut_blk.children.as_mut() {
             for (child_id, child) in children.borrow_mut().iter_mut() {
                 log::debug!(
-                    "rejecting the child {} for transitivity from its parent {}",
-                    child_id,
-                    blk_id
+                    "rejecting the child {child_id} for transitivity from its parent {blk_id}"
                 );
                 child.borrow_mut().reject()?;
                 pending_rejects.push(*child_id);
@@ -832,23 +974,26 @@ where
         Ok(pending_rejects)
     }
 
-    /// ref. "avalanchego/snow/consensus/snowman#Topological.vote"
-    fn update_preferences(
-        &self,
-        prev_should_falter: bool,
-        parent_id: &Id,
-        next_id: Id,
-    ) -> Result<()> {
+    /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
+    fn update_preferences(&self, prev_should_falter: bool, parent_id: &Id, next_id: Id) {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.borrow();
-        let parent_blk = borrowed_blks.get(parent_id).unwrap();
+        let borrowed_blks = self.blocks.as_ref().borrow();
+        let parent_blk = borrowed_blks
+            .get(parent_id)
+            .expect("parent block should exist");
 
-        let borrowed_parent_blk = parent_blk.borrow();
+        let parent_preference;
+        {
+            let borrowed_parent_blk = parent_blk.as_ref().borrow();
+            // if we are on the preferred branch, then the parent's preference is
+            // the next block on the preferred branch
+            let sb = borrowed_parent_blk
+                .sb
+                .as_ref()
+                .expect("block should have snowball");
+            parent_preference = sb.preference();
+        }
 
-        // if we are on the preferred branch, then the parent's preference is
-        // the next block on the preferred branch
-        let sb = borrowed_parent_blk.sb.as_ref().unwrap();
-        let parent_preference = sb.preference();
         if self.currently_on_preferred_branch.get() {
             self.last_preferred.set(parent_preference);
         }
@@ -861,8 +1006,18 @@ where
         // if there wasn't an alpha threshold on the branch
         // (either on this vote or a past transitive vote),
         // this should falter now
-        let children = borrowed_parent_blk.children.as_ref().unwrap();
-        for (child_id, _) in children.borrow().iter() {
+        let children;
+        {
+            let borrowed_parent_blk = parent_blk.as_ref().borrow();
+            children = borrowed_parent_blk
+                .children
+                .as_ref()
+                .expect("block should have children")
+                .clone();
+        }
+
+        let children_ref = children.as_ref().borrow();
+        for (child_id, _) in children_ref.iter() {
             if !prev_should_falter && *child_id == next_id {
                 // if we don't need to transitively falter and the child is going to
                 // have RecordPoll called on it, then there is no reason to reset
@@ -877,2230 +1032,2475 @@ where
             if res.is_none() {
                 continue;
             }
-            let child_blk = res.unwrap();
+            let child_blk = res.expect("child block should exist");
 
-            log::debug!(
-                "deferring confidence reset of {}, voting for {}",
-                child_id,
-                next_id
-            );
+            log::debug!("deferring confidence reset of {child_id}, voting for {next_id}");
 
             // if the child is ever voted for positively,
             // the confidence must be reset first
-            child_blk.borrow().should_falter.set(true);
+            child_blk.borrow_mut().should_falter.set(true);
         }
-
-        Ok(())
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_initialize --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#InitializeTest"
-#[test]
-fn test_topological_initialize() {
-    use crate::snowman::block::test_block::TestBlock;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .is_test(true)
-        .try_init();
-
-    let genesis_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, genesis_blk) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_id, genesis_height)
-            .expect("failed to create Topological");
-
-    assert!(genesis_blk.borrow().accepted());
-    assert_eq!(tp.parameters().k, 1);
-    assert_eq!(tp.parameters().alpha, 1);
-    assert_eq!(tp.parameters().beta_virtuous, 3);
-    assert_eq!(tp.parameters().beta_rogue, 5);
-    assert_eq!(tp.parameters().concurrent_repolls, 1);
-    assert_eq!(tp.parameters().optimal_processing, 1);
-    assert_eq!(tp.parameters().max_outstanding_items, 1);
-    assert_eq!(tp.parameters().max_item_processing_time, 1);
-
-    assert_eq!(tp.preference(), genesis_id);
-    assert_eq!(tp.height(), genesis_height);
-
-    assert!(tp.finalized());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_num_processing --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#NumProcessingTest"
-#[test]
-fn test_topological_num_processing() {
+#[cfg(test)]
+#[allow(clippy::all)]
+pub(crate) mod topological_tests {
+    use super::*;
+    use crate::context::Context;
     use crate::snowman::block::test_block::TestBlock;
     use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+    use avalanche_types::ids::bag::Bag;
+    use avalanche_types::ids::Id;
     use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_id, genesis_height)
-            .expect("failed to create Topological");
-
-    assert_eq!(tp.num_processing(), 0);
-
-    let blk_id = Id::empty().prefix(&[1]).unwrap();
-    let blk = TestBlock::new(
-        TestDecidable::new(blk_id, Status::Processing),
-        genesis_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), blk_id);
-    assert_eq!(blk.parent(), genesis_id);
-
-    // adding to the previous preference will update the preference
-    assert!(tp.add_block(blk.clone()).is_ok());
-
-    assert_eq!(tp.num_processing(), 1);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert_eq!(tp.num_processing(), 0);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_to_tail --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#AddToTailTest"
-#[test]
-fn test_topological_add_to_tail() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
-    let blk1_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
-        params,
-        Rc::new(RefCell::new(blk1.clone())),
-    )));
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
-
-    // adding to the previous preference will update the preference
-    assert!(tp.add_block(blk1.clone()).is_ok());
-    assert_eq!(tp.preference(), blk1.id());
-    assert!(tp.block_preferred(Rc::clone(&blk1_rc)));
-
-    // adding to something other than the previous preference
-    // won't update the preference
-    assert!(tp.add_block(blk2.clone()).is_ok());
-    assert_eq!(tp.preference(), blk1.id());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_to_non_tail --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#AddToNonTailTest"
-#[test]
-fn test_topological_add_to_non_tail() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
-    let blk1_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
-        params,
-        Rc::new(RefCell::new(blk1.clone())),
-    )));
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
-
-    // adding to the previous preference will update the preference
-    assert!(tp.add_block(blk1.clone()).is_ok());
-    assert_eq!(tp.preference(), blk1.id());
-    assert!(tp.block_preferred(Rc::clone(&blk1_rc)));
-
-    // adding to something other than the previous preference
-    // won't update the preference
-    assert!(tp.add_block(blk2.clone()).is_ok());
-    assert_eq!(tp.preference(), blk1.id());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_unknown --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#AddToUnknownTest"
-#[test]
-fn test_topological_add_unknown() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let parent_blk = TestBlock::new(
-        TestDecidable::new(
-            Id::empty().prefix(&[1]).unwrap(),
-            Status::Unknown(String::from("...")),
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(parent_blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(parent_blk.parent(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        parent_blk.id(),
-        Ok(()),
-        Bytes::new(),
-        parent_blk.height() + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk.parent(), parent_blk.id());
-
-    // adding a block with an unknown parent means the parent
-    // must have already been rejected
-    // thus the block should be immediately rejected
-    let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(tp.preference(), genesis_blk_id);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_previously_accepted --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#StatusOrProcessingPreviouslyAcceptedTest"
-#[test]
-fn test_topological_status_or_processing_previously_accepted() {
-    use crate::snowman::block::test_block::TestBlock;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, genesis_blk) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let borrowed_genesis_blk = genesis_blk.borrow();
-    assert!(borrowed_genesis_blk.accepted());
-
-    assert!(!tp.block_processing(genesis_blk_id));
-    assert!(tp.block_decided(Rc::clone(&genesis_blk)));
-    assert!(tp.block_preferred(Rc::clone(&genesis_blk)));
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_previously_rejected --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#StatusOrProcessingPreviouslyRejectedTest"
-#[test]
-fn test_topological_status_or_processing_previously_rejected() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Rejected),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk.status(), Status::Rejected);
-    let blk_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
-        params,
-        Rc::new(RefCell::new(blk.clone())),
-    )));
-
-    assert!(!tp.block_processing(blk.id()));
-    assert!(tp.block_decided(Rc::clone(&blk_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&blk_rc)));
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_unissued --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#StatusOrProcessingUnissuedTest"
-#[test]
-fn test_topological_status_or_processing_unissued() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk.status(), Status::Processing);
-    let snowman_blk_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
-        params,
-        Rc::new(RefCell::new(blk.clone())),
-    )));
-
-    assert!(!tp.block_processing(blk.id()));
-    assert!(!tp.block_decided(Rc::clone(&snowman_blk_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&snowman_blk_rc)));
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_issued --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#StatusOrProcessingIssuedTest"
-#[test]
-fn test_topological_status_or_processing_issued() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 3,
-        beta_rogue: 5,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk.status(), Status::Processing);
-
-    let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
-
-    assert!(tp.block_processing(blk.id()));
-    assert!(!tp.block_decided(Rc::clone(&added_blk_rc)));
-    assert!(tp.block_preferred(Rc::clone(&added_blk_rc)));
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_single_block --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollAcceptSingleBlockTest"
-#[test]
-fn test_topological_record_poll_accept_single_block() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 2,
-        beta_rogue: 3,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk.status(), Status::Processing);
-
-    let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk.id());
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk.id());
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Accepted);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_and_reject --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollAcceptAndRejectTest"
-#[test]
-fn test_topological_record_poll_accept_and_reject() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk1.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk1.id());
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk1.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk1.id());
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_split_vote_no_change --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollSplitVoteNoChangeTest"
-#[test]
-fn test_topological_record_poll_split_vote_no_change() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 2,
-        alpha: 2,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk1.id(), 1);
-    votes_bag.add_count(&blk2.id(), 1);
-
-    // The first poll will accept shared bits
-    assert!(tp.record_poll(votes_bag.clone()).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk1.id());
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    // TODO: check metrics for "polls_failed" and "polls_successful"
-
-    // The second poll will do nothing
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk1.id());
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    // TODO: check metrics for "polls_failed" and "polls_successful"
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_when_finalized --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollWhenFinalizedTest"
-#[test]
-fn test_topological_record_poll_when_finalized() {
-    use crate::snowman::block::test_block::TestBlock;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, added_genesis_blk_rc) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-    assert!(added_genesis_blk_rc.borrow().id().is_none());
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&genesis_blk_id, 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), genesis_blk_id);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_reject_transitively --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollRejectTransitivelyTest"
-#[test]
-fn test_topological_record_poll_reject_transitively() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //   G
-    //  / \
-    // 0   1
-    //     |
-    //     2
-    // Tail = 0
-
-    let votes_bag = Bag::new();
-    votes_bag.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes_bag).is_ok());
-
-    // Current graph structure:
-    // 0
-    // Tail = 0
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk0.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_transitively_reset_confidence --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollTransitivelyResetConfidenceTest"
-#[test]
-fn test_topological_record_poll_transitively_reset_confidence() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 2,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) = Topological::<TestBlock>::new(
-        Context::default(),
-        params.clone(),
-        genesis_blk_id,
-        genesis_height,
-    )
-    .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
-        blk1.id(),
-        Ok(()),
-        Bytes::new(),
-        blk1.height() + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let blk3 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
-        blk1.id(),
-        Ok(()),
-        Bytes::new(),
-        blk1.height() + 1,
-        0,
-    );
-    assert_eq!(blk3.id(), Id::empty().prefix(&[4]).unwrap());
-    assert_eq!(blk3.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //   G
-    //  / \
-    // 0   1
-    //    / \
-    //   2   3
-
-    let votes_bag_for_2 = Bag::new();
-    votes_bag_for_2.add_count(&blk2.id(), 1);
-    assert!(tp.record_poll(votes_bag_for_2).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag_empty = Bag::new();
-    assert!(tp.record_poll(votes_bag_empty).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag_for_2 = Bag::new();
-    votes_bag_for_2.add_count(&blk2.id(), 1);
-    assert!(tp.record_poll(votes_bag_for_2).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag_for_3 = Bag::new();
-    votes_bag_for_3.add_count(&blk3.id(), 1);
-    assert!(tp.record_poll(votes_bag_for_3).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_bag_for_3 = Bag::new();
-    votes_bag_for_3.add_count(&blk3.id(), 1);
-    assert!(tp.record_poll(votes_bag_for_3).is_ok());
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk3.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Accepted);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_invalid_vote --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollInvalidVoteTest"
-#[test]
-fn test_topological_record_poll_invalid_vote() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 2,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk.status(), Status::Processing);
-
-    let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-    assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
-
-    let valid_votes_bag = Bag::new();
-    valid_votes_bag.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(valid_votes_bag).is_ok());
-
-    let invalid_votes_bag = Bag::new();
-    let unknown_blk_id = Id::empty().prefix(&[2]).unwrap();
-    invalid_votes_bag.add_count(&unknown_blk_id, 1);
-    assert!(tp.record_poll(invalid_votes_bag).is_ok());
-
-    let valid_votes_bag = Bag::new();
-    valid_votes_bag.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(valid_votes_bag).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk.id());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_transitive_voting --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollTransitiveVotingTest"
-#[test]
-fn test_topological_record_poll_transitive_voting() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 3,
-        alpha: 3,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        blk0.id(),
-        Ok(()),
-        Bytes::new(),
-        blk0.height() + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
-        blk1.id(),
-        Ok(()),
-        Bytes::new(),
-        blk1.height() + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let blk3 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
-        blk0.id(),
-        Ok(()),
-        Bytes::new(),
-        blk0.height() + 1,
-        0,
-    );
-    assert_eq!(blk3.id(), Id::empty().prefix(&[4]).unwrap());
-    assert_eq!(blk3.status(), Status::Processing);
-
-    let blk4 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[5]).unwrap(), Status::Processing),
-        blk3.id(),
-        Ok(()),
-        Bytes::new(),
-        blk3.height() + 1,
-        0,
-    );
-    assert_eq!(blk4.id(), Id::empty().prefix(&[5]).unwrap());
-    assert_eq!(blk4.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk4_rc = tp.add_block(blk4.clone()).unwrap();
-    assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //   G
-    //   |
-    //   0
-    //  / \
-    // 1   3
-    // |   |
-    // 2   4
-    // Tail = 2
-
-    let votes_0_2_4 = Bag::new();
-    votes_0_2_4.add_count(&blk0.id(), 1);
-    votes_0_2_4.add_count(&blk2.id(), 1);
-    votes_0_2_4.add_count(&blk4.id(), 1);
-    assert!(tp.record_poll(votes_0_2_4).is_ok());
-
-    // Current graph structure:
-    //   0
-    //  / \
-    // 1   3
-    // |   |
-    // 2   4
-    // Tail = 2
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Processing);
-
-    let dep_2_2_2 = Bag::new();
-    dep_2_2_2.add_count(&blk2.id(), 3);
-    assert!(tp.record_poll(dep_2_2_2).is_ok());
-
-    // Current graph structure:
-    //   2
-    // Tail = 2
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk2.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Rejected);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingTest"
-#[test]
-fn test_topological_record_poll_diverged_voting() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Trace)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x0f]), // 0b1111
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::from_slice(&[0x0f])); // 0b1111
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x08]), // 0b1000
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x01]), // 0b0001
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let blk3 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        blk2.id(),
-        Ok(()),
-        Bytes::new(),
-        blk2.height() + 1,
-        0,
-    );
-    assert_eq!(blk3.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk3.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    // The first bit is contested as either 0 or 1. When voting for [block0] and
-    // when the first bit is 1, the following bits have been decided to follow
-    // the 255 remaining bits of [block0].
-    let votes_0 = Bag::new();
-    votes_0.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes_0).is_ok());
-
-    // Although we are adding in [block2] here - the underlying snowball
-    // instance has already decided it is rejected. Snowman doesn't actually
-    // know that though, because that is an implementation detail of the
-    // Snowball trie that is used.
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Because [block2] is effectively rejected, [block3] is also effectively
-    // rejected.
-    let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //       G
-    //     /   \
-    //    *     |
-    //   / \    |
-    //  0   2   1
-    //      |
-    //      3
-    // Tail = 0
-
-    // Transitively votes for [block2] by voting for its child [block3].
-    // Because [block2] shares the first bit with [block0] and the following
-    // bits have been finalized for [block0], the voting results in accepting
-    // [block0]. When [block0] is accepted, [block1] and [block2] are rejected
-    // as conflicting. [block2]'s child, [block3], is then rejected
-    // transitively.
-    let votes_3 = Bag::new();
-    votes_3.add_count(&blk3.id(), 1);
-    assert!(tp.record_poll(votes_3).is_ok());
-
-    assert!(tp.finalized());
-    assert_eq!(tp.preference(), blk0.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting_with_no_conflicting_bit --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingWithNoConflictingBitTest"
-#[test]
-fn test_topological_record_poll_diverged_voting_with_no_conflicting_bit() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Trace)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x06]), // 0b0110
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::from_slice(&[0x06])); // 0b0110
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x08]), // 0b1000
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x01]), // 0b0001
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let blk3 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        blk2.id(),
-        Ok(()),
-        Bytes::new(),
-        blk2.height() + 1,
-        0,
-    );
-    assert_eq!(blk3.id(), Id::empty().prefix(&[1]).unwrap());
-    assert_eq!(blk3.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    // When voting for [block0], we end up finalizing the first bit as 0. The
-    // second bit is contested as either 0 or 1. For when the second bit is 1,
-    // the following bits have been decided to follow the 254 remaining bits of
-    // [block0].
-    let votes_0 = Bag::new();
-    votes_0.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes_0).is_ok());
-
-    // Although we are adding in [block2] here - the underlying snowball
-    // instance has already decided it is rejected. Snowman doesn't actually
-    // know that though, because that is an implementation detail of the
-    // Snowball trie that is used.
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Because [block2] is effectively rejected, [block3] is also effectively
-    // rejected.
-    let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //       G
-    //     /   \
-    //    *     |
-    //   / \    |
-    //  0   1   2
-    //          |
-    //          3
-    // Tail = 0
-
-    // Transitively votes for [block2] by voting for its child [block3]. Because
-    // [block2] doesn't share any processing bits with [block0] or [block1], the
-    // votes are over only rejected bits. Therefore, the votes for [block2] are
-    // dropped. Although the votes for [block3] are still applied, [block3] will
-    // only be marked as accepted after [block2] is marked as accepted; which
-    // will never happen.
-    let votes_3 = Bag::new();
-    votes_3.add_count(&blk3.id(), 1);
-    assert!(tp.record_poll(votes_3).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk0.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-}
-
-/*
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting_with_invalid_block_id_unknown_tail --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingWithInvalidBlockIDUnknownTailTest"
-#[test]
-fn test_topological_record_poll_diverged_voting_with_invalid_block_id_unknown_tail() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Trace)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 2,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x03]), // 0b0011
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk0.id(), Id::from_slice(&[0x03])); // 0b0011
-    assert_eq!(blk0.status(), Status::Processing);
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x08]), // 0b1000
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
-    assert_eq!(blk1.status(), Status::Processing);
-
-    let blk2 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x01]), // 0b0001
-            Status::Processing,
-        ),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
-    assert_eq!(blk2.status(), Status::Processing);
-
-    let blk3 = TestBlock::new(
-        TestDecidable::new(
-            Id::from_slice(&[0x03]), // 0b0011
-            Status::Processing,
-        ),
-        blk2.id(),
-        Ok(()),
-        Bytes::new(),
-        blk2.height() + 1,
-        0,
-    );
-    assert_eq!(blk3.id(), Id::from_slice(&[0x03]));
-    assert_eq!(blk3.status(), Status::Processing);
-
-    let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let votes_0 = Bag::new();
-    votes_0.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes_0).is_ok());
-
-    let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
-
-    // Current graph structure:
-    //     G
-    //  /  |  \
-    // 0   1   2
-    //         |
-    //         3
-    // Tail = 3
-
-    // Transitively increases block2 confidence by voting for its child block3.
-    // Because block2 shares the first bit with block0 but block0 was added first,
-    // the voting results in accepting block0 instead.
-    // When block2 is rejected, its child gets rejected transitively.
-    let votes_3 = Bag::new();
-    votes_3.add_count(&blk3.id(), 1);
-    assert!(tp.record_poll(votes_3).is_ok());
-
-    assert!(!tp.finalized());
-    assert_eq!(tp.preference(), blk0.id());
-    assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
-    assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
-    assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
-}
-*/
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_change_preferred_chain --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RecordPollChangePreferredChainTest"
-#[test]
-fn test_topological_record_poll_change_preferred_chain() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 10,
-        beta_rogue: 10,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let a1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    let b1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    let a2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
-        a1.id(),
-        Ok(()),
-        Bytes::new(),
-        a1.height() + 1,
-        0,
-    );
-    let b2 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
-        b1.id(),
-        Ok(()),
-        Bytes::new(),
-        b1.height() + 1,
-        0,
-    );
-
-    let a1_rc = tp.add_block(a1.clone()).unwrap();
-    assert_eq!(a1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let a2_rc = tp.add_block(a2.clone()).unwrap();
-    assert_eq!(a2_rc.borrow().status().unwrap(), Status::Processing);
-
-    let b1_rc = tp.add_block(b1.clone()).unwrap();
-    assert_eq!(b1_rc.borrow().status().unwrap(), Status::Processing);
-
-    let b2_rc = tp.add_block(b2.clone()).unwrap();
-    assert_eq!(b2_rc.borrow().status().unwrap(), Status::Processing);
-
-    assert_eq!(tp.preference(), a2.id());
-    assert!(tp.block_preferred(Rc::clone(&a1_rc)));
-    assert!(tp.block_preferred(Rc::clone(&a2_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&b1_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&b2_rc)));
-
-    let votes_b2 = Bag::new();
-    votes_b2.add_count(&b2.id(), 1);
-    assert!(tp.record_poll(votes_b2).is_ok());
-
-    assert_eq!(tp.preference(), b2.id());
-    assert!(!tp.block_preferred(Rc::clone(&a1_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&a2_rc)));
-    assert!(tp.block_preferred(Rc::clone(&b1_rc)));
-    assert!(tp.block_preferred(Rc::clone(&b2_rc)));
-
-    let votes_a1 = Bag::new();
-    votes_a1.add_count(&a1.id(), 1);
-    assert!(tp.record_poll(votes_a1).is_ok());
-
-    let votes_a1 = Bag::new();
-    votes_a1.add_count(&a1.id(), 1);
-    assert!(tp.record_poll(votes_a1).is_ok());
-
-    assert_eq!(tp.preference(), a2.id());
-    assert!(tp.block_preferred(Rc::clone(&a1_rc)));
-    assert!(tp.block_preferred(Rc::clone(&a2_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&b1_rc)));
-    assert!(!tp.block_preferred(Rc::clone(&b2_rc)));
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_initial_reject --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnInitialRejectionTest"
-#[test]
-fn test_topological_error_on_initial_reject() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use avalanche_types::errors::Error;
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let rejected_blk = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Rejected),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let mut rejected_decidable =
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
-    rejected_decidable.set_reject_result(Err(Error::Other {
-        message: "test error".to_string(),
-        retryable: false,
-    }));
-    let blk = TestBlock::new(
-        rejected_decidable,
-        rejected_blk.id(),
-        Ok(()),
-        Bytes::new(),
-        rejected_blk.height() + 1,
-        0,
-    );
-
-    let res = tp.add_block(blk.clone());
-    assert!(res.is_err());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_initial_accept --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnAcceptTest"
-#[test]
-fn test_topological_error_on_initial_accept() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use avalanche_types::errors::Error;
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let mut failing_decidable =
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing);
-    failing_decidable.set_accept_result(Err(Error::Other {
-        message: "test error".to_string(),
-        retryable: false,
-    }));
-    let blk = TestBlock::new(
-        failing_decidable,
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let added_blk = tp.add_block(blk.clone()).unwrap();
-    assert_eq!(added_blk.borrow().status().unwrap(), Status::Processing);
-
-    let votes = Bag::new();
-    votes.add_count(&blk.id(), 1);
-    assert!(tp.record_poll(votes).is_err());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_reject_sibling --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnRejectSiblingTest"
-#[test]
-fn test_topological_error_on_reject_sibling() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use avalanche_types::errors::Error;
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let mut failing_decidable =
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
-    failing_decidable.set_reject_result(Err(Error::Other {
-        message: "test error".to_string(),
-        retryable: false,
-    }));
-    let blk1 = TestBlock::new(
-        failing_decidable,
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let added_blk0 = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1 = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1.borrow().status().unwrap(), Status::Processing);
-
-    let votes0 = Bag::new();
-    votes0.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes0).is_err());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_transitive_reject --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnTransitiveRejectionTest"
-#[test]
-fn test_topological_error_on_transitive_reject() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use avalanche_types::errors::Error;
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-
-    let mut failing_decidable =
-        TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing);
-    failing_decidable.set_reject_result(Err(Error::Other {
-        message: "test error".to_string(),
-        retryable: false,
-    }));
-    let blk2 = TestBlock::new(
-        failing_decidable,
-        blk1.id(),
-        Ok(()),
-        Bytes::new(),
-        blk1.height() + 1,
-        0,
-    );
-
-    let added_blk0 = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk1 = tp.add_block(blk1.clone()).unwrap();
-    assert_eq!(added_blk1.borrow().status().unwrap(), Status::Processing);
-
-    let added_blk2 = tp.add_block(blk2.clone()).unwrap();
-    assert_eq!(added_blk2.borrow().status().unwrap(), Status::Processing);
-
-    let votes0 = Bag::new();
-    votes0.add_count(&blk0.id(), 1);
-    assert!(tp.record_poll(votes0).is_err());
-}
-
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_decided_block --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnAddDecidedBlock"
-#[test]
-fn test_topological_error_on_decided_block() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::test_decidable::TestDecidable;
-    use bytes::Bytes;
-
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
-
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
-
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
-
-    let blk = TestBlock::new(
-        TestDecidable::new(Id::from_slice(&[0x03]), Status::Accepted), // 0b0011
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    let res = tp.add_block(blk.clone());
-    assert!(res.is_err());
-    match res {
-        Ok(_) => panic!("unexpected Ok"),
-        Err(e) => assert!(e.to_string().contains("duplicate block add")),
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    // Helper function to borrow a SnowmanBlock from an Rc<RefCell<SnowmanBlock<B>>>
+    fn borrow_snowman_block<B: Block>(
+        block: &Rc<RefCell<SnowmanBlock<B>>>,
+    ) -> std::cell::Ref<'_, SnowmanBlock<B>> {
+        block.as_ref().borrow()
     }
-}
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_add_duplicate_block_id --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#ErrorOnAddDuplicateBlockID"
-#[test]
-fn test_topological_error_on_add_duplicate_block_id() {
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-    use bytes::Bytes;
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological_tests::test_topological_initialize --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#InitializeTest`
+    #[allow(clippy::type_complexity)]
+    #[test]
+    pub fn test_topological_initialize() {
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Info)
+            .is_test(true)
+            .try_init();
 
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Debug)
-        .is_test(true)
-        .try_init();
+        let genesis_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
 
-    let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
-    let genesis_height = 0_u64;
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, genesis_blk) =
+            Topological::<TestBlock>::new(Context::default(), params, genesis_id, genesis_height)
+                .expect("failed to create Topological");
 
-    let params = crate::Parameters {
-        k: 1,
-        alpha: 1,
-        beta_virtuous: 1,
-        beta_rogue: 1,
-        concurrent_repolls: 1,
-        optimal_processing: 1,
-        max_outstanding_items: 1,
-        max_item_processing_time: 1,
-        mixed_query_num_push_to_validators: 0,
-        mixed_query_num_push_to_non_validators: 0,
-    };
-    let (tp, _) =
-        Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
-            .expect("failed to create Topological");
-    assert_eq!(tp.preference(), genesis_blk_id);
+        assert!(borrow_snowman_block(&genesis_blk).accepted());
+        assert_eq!(tp.parameters().k, 1);
+        assert_eq!(tp.parameters().alpha, 1);
+        assert_eq!(tp.parameters().beta_virtuous, 3);
+        assert_eq!(tp.parameters().beta_rogue, 5);
+        assert_eq!(tp.parameters().concurrent_repolls, 1);
+        assert_eq!(tp.parameters().optimal_processing, 1);
+        assert_eq!(tp.parameters().max_outstanding_items, 1);
+        assert_eq!(tp.parameters().max_item_processing_time, 1);
 
-    let blk0 = TestBlock::new(
-        TestDecidable::new(Id::from_slice(&[0x03]), Status::Processing), // 0b0011
-        genesis_blk_id,
-        Ok(()),
-        Bytes::new(),
-        genesis_height + 1,
-        0,
-    );
-    let blk1 = TestBlock::new(
-        TestDecidable::new(Id::from_slice(&[0x03]), Status::Processing), // 0b0011
-        blk0.id(),
-        Ok(()),
-        Bytes::new(),
-        blk0.height() + 1,
-        0,
-    );
+        assert_eq!(tp.preference(), genesis_id);
+        assert_eq!(tp.height(), genesis_height);
 
-    let added_blk0 = tp.add_block(blk0.clone()).unwrap();
-    assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
-
-    let res = tp.add_block(blk1.clone());
-    assert!(res.is_err());
-    match res {
-        Ok(_) => panic!("unexpected Ok"),
-        Err(e) => assert!(e.to_string().contains("duplicate block add")),
+        assert!(tp.finalized());
     }
-}
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_randomized_consistency --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#RandomizedConsistencyTest"
-#[test]
-fn test_topological_randomized_consistency() {
-    // TODO
-}
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_num_processing --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#NumProcessingTest`
+    #[test]
+    pub fn test_topological_num_processing() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_processing_error --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#MetricsProcessingErrorTest"
-#[test]
-fn test_topological_metrics_processing_error() {
-    // TODO
-}
+        let genesis_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_accepted_error --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#MetricsAcceptedErrorTest"
-#[test]
-fn test_topological_metrics_accepted_error() {
-    // TODO
-}
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) =
+            Topological::<TestBlock>::new(Context::default(), params, genesis_id, genesis_height)
+                .expect("failed to create Topological");
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_rejected_error --exact --show-output
-/// ref. "avalanchego/snow/consensus/snowman#MetricsRejectedErrorTest"
-#[test]
-fn test_topological_metrics_rejected_error() {
-    // TODO
+        assert_eq!(tp.num_processing(), 0);
+
+        let blk_id = Id::empty().prefix(&[1]).unwrap();
+        let blk = TestBlock::new(
+            TestDecidable::new(blk_id, Status::Processing),
+            genesis_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), blk_id);
+        assert_eq!(blk.parent(), genesis_id);
+
+        // adding to the previous preference will update the preference
+        assert!(tp.add_block(blk.clone()).is_ok());
+
+        assert_eq!(tp.num_processing(), 1);
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert_eq!(tp.num_processing(), 0);
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_to_tail --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#AddToTailTest`
+    #[test]
+    fn test_topological_add_to_tail() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params.clone(),
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
+        let blk1_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
+            params,
+            Rc::new(RefCell::new(blk1.clone())),
+        )));
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
+
+        // adding to the previous preference will update the preference
+        assert!(tp.add_block(blk1.clone()).is_ok());
+        assert_eq!(tp.preference(), blk1.id());
+        assert!(tp.block_preferred(&blk1_rc));
+
+        // adding to something other than the previous preference
+        // won't update the preference
+        assert!(tp.add_block(blk2).is_ok());
+        assert_eq!(tp.preference(), blk1.id());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_to_non_tail --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#AddToNonTailTest`
+    #[test]
+    fn test_topological_add_to_non_tail() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params.clone(),
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
+        let blk1_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
+            params,
+            Rc::new(RefCell::new(blk1.clone())),
+        )));
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
+
+        // adding to the previous preference will update the preference
+        assert!(tp.add_block(blk1.clone()).is_ok());
+        assert_eq!(tp.preference(), blk1.id());
+        assert!(tp.block_preferred(&blk1_rc));
+
+        // adding to something other than the previous preference
+        // won't update the preference
+        assert!(tp.add_block(blk2).is_ok());
+        assert_eq!(tp.preference(), blk1.id());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_add_unknown --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#AddToUnknownTest`
+    #[test]
+    fn test_topological_add_unknown() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let parent_blk = TestBlock::new(
+            TestDecidable::new(
+                Id::empty().prefix(&[1]).unwrap(),
+                Status::Unknown(String::from("...")),
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(parent_blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(parent_blk.parent(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            parent_blk.id(),
+            Ok(()),
+            Bytes::new(),
+            parent_blk.height() + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk.parent(), parent_blk.id());
+
+        // adding a block with an unknown parent means the parent
+        // must have already been rejected
+        // thus the block should be immediately rejected
+        let added_blk_rc = tp.add_block(blk).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(tp.preference(), genesis_blk_id);
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_previously_accepted --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#StatusOrProcessingPreviouslyAcceptedTest`
+    #[test]
+    fn test_topological_status_or_processing_previously_accepted() {
+        use crate::snowman::block::test_block::TestBlock;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, genesis_blk) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let borrowed_genesis_blk = borrow_snowman_block(&genesis_blk);
+        assert!(borrowed_genesis_blk.accepted());
+
+        assert!(!tp.block_processing(genesis_blk_id));
+        assert!(tp.block_decided(&genesis_blk));
+        assert!(tp.block_preferred(&genesis_blk));
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_previously_rejected --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#StatusOrProcessingPreviouslyRejectedTest`
+    #[test]
+    fn test_topological_status_or_processing_previously_rejected() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params.clone(),
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Rejected),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk.status(), Status::Rejected);
+        let blk_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
+            params,
+            Rc::new(RefCell::new(blk.clone())),
+        )));
+
+        assert!(!tp.block_processing(blk.id()));
+        assert!(tp.block_decided(&blk_rc));
+        assert!(!tp.block_preferred(&blk_rc));
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_unissued --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#StatusOrProcessingUnissuedTest`
+    #[test]
+    fn test_topological_status_or_processing_unissued() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params.clone(),
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk.status(), Status::Processing);
+        let snowman_blk_rc = Rc::new(RefCell::new(SnowmanBlock::new_with_block(
+            params,
+            Rc::new(RefCell::new(blk.clone())),
+        )));
+
+        assert!(!tp.block_processing(blk.id()));
+        assert!(!tp.block_decided(&snowman_blk_rc));
+        assert!(!tp.block_preferred(&snowman_blk_rc));
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_issued --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#StatusOrProcessingIssuedTest`
+    #[test]
+    fn test_topological_status_or_processing_issued() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 3,
+            beta_rogue: 5,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk.status(), Status::Processing);
+
+        let added_blk_rc = tp.add_block(blk.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        assert!(tp.block_processing(blk.id()));
+        assert!(!tp.block_decided(&added_blk_rc));
+        assert!(tp.block_preferred(&added_blk_rc));
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_single_block --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#RecordPollAcceptSingleBlockTest`
+    #[test]
+    fn test_topological_record_poll_accept_single_block() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 2,
+            beta_rogue: 3,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk.status(), Status::Processing);
+
+        let added_blk_rc = tp.add_block(blk.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Accepted
+        );
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_and_reject --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#RecordPollAcceptAndRejectTest`
+    #[test]
+    fn test_topological_record_poll_accept_and_reject() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2_rc = tp.add_block(blk2).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk1.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk1.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk1.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk1.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Rejected
+        );
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_split_vote_no_change --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollSplitVoteNoChangeTest"
+    #[test]
+    fn test_topological_record_poll_split_vote_no_change() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 2,
+            alpha: 2,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk1.id(), 1);
+        votes_bag.add_count(&blk2.id(), 1);
+
+        // The first poll will accept shared bits
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk1.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // TODO: check metrics for "polls_failed" and "polls_successful"
+
+        // The second poll will do nothing
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk1.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // TODO: check metrics for "polls_failed" and "polls_successful"
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_when_finalized --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollWhenFinalizedTest"
+    #[test]
+    fn test_topological_record_poll_when_finalized() {
+        use crate::snowman::block::test_block::TestBlock;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&genesis_blk_id, 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), genesis_blk_id);
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_reject_transitively --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollRejectTransitivelyTest"
+    #[test]
+    fn test_topological_record_poll_reject_transitively() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1_rc = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2_rc = tp.add_block(blk2).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Current graph structure:
+        //   G
+        //  / \
+        // 0   1
+        //     |
+        //     2
+        // Tail = 0
+
+        let votes_bag = Bag::new();
+        votes_bag.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(&votes_bag).is_ok());
+
+        // Current graph structure:
+        // 0
+        // Tail = 0
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk0.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Rejected
+        );
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_transitively_reset_confidence --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollTransitivelyResetConfidenceTest"
+    #[test]
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    fn test_topological_record_poll_transitively_reset_confidence() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 2,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
+            blk1.id(),
+            Ok(()),
+            Bytes::new(),
+            blk1.height() + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let blk3 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
+            blk1.id(),
+            Ok(()),
+            Bytes::new(),
+            blk1.height() + 1,
+            0,
+        );
+        assert_eq!(blk3.id(), Id::empty().prefix(&[4]).unwrap());
+        assert_eq!(blk3.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1_rc = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Current graph structure:
+        //   G
+        //  / \
+        // 0   1
+        //    / \
+        //   2   3
+
+        let votes_bag_for_2 = Bag::new();
+        votes_bag_for_2.add_count(&blk2.id(), 1);
+        assert!(tp.record_poll(&votes_bag_for_2).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag_empty = Bag::new();
+        assert!(tp.record_poll(&votes_bag_empty).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag_for_2 = Bag::new();
+        votes_bag_for_2.add_count(&blk2.id(), 1);
+        assert!(tp.record_poll(&votes_bag_for_2).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag_for_3 = Bag::new();
+        votes_bag_for_3.add_count(&blk3.id(), 1);
+        assert!(tp.record_poll(&votes_bag_for_3).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes_bag_for_3 = Bag::new();
+        votes_bag_for_3.add_count(&blk3.id(), 1);
+        assert!(tp.record_poll(&votes_bag_for_3).is_ok());
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk3.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Accepted
+        );
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_invalid_vote --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollInvalidVoteTest"
+    #[test]
+    fn test_topological_record_poll_invalid_vote() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 2,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk.status(), Status::Processing);
+
+        let added_blk_rc = tp.add_block(blk.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let valid_votes_bag = Bag::new();
+        valid_votes_bag.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&valid_votes_bag).is_ok());
+
+        let invalid_votes_bag = Bag::new();
+        let unknown_blk_id = Id::empty().prefix(&[2]).unwrap();
+        invalid_votes_bag.add_count(&unknown_blk_id, 1);
+        assert!(tp.record_poll(&invalid_votes_bag).is_ok());
+
+        let valid_votes_bag = Bag::new();
+        valid_votes_bag.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&valid_votes_bag).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk.id());
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_transitive_voting --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollTransitiveVotingTest"
+    #[test]
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    fn test_topological_record_poll_transitive_voting() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 3,
+            alpha: 3,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            blk0.id(),
+            Ok(()),
+            Bytes::new(),
+            blk0.height() + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::empty().prefix(&[2]).unwrap());
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
+            blk1.id(),
+            Ok(()),
+            Bytes::new(),
+            blk1.height() + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::empty().prefix(&[3]).unwrap());
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let blk3 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
+            blk0.id(),
+            Ok(()),
+            Bytes::new(),
+            blk0.height() + 1,
+            0,
+        );
+        assert_eq!(blk3.id(), Id::empty().prefix(&[4]).unwrap());
+        assert_eq!(blk3.status(), Status::Processing);
+
+        let blk4 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[5]).unwrap(), Status::Processing),
+            blk3.id(),
+            Ok(()),
+            Bytes::new(),
+            blk3.height() + 1,
+            0,
+        );
+        assert_eq!(blk4.id(), Id::empty().prefix(&[5]).unwrap());
+        assert_eq!(blk4.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1_rc = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk3_rc = tp.add_block(blk3).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk4_rc = tp.add_block(blk4.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Current graph structure:
+        //   G
+        //   |
+        //   0
+        //  / \
+        // 1   3
+        // |   |
+        // 2   4
+        // Tail = 2
+
+        let votes_0_2_4 = Bag::new();
+        votes_0_2_4.add_count(&blk0.id(), 1);
+        votes_0_2_4.add_count(&blk2.id(), 1);
+        votes_0_2_4.add_count(&blk4.id(), 1);
+        assert!(tp.record_poll(&votes_0_2_4).is_ok());
+
+        // Current graph structure:
+        //   0
+        //  / \
+        // 1   3
+        // |   |
+        // 2   4
+        // Tail = 2
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let dep_2_2_2 = Bag::new();
+        dep_2_2_2.add_count(&blk2.id(), 3);
+        assert!(tp.record_poll(&dep_2_2_2).is_ok());
+
+        // Current graph structure:
+        //   2
+        // Tail = 2
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk2.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
+            Status::Rejected
+        );
+    }
+
+    /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingTest"
+    #[test]
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    fn test_topological_record_poll_diverged_voting() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Trace)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x0f]), // 0b1111
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::from_slice(&[0x0f])); // 0b1111
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x08]), // 0b1000
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x01]), // 0b0001
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let blk3 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            blk2.id(),
+            Ok(()),
+            Bytes::new(),
+            blk2.height() + 1,
+            0,
+        );
+        assert_eq!(blk3.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk3.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1_rc = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // The first bit is contested as either 0 or 1. When voting for [block0] and
+        // when the first bit is 1, the following bits have been decided to follow
+        // the 255 remaining bits of [block0].
+        let votes_0 = Bag::new();
+        votes_0.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(&votes_0).is_ok());
+
+        // Although we are adding in [block2] here - the underlying snowball
+        // instance has already decided it is rejected. Snowman doesn't actually
+        // know that though, because that is an implementation detail of the
+        // Snowball trie that is used.
+        let added_blk2_rc = tp.add_block(blk2).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Because [block2] is effectively rejected, [block3] is also effectively
+        // rejected.
+        let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Current graph structure:
+        //       G
+        //     /   \
+        //    *     |
+        //   / \    |
+        //  0   2   1
+        //      |
+        //      3
+        // Tail = 0
+
+        // Transitively votes for [block2] by voting for its child [block3].
+        // Because [block2] shares the first bit with [block0] and the following
+        // bits have been finalized for [block0], the voting results in accepting
+        // [block0]. When [block0] is accepted, [block1] and [block2] are rejected
+        // as conflicting. [block2]'s child, [block3], is then rejected
+        // transitively.
+        let votes_3 = Bag::new();
+        votes_3.add_count(&blk3.id(), 1);
+        assert!(tp.record_poll(&votes_3).is_ok());
+
+        assert!(tp.finalized());
+        assert_eq!(tp.preference(), blk0.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Accepted
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Rejected
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Rejected
+        );
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting_with_no_conflicting_bit --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingWithNoConflictingBitTest"
+    #[test]
+    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::too_many_lines)]
+    fn test_topological_record_poll_diverged_voting_with_no_conflicting_bit() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Trace)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x06]), // 0b0110
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::from_slice(&[0x06])); // 0b0110
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x08]), // 0b1000
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x01]), // 0b0001
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let blk3 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            blk2.id(),
+            Ok(()),
+            Bytes::new(),
+            blk2.height() + 1,
+            0,
+        );
+        assert_eq!(blk3.id(), Id::empty().prefix(&[1]).unwrap());
+        assert_eq!(blk3.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1_rc = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // When voting for [block0], we end up finalizing the first bit as 0. The
+        // second bit is contested as either 0 or 1. For when the second bit is 1,
+        // the following bits have been decided to follow the 254 remaining bits of
+        // [block0].
+        let votes_0 = Bag::new();
+        votes_0.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(&votes_0).is_ok());
+
+        // Although we are adding in [block2] here - the underlying snowball
+        // instance has already decided it is rejected. Snowman doesn't actually
+        // know that though, because that is an implementation detail of the
+        // Snowball trie that is used.
+        let added_blk2_rc = tp.add_block(blk2).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Because [block2] is effectively rejected, [block3] is also effectively
+        // rejected.
+        let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        // Current graph structure:
+        //       G
+        //     /   \
+        //    *     |
+        //   / \    |
+        //  0   1   2
+        //          |
+        //          3
+        // Tail = 0
+
+        // Transitively votes for [block2] by voting for its child [block3]. Because
+        // [block2] doesn't share any processing bits with [block0] or [block1], the
+        // votes are over only rejected bits. Therefore, the votes for [block2] are
+        // dropped. Although the votes for [block3] are still applied, [block3] will
+        // only be marked as accepted after [block2] is marked as accepted; which
+        // will never happen.
+        let votes_3 = Bag::new();
+        votes_3.add_count(&blk3.id(), 1);
+        assert!(tp.record_poll(&votes_3).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk0.id());
+        assert_eq!(
+            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
+            Status::Processing
+        );
+        assert_eq!(
+            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
+            Status::Processing
+        );
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_change_preferred_chain --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#RecordPollChangePreferredChainTest`
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_topological_record_poll_change_preferred_chain() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 10,
+            beta_rogue: 10,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let a1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        let b1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        let a2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing),
+            a1.id(),
+            Ok(()),
+            Bytes::new(),
+            a1.height() + 1,
+            0,
+        );
+        let b2 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[4]).unwrap(), Status::Processing),
+            b1.id(),
+            Ok(()),
+            Bytes::new(),
+            b1.height() + 1,
+            0,
+        );
+
+        let a1_rc = tp.add_block(a1.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&a1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let a2_rc = tp.add_block(a2.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&a2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let b1_rc = tp.add_block(b1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&b1_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        let b2_rc = tp.add_block(b2.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&b2_rc).status().unwrap(),
+            Status::Processing
+        );
+
+        assert_eq!(tp.preference(), a2.id());
+        assert!(tp.block_preferred(&a1_rc));
+        assert!(tp.block_preferred(&a2_rc));
+        assert!(!tp.block_preferred(&b1_rc));
+        assert!(!tp.block_preferred(&b2_rc));
+
+        let votes_b2 = Bag::new();
+        votes_b2.add_count(&b2.id(), 1);
+        assert!(tp.record_poll(&votes_b2).is_ok());
+
+        assert_eq!(tp.preference(), b2.id());
+        assert!(!tp.block_preferred(&a1_rc));
+        assert!(!tp.block_preferred(&a2_rc));
+        assert!(tp.block_preferred(&b1_rc));
+        assert!(tp.block_preferred(&b2_rc));
+
+        let votes_a1_first = Bag::new();
+        votes_a1_first.add_count(&a1.id(), 1);
+        assert!(tp.record_poll(&votes_a1_first).is_ok());
+
+        let votes_a1_second = Bag::new();
+        votes_a1_second.add_count(&a1.id(), 1);
+        assert!(tp.record_poll(&votes_a1_second).is_ok());
+
+        assert_eq!(tp.preference(), a2.id());
+        assert!(tp.block_preferred(&a1_rc));
+        assert!(tp.block_preferred(&a2_rc));
+        assert!(!tp.block_preferred(&b1_rc));
+        assert!(!tp.block_preferred(&b2_rc));
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_initial_reject --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnInitialRejectionTest`
+    #[test]
+    pub fn test_topological_error_on_initial_reject() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let rejected_blk = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Rejected),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let mut rejected_decidable =
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
+        rejected_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+            message: "test error".to_string(),
+            retryable: false,
+        }));
+        let blk = TestBlock::new(
+            rejected_decidable,
+            rejected_blk.id(),
+            Ok(()),
+            Bytes::new(),
+            rejected_blk.height() + 1,
+            0,
+        );
+
+        let res = tp.add_block(blk);
+        assert!(res.is_err());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_initial_accept --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnAcceptTest`
+    #[test]
+    pub fn test_topological_error_on_initial_accept() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let mut failing_decidable =
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing);
+        failing_decidable.set_accept_result(Err(avalanche_types::errors::Error::Other {
+            message: "test error".to_string(),
+            retryable: false,
+        }));
+        let blk = TestBlock::new(
+            failing_decidable,
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let added_blk = tp.add_block(blk.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes = Bag::new();
+        votes.add_count(&blk.id(), 1);
+        assert!(tp.record_poll(&votes).is_err());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_reject_sibling --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnRejectSiblingTest`
+    #[test]
+    pub fn test_topological_error_on_reject_sibling() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let mut failing_decidable =
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
+        failing_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+            message: "test error".to_string(),
+            retryable: false,
+        }));
+        let blk1 = TestBlock::new(
+            failing_decidable,
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let added_blk0 = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1 = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes0 = Bag::new();
+        votes0.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(&votes0).is_err());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_transitive_reject --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnTransitiveRejectionTest`
+    #[test]
+    pub fn test_topological_error_on_transitive_reject() {
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let mut failing_decidable =
+            TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing);
+        failing_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+            message: "test error".to_string(),
+            retryable: false,
+        }));
+        let blk2 = TestBlock::new(
+            failing_decidable,
+            blk1.id(),
+            Ok(()),
+            Bytes::new(),
+            blk1.height() + 1,
+            0,
+        );
+
+        let added_blk0 = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk1 = tp.add_block(blk1).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk1).status().unwrap(),
+            Status::Processing
+        );
+
+        let added_blk2 = tp.add_block(blk2).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk2).status().unwrap(),
+            Status::Processing
+        );
+
+        let votes0 = Bag::new();
+        votes0.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(&votes0).is_err());
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_decided_block --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnAddDecidedBlock`
+    #[test]
+    pub fn test_topological_error_on_decided_block() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::test_decidable::TestDecidable;
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk = TestBlock::new(
+            TestDecidable::new(Id::from_slice(&[0x03]), Status::Accepted), // 0b0011
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+
+        let res = tp.add_block(blk);
+        assert!(res.is_err());
+        match res {
+            Ok(_) => panic!("unexpected Ok"),
+            Err(e) => assert!(e.message().contains("duplicate block add")),
+        }
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_add_duplicate_block_id --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnAddDuplicateBlockID`
+    #[test]
+    pub fn test_topological_error_on_add_duplicate_block_id() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 1,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) = Topological::<TestBlock>::new(
+            Context::default(),
+            params,
+            genesis_blk_id,
+            genesis_height,
+        )
+        .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(Id::from_slice(&[0x03]), Status::Processing), // 0b0011
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        let blk1 = TestBlock::new(
+            TestDecidable::new(Id::from_slice(&[0x03]), Status::Processing), // 0b0011
+            blk0.id(),
+            Ok(()),
+            Bytes::new(),
+            blk0.height() + 1,
+            0,
+        );
+
+        let added_blk0 = tp.add_block(blk0).unwrap();
+        assert_eq!(
+            borrow_snowman_block(&added_blk0).status().unwrap(),
+            Status::Processing
+        );
+
+        let res = tp.add_block(blk1);
+        assert!(res.is_err());
+        match res {
+            Ok(_) => panic!("unexpected Ok"),
+            Err(e) => assert!(e.message().contains("duplicate block add")),
+        }
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_randomized_consistency --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#RandomizedConsistencyTest`
+    #[test]
+    pub fn test_topological_randomized_consistency() {
+        // TODO
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_processing_error --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#MetricsProcessingErrorTest`
+    #[test]
+    pub fn test_topological_metrics_processing_error() {
+        // TODO
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_accepted_error --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#MetricsAcceptedErrorTest`
+    #[test]
+    pub fn test_topological_metrics_accepted_error() {
+        // TODO
+    }
+
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_metrics_rejected_error --exact --show-output
+    /// Reference: `avalanchego/snow/consensus/snowman#MetricsRejectedErrorTest`
+    #[test]
+    pub fn test_topological_metrics_rejected_error() {
+        // TODO
+    }
 }

@@ -25,11 +25,10 @@ pub enum Kind {
 impl std::convert::From<&str> for Kind {
     fn from(s: &str) -> Self {
         match s {
-            "anchor" => Kind::Anchor,
-            "non-anchor" => Kind::NonAnchor,
-            "non_anchor" => Kind::NonAnchor,
+            "anchor" => Self::Anchor,
+            "non-anchor" | "non_anchor" => Self::NonAnchor,
 
-            other => Kind::Unknown(other.to_owned()),
+            other => Self::Unknown(other.to_owned()),
         }
     }
 }
@@ -38,23 +37,25 @@ impl std::str::FromStr for Kind {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(Kind::from(s))
+        Ok(Self::from(s))
     }
 }
 
 impl Kind {
     /// Returns the `&str` value of the enum member.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
-            Kind::Anchor => "anchor",
-            Kind::NonAnchor => "non-anchor",
+            Self::Anchor => "anchor",
+            Self::NonAnchor => "non-anchor",
 
-            Kind::Unknown(s) => s.as_ref(),
+            Self::Unknown(s) => s.as_ref(),
         }
     }
 
     /// Returns all the `&str` values of the enum members.
-    pub fn values() -> &'static [&'static str] {
+    #[must_use]
+    pub const fn values() -> &'static [&'static str] {
         &[
             "anchor",     //
             "non-anchor", //

@@ -65,7 +65,7 @@ pub struct Context {
     /// recorded in the parent block. The P-chain height provided here is also
     /// the parent's P-chain height, not this block's P-chain height.
     ///
-    /// Because PreForkBlocks and PostForkOptions do not verify their execution
+    /// Because `PreForkBlocks` and `PostForkOptions` do not verify their execution
     /// against the P-chain's state, this context is undefined for those blocks.
     pub p_chain_height: u64,
 }

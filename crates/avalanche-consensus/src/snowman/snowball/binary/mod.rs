@@ -1,10 +1,10 @@
-//! Binary slush instance algorithm.
+//! Binary Slush instance algorithm.
 pub mod node;
 
 use std::cell::Cell;
 
-/// Implements a binary slush instance.
-/// ref. <https://github.com/ava-labs/avalanchego/blob/master/snow/consensus/snowball/binary_slush.go> "binarySlush"
+/// Implements a binary Slush instance.
+/// See: <https://github.com/ava-labs/avalanchego/blob/master/snow/consensus/snowball/binary_slush.go> "binarySlush".
 #[derive(Clone, Debug)]
 pub struct Slush {
     /// Represents the last choice (or preference) of the last successful poll.
@@ -30,14 +30,18 @@ impl Slush {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Slush {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "SL(Preference = {})", self.preference())
     }
 }
 
+/// 示例：
+///
+/// ```sh
 /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_slush --exact --show-output
+/// ```
 #[test]
 fn test_slush() {
     let _ = env_logger::builder()
@@ -126,7 +130,7 @@ impl Snowflake {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Snowflake {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -139,7 +143,7 @@ impl std::fmt::Display for Snowflake {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowflake --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowflake --exact --show-output
 /// ref. "TestBinarySnowflake"
 #[test]
 fn test_snowflake() {
@@ -237,9 +241,11 @@ impl Snowball {
 
     pub fn record_successful_poll(&self, choice: i64) {
         let mut polls = self.num_successful_polls.take();
-        polls[choice as usize] += 1;
+        let choice_idx = usize::try_from(choice).expect("choice should be non-negative");
+        polls[choice_idx] += 1;
 
-        let (count, count_other) = (polls[choice as usize], polls[1 - choice as usize]);
+        let other_idx = 1 - choice_idx;
+        let (count, count_other) = (polls[choice_idx], polls[other_idx]);
         self.num_successful_polls.set(polls);
 
         if count > count_other {
@@ -250,13 +256,13 @@ impl Snowball {
     }
 
     pub fn record_unsuccessful_poll(&self) {
-        self.snowflake.record_unsuccessful_poll()
+        self.snowflake.record_unsuccessful_poll();
     }
 }
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Snowball {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -270,7 +276,7 @@ impl std::fmt::Display for Snowball {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball --exact --show-output
 /// ref. "TestBinarySnowball"
 #[test]
 fn test_snowball() {
@@ -309,7 +315,7 @@ fn test_snowball() {
     log::info!("{snb}");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_record_unsuccessful_poll --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_record_unsuccessful_poll --exact --show-output
 /// ref. "TestBinarySnowballRecordUnsuccessfulPoll"
 #[test]
 fn test_snowball_record_unsuccessful_poll() {
@@ -340,14 +346,14 @@ fn test_snowball_record_unsuccessful_poll() {
     snb.record_successful_poll(blue);
     assert_eq!(snb.preference(), blue);
     assert!(snb.finalized(), "finalized too late");
-    assert_eq!(snb.num_successful_polls(red as usize), 0);
-    assert_eq!(snb.num_successful_polls(blue as usize), 3);
+    assert_eq!(snb.num_successful_polls(usize::try_from(red).unwrap()), 0);
+    assert_eq!(snb.num_successful_polls(usize::try_from(blue).unwrap()), 3);
 
     log::info!("{snb}");
     assert_eq!(snb.to_string(), "SB(Preference = 1, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 3, SF(Confidence = 2, Finalized = true, SL(Preference = 1)))");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_accept_weird_color --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_accept_weird_color --exact --show-output
 /// ref. "TestBinarySnowballAcceptWeirdColor"
 #[test]
 fn test_snowball_accept_weird_color() {
@@ -387,7 +393,7 @@ fn test_snowball_accept_weird_color() {
     assert_eq!(snb.to_string(), "SB(Preference = 1, NumSuccessfulPolls[0] = 2, NumSuccessfulPolls[1] = 2, SF(Confidence = 2, Finalized = true, SL(Preference = 0)))");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_lock_color --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::binary::test_snowball_lock_color --exact --show-output
 /// ref. "TestBinarySnowballLockColor"
 #[test]
 fn test_snowball_lock_color() {

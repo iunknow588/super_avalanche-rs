@@ -6,7 +6,7 @@ use crate::{errors::Result, jsonrpc::client::x as client_x, key, txs, wallet};
 
 impl<T> wallet::Wallet<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     #[must_use]
     pub fn x(&self) -> X<T> {
@@ -19,20 +19,24 @@ where
 #[derive(Clone, Debug)]
 pub struct X<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::Wallet<T>,
 }
 
 impl<T> X<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     /// Fetches the current balance of the wallet owner from the specified HTTP endpoint.
     /// 查询指定 endpoint 上 X 链余额。
     ///
     /// # Errors
     /// 查询失败时返回错误。
+    ///
+    /// # Panics
+    ///
+    /// Panics if the result is None.
     pub async fn balance_with_endpoint(&self, http_rpc: &str) -> Result<u64> {
         let resp = client_x::get_balance(http_rpc, &self.inner.x_address).await?;
         let cur_balance = resp
@@ -43,14 +47,14 @@ where
     }
 
     /// Fetches the current balance of the wallet owner from all endpoints
-    /// in the same order of "self.http_rpcs".
+    /// in the same order of "`self.http_rpcs`".
     /// 获取 X 链所有资产余额。
     ///
     /// # Errors
     /// 查询失败时返回错误。
     pub async fn balances(&self) -> Result<Vec<u64>> {
         let mut balances = Vec::new();
-        for http_rpc in self.inner.base_http_urls.iter() {
+        for http_rpc in &self.inner.base_http_urls {
             let balance = self.balance_with_endpoint(http_rpc).await?;
             balances.push(balance);
         }

@@ -4,7 +4,13 @@ use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 use url::Url;
 
+/// 将 `SocketAddr`序列化为字符串。
+///
 /// ref. <https://serde.rs/custom-date-format.html>
+///
+/// # Errors
+///
+/// 如果序列化失败，则返回错误。
 pub fn serialize<S>(x: &SocketAddr, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -13,7 +19,13 @@ where
     serializer.serialize_str(&x.to_string())
 }
 
+/// 从字符串反序列化为 `SocketAddr`。
+///
 /// ref. <https://serde.rs/custom-date-format.html>
+///
+/// # Errors
+///
+/// 如果反序列化失败，则返回错误。
 pub fn deserialize<'de, D>(deserializer: D) -> Result<SocketAddr, D::Error>
 where
     D: Deserializer<'de>,
@@ -23,7 +35,7 @@ where
     match s.parse() {
         Ok(addr) => Ok(addr),
         Err(e) => {
-            log::warn!("fallback to URL parsing {:?}", e);
+            log::warn!("fallback to URL parsing {e:?}");
             let url = Url::parse(&s).map_err(serde::de::Error::custom)?;
 
             let host = if let Some(hs) = url.host_str() {
@@ -32,11 +44,7 @@ where
                 return Err(serde::de::Error::custom("no host found"));
             };
             let ip: IpAddr = host.parse().map_err(serde::de::Error::custom)?;
-            let port = if let Some(port) = url.port() {
-                port
-            } else {
-                0 // e.g., DNS
-            };
+            let port = url.port().unwrap_or(0); // 0 for DNS
             Ok(SocketAddr::new(ip, port))
         }
     }
@@ -45,6 +53,11 @@ where
 pub struct IpPort;
 
 impl SerializeAs<SocketAddr> for IpPort {
+    /// 将 `SocketAddr`序列化为字符串。
+    ///
+    /// # Errors
+    ///
+    /// 如果序列化失败，则返回错误。
     fn serialize_as<S>(x: &SocketAddr, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -54,6 +67,11 @@ impl SerializeAs<SocketAddr> for IpPort {
 }
 
 impl<'de> DeserializeAs<'de, SocketAddr> for IpPort {
+    /// 从字符串反序列化为 `SocketAddr`。
+    ///
+    /// # Errors
+    ///
+    /// 如果反序列化失败，则返回错误。
     fn deserialize_as<D>(deserializer: D) -> Result<SocketAddr, D::Error>
     where
         D: Deserializer<'de>,
@@ -63,7 +81,7 @@ impl<'de> DeserializeAs<'de, SocketAddr> for IpPort {
         match s.parse() {
             Ok(addr) => Ok(addr),
             Err(e) => {
-                log::warn!("fallback to URL parsing {:?}", e);
+                log::warn!("fallback to URL parsing {e:?}");
                 let url = Url::parse(&s).map_err(serde::de::Error::custom)?;
 
                 let host = if let Some(hs) = url.host_str() {
@@ -72,18 +90,14 @@ impl<'de> DeserializeAs<'de, SocketAddr> for IpPort {
                     return Err(serde::de::Error::custom("no host found"));
                 };
                 let ip: IpAddr = host.parse().map_err(serde::de::Error::custom)?;
-                let port = if let Some(port) = url.port() {
-                    port
-                } else {
-                    0 // e.g., DNS
-                };
+                let port = url.port().unwrap_or(0); // 0 for DNS
                 Ok(SocketAddr::new(ip, port))
             }
         }
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- codec::serde::ip_port::test_custom_de_serializer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `codec::serde::ip_port::test_custom_de_serializer` --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     use std::net::Ipv4Addr;
@@ -107,12 +121,12 @@ fn test_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 

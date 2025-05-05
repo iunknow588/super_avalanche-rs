@@ -1,2 +1,2 @@
-//! A library for building p2p inbound and outbound connections.
+//! A library for building peer-to-peer (p2p) inbound and outbound connections.
 pub mod peer;

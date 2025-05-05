@@ -23,6 +23,11 @@ pub const MEGA_AVAX: u64 = 1000 * KILO_AVAX;
 pub const AVAX_EVM_CHAIN: u64 = 1000 * MEGA_AVAX;
 
 /// Converts the nano AVAX to AVAX unit for X and P chain.
+///
+/// # Panics
+///
+/// Panics if the power operation fails when calculating the AVAX unit.
+#[must_use]
 pub fn cast_xp_navax_to_avax(navax: U256) -> u64 {
     // ref. "ethers::utils::Units::Ether"
     let avax_unit = U256::from(10).checked_pow(U256::from(9)).unwrap();
@@ -34,7 +39,7 @@ pub fn cast_xp_navax_to_avax(navax: U256) -> u64 {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- units::test_cast_xp_navax_to_avax --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- units::test_cast_xp_navax_to_avax --exact --show-output
 #[test]
 fn test_cast_xp_navax_to_avax() {
     assert_eq!(cast_xp_navax_to_avax(U256::max_value()), u64::MAX);
@@ -45,18 +50,19 @@ fn test_cast_xp_navax_to_avax() {
 /// Converts the X/P chain AVAX unit to nano-AVAX.
 /// On the X and P-Chain, one AVAX is 10^9 units.
 /// ref. <https://snowtrace.io/unitconverter>
-/// If it overflows, it resets to U256::MAX.
+/// If it overflows, it resets to `U256::MAX`.
+///
+/// # Panics
+///
+/// Panics if the power operation fails when calculating the AVAX unit.
+#[must_use]
 pub fn cast_avax_to_xp_navax(avax: U256) -> U256 {
     // ref. "ethers::utils::Units::Ether"
     let avax_unit = U256::from(10).checked_pow(U256::from(9)).unwrap();
-    if let Some(navaxs) = avax.checked_mul(avax_unit) {
-        navaxs
-    } else {
-        U256::max_value()
-    }
+    avax.checked_mul(avax_unit).unwrap_or_else(U256::max_value)
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- units::test_cast_avax_to_xp_navax --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- units::test_cast_avax_to_xp_navax --exact --show-output
 #[test]
 fn test_cast_avax_to_xp_navax() {
     assert_eq!(cast_avax_to_xp_navax(U256::max_value()), U256::max_value());
@@ -79,7 +85,12 @@ fn test_cast_avax_to_xp_navax() {
 /// On the C-Chain, one AVAX is 10^18 units.
 /// ref. <https://snowtrace.io/unitconverter>
 ///
-/// If it overflows, it resets to i64::MAX.
+/// If it overflows, it resets to `i64::MAX`.
+///
+/// # Panics
+///
+/// Panics if the power operation fails when calculating the AVAX unit.
+#[must_use]
 pub fn cast_evm_navax_to_avax_i64(navax: U256) -> i64 {
     // ref. "ethers::utils::Units::Ether"
     let avax_unit = U256::from(10).checked_pow(U256::from(18)).unwrap();
@@ -91,12 +102,12 @@ pub fn cast_evm_navax_to_avax_i64(navax: U256) -> i64 {
         if converted >= i64::MAX as u64 {
             i64::MAX
         } else {
-            converted as i64
+            i64::try_from(converted).unwrap_or(i64::MAX)
         }
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- units::test_cast_evm_navax_to_avax_i64 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- units::test_cast_evm_navax_to_avax_i64 --exact --show-output
 #[test]
 fn test_cast_evm_navax_to_avax_i64() {
     assert_eq!(cast_evm_navax_to_avax_i64(U256::max_value()), i64::MAX);
@@ -107,18 +118,19 @@ fn test_cast_evm_navax_to_avax_i64() {
 /// Converts the EVM AVAX unit to nano-AVAX.
 /// On the C-Chain, one AVAX is 10^18 units.
 /// ref. <https://snowtrace.io/unitconverter>
-/// If it overflows, it resets to U256::MAX.
+/// If it overflows, it resets to `U256::MAX`.
+///
+/// # Panics
+///
+/// Panics if the power operation fails when calculating the AVAX unit.
+#[must_use]
 pub fn cast_avax_to_evm_navax(avax: U256) -> U256 {
     // ref. "ethers::utils::Units::Ether"
     let avax_unit = U256::from(10).checked_pow(U256::from(18)).unwrap();
-    if let Some(navaxs) = avax.checked_mul(avax_unit) {
-        navaxs
-    } else {
-        U256::max_value()
-    }
+    avax.checked_mul(avax_unit).unwrap_or_else(U256::max_value)
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- units::test_cast_avax_to_evm_navax --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- units::test_cast_avax_to_evm_navax --exact --show-output
 #[test]
 fn test_cast_avax_to_evm_navax() {
     assert_eq!(cast_avax_to_evm_navax(U256::max_value()), U256::max_value());

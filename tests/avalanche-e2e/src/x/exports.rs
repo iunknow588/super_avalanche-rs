@@ -80,7 +80,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
                 if !spec_rlocked.ignore_errors {
                     return Err(e);
                 } else {
-                    log::warn!("ignoring error {}", e);
+                    log::warn!("ignoring error {e}");
                 }
             }
         }
@@ -225,7 +225,7 @@ async fn make_single_export(
         ));
     }
 
-    log::info!("SUCCESS with transaction id {}", tx_id);
+    log::info!("SUCCESS with transaction id {tx_id})");
 
     let tx_id = w
         .p()

@@ -29,9 +29,14 @@ impl Default for IssueTxRequest {
 }
 
 impl IssueTxRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -81,7 +86,7 @@ impl Default for IssueTxResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_issue_tx --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_issue_tx` --exact --show-output
 #[test]
 fn test_issue_tx() {
     use std::str::FromStr;
@@ -152,7 +157,7 @@ impl Default for GetTxStatusResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_get_tx_status --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_get_tx_status` --exact --show-output
 #[test]
 fn test_get_tx_status() {
     // ref. https://docs.avax.network/apis/avalanchego/apis/x-chain/#avmgettxstatus
@@ -206,9 +211,14 @@ impl Default for GetUtxosRequest {
 }
 
 impl GetUtxosRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -253,7 +263,7 @@ pub struct GetUtxosResult {
     pub encoding: Option<String>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_get_utxos_empty --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_get_utxos_empty` --exact --show-output
 #[test]
 fn test_get_utxos_empty() {
     // ref. https://docs.avax.network/apis/avalanchego/apis/x-chain/#avmgetutxos
@@ -295,7 +305,7 @@ fn test_get_utxos_empty() {
     assert_eq!(resp, expected);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_get_utxos_non_empty --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_get_utxos_non_empty` --exact --show-output
 #[test]
 fn test_get_utxos_non_empty() {
     // ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetbalance
@@ -366,7 +376,7 @@ pub struct GetBalanceResult {
     pub utxo_ids: Option<Vec<txs::utxo::Id>>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_get_balance --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_get_balance` --exact --show-output
 #[test]
 fn test_get_balance() {
     use std::str::FromStr;
@@ -437,7 +447,7 @@ pub struct GetAssetDescriptionResult {
     pub denomination: usize,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::avm::test_get_asset_description --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::avm::test_get_asset_description` --exact --show-output
 #[test]
 fn test_get_asset_description() {
     use std::str::FromStr;
@@ -500,9 +510,14 @@ impl Default for IssueStopVertexRequest {
 }
 
 impl IssueStopVertexRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 

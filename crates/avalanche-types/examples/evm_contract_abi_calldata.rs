@@ -9,6 +9,7 @@ use ethers_core::{
 };
 
 /// cargo run --example evm_contract_abi_calldata --features="evm"
+#[allow(clippy::unnecessary_wraps)]
 fn main() -> io::Result<()> {
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
@@ -28,7 +29,7 @@ fn main() -> io::Result<()> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::String("abc".to_string())];
-    let calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 
     // parsed function of "send(address receiver, uint amount)"
@@ -57,7 +58,7 @@ fn main() -> io::Result<()> {
         ),
         Token::Uint(U256::from(1)),
     ];
-    let calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 
     Ok(())

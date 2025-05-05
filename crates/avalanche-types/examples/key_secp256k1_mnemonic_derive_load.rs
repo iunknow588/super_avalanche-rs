@@ -18,8 +18,8 @@ fn main() {
             .unwrap();
 
     let entry = key.to_info(1).expect("failed to_info");
-    log::info!("network ID 1:\n{}", entry);
+    log::info!("network ID 1:\n{entry}");
 
     let entry = key.to_info(9999).expect("failed to_info");
-    log::info!("network ID 9999:\n{}", entry);
+    log::info!("network ID 9999:\n{entry}");
 }

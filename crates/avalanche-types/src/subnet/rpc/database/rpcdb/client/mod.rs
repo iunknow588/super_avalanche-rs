@@ -30,24 +30,31 @@ use crate::{
 use prost::bytes::Bytes;
 use tonic::transport::Channel;
 
-/// DatabaseClient is an implementation of [`crate::subnet::rpc::database::Database`] that talks over RPC.
+/// `DatabaseClient` is an implementation of [`crate::subnet::rpc::database::Database`] that talks over RPC.
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/database/rpcdb#DatabaseClient>
 #[derive(Clone)]
 pub struct DatabaseClient {
+    /// The underlying RPC client
     inner: RpcDbDatabaseClient<Channel>,
     /// True if the underlying database is closed.
     closed: Arc<AtomicBool>,
 }
 
 impl DatabaseClient {
-    pub fn new_boxed(client_conn: Channel) -> BoxedDatabase {
-        Box::new(Self {
+    #[must_use]
+    pub fn new(client_conn: Channel) -> Self {
+        Self {
             inner: RpcDbDatabaseClient::new(client_conn)
                 .max_decoding_message_size(usize::MAX)
                 .max_encoding_message_size(usize::MAX),
             closed: Arc::new(AtomicBool::new(false)),
-        })
+        }
+    }
+
+    #[must_use]
+    pub fn new_boxed(client_conn: Channel) -> BoxedDatabase {
+        Box::new(Self::new(client_conn))
     }
 }
 
@@ -62,8 +69,8 @@ impl database::KeyValueReaderWriterDeleter for DatabaseClient {
             })
             .await
             .map_err(|s| {
-                log::error!("has request failed: {:?}", s);
-                errors::from_status(s)
+                log::error!("has request failed: {s:?}");
+                errors::from_status(&s)
             })?
             .into_inner();
 
@@ -79,8 +86,8 @@ impl database::KeyValueReaderWriterDeleter for DatabaseClient {
             })
             .await
             .map_err(|s| {
-                log::error!("get request failed: {:?}", s);
-                errors::from_status(s)
+                log::error!("get request failed: {s:?}");
+                errors::from_status(&s)
             })?;
 
         log::debug!("get response: {:?}", resp);
@@ -101,8 +108,8 @@ impl database::KeyValueReaderWriterDeleter for DatabaseClient {
             })
             .await
             .map_err(|s| {
-                log::error!("put request failed: {:?}", s);
-                errors::from_status(s)
+                log::error!("put request failed: {s:?}");
+                errors::from_status(&s)
             })?;
 
         errors::from_i32(resp.into_inner().err)
@@ -117,8 +124,8 @@ impl database::KeyValueReaderWriterDeleter for DatabaseClient {
             })
             .await
             .map_err(|s| {
-                log::error!("delete request failed: {:?}", s);
-                errors::from_status(s)
+                log::error!("delete request failed: {s:?}");
+                errors::from_status(&s)
             })?;
 
         errors::from_i32(resp.into_inner().err)
@@ -129,13 +136,17 @@ impl database::KeyValueReaderWriterDeleter for DatabaseClient {
 impl database::Closer for DatabaseClient {
     /// Attempts to close the database.
     async fn close(&self) -> io::Result<()> {
-        let mut db = self.inner.clone();
         self.closed.store(true, Ordering::Relaxed);
 
-        let resp = db.close(CloseRequest {}).await.map_err(|s| {
-            log::error!("close request failed: {:?}", s);
-            errors::from_status(s)
-        })?;
+        let resp = self
+            .inner
+            .clone()
+            .close(CloseRequest {})
+            .await
+            .map_err(|s| {
+                log::error!("close request failed: {s:?}");
+                errors::from_status(&s)
+            })?;
 
         errors::from_i32(resp.into_inner().err)
     }
@@ -145,11 +156,15 @@ impl database::Closer for DatabaseClient {
 impl crate::subnet::rpc::health::Checkable for DatabaseClient {
     /// Attempts to perform a health check against the underlying database.
     async fn health_check(&self) -> io::Result<Vec<u8>> {
-        let mut db = self.inner.clone();
-        let resp = db.health_check(Empty {}).await.map_err(|s| {
-            log::error!("health check failed: {:?}", s);
-            errors::from_status(s)
-        })?;
+        let resp = self
+            .inner
+            .clone()
+            .health_check(Empty {})
+            .await
+            .map_err(|s| {
+                log::error!("health check failed: {s:?}");
+                errors::from_status(&s)
+            })?;
 
         Ok(resp.into_inner().details.to_vec())
     }
@@ -178,8 +193,9 @@ impl database::iterator::Iteratee for DatabaseClient {
         start: &[u8],
         prefix: &[u8],
     ) -> io::Result<BoxedIterator> {
-        let mut db = self.inner.clone();
-        match db
+        match self
+            .inner
+            .clone()
             .new_iterator_with_start_and_prefix(NewIteratorWithStartAndPrefixRequest {
                 start: Bytes::from(start.to_owned()),
                 prefix: Bytes::from(prefix.to_owned()),
@@ -192,7 +208,7 @@ impl database::iterator::Iteratee for DatabaseClient {
                 Arc::clone(&self.closed),
             )),
             Err(s) => Ok(crate::subnet::rpc::database::nodb::Iterator::new_boxed(
-                Some(errors::from_status(s)),
+                Some(errors::from_status(&s)),
             )),
         }
     }

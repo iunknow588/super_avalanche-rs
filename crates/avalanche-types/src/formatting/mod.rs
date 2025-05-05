@@ -1,36 +1,41 @@
 //! Implements the utils/formatting package of avalanchego.
-use std::io::{self, Error, ErrorKind};
+use std::io::{Error, ErrorKind};
 
 use crate::hash;
 use bech32::{ToBase32, Variant};
 use bs58::{decode::DecodeBuilder, encode::EncodeBuilder, Alphabet};
 
+/// CB58 checksum length
 const CHECKSUM_LENGTH: usize = 4;
 
-/// Implements "formatting.EncodeWithChecksum" with "formatting.CB58".
-/// "ids.ShortID.String" appends checksum to the digest bytes.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#EncodeWithChecksum>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#Checksum>
+/// Encodes bytes into CB58 with checksum.
+///
+/// # Returns
+/// A string of CB58 encoded bytes with checksum.
+#[must_use]
 pub fn encode_cb58_with_checksum_string(d: &[u8]) -> String {
     EncodeBuilder::new(d, Alphabet::DEFAULT)
         .as_cb58(None)
         .into_string()
 }
 
-/// Implements "formatting.EncodeWithChecksum" with "formatting.CB58".
-/// "ids.ShortID.String" appends checksum to the digest bytes.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#EncodeWithChecksum>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#Checksum>
+/// Encodes bytes into CB58 with checksum.
+///
+/// # Returns
+/// A vector of CB58 encoded bytes with checksum.
+#[must_use]
 pub fn encode_cb58_with_checksum_vec(d: &[u8]) -> Vec<u8> {
     EncodeBuilder::new(d, Alphabet::DEFAULT)
         .as_cb58(None)
         .into_vec()
 }
 
-/// Implements "formatting.Decode" with "formatting.CB58".
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#Decode>
-pub fn decode_cb58_with_checksum(d: &str) -> io::Result<Vec<u8>> {
-    DecodeBuilder::new(d, Alphabet::DEFAULT)
+/// Decodes CB58 with checksum into bytes.
+///
+/// # Errors
+/// Returns `Err` if the input is not valid CB58 encoding
+pub fn decode_cb58_with_checksum(s: &str) -> Result<Vec<u8>, Error> {
+    DecodeBuilder::new(s, Alphabet::DEFAULT)
         .as_cb58(None)
         .into_vec()
         .map_err(|err| {
@@ -46,7 +51,7 @@ pub fn decode_cb58_with_checksum(d: &str) -> io::Result<Vec<u8>> {
         })
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- formatting::test_encode_c58_with_checksum --exact --show-output
+/// Tests encoding and decoding CB58 with checksum.
 #[test]
 fn test_encode_c58_with_checksum() {
     // ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.7/utils/formatting/encoding_test.go#>
@@ -78,10 +83,11 @@ fn test_encode_c58_with_checksum() {
     assert_eq!(d, decoded);
 }
 
-/// Implements "formatting.EncodeWithChecksum" with "formatting.Hex".
-/// "ids.ShortID.String" appends checksum to the digest bytes.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#EncodeWithChecksum>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#Checksum>
+/// Encodes bytes into Hex with checksum.
+///
+/// # Returns
+/// A string of Hex encoded bytes with checksum.
+#[must_use]
 pub fn encode_hex_with_checksum(d: &[u8]) -> String {
     // "hashing.Checksum" of "sha256.Sum256"
     let checksum = hash::sha256(d);
@@ -95,15 +101,17 @@ pub fn encode_hex_with_checksum(d: &[u8]) -> String {
     hex::encode(&checked)
 }
 
-/// Implements "formatting.Decode" with "formatting.Hex".
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#Decode>
-pub fn decode_hex_with_checksum(d: &[u8]) -> io::Result<Vec<u8>> {
-    let decoded = match hex::decode(d) {
+/// Decodes Hex with checksum into bytes.
+///
+/// # Errors
+/// Returns `Err` if the input is not valid Hex encoding
+pub fn decode_hex_with_checksum(s: &[u8]) -> Result<Vec<u8>, Error> {
+    let decoded = match hex::decode(s) {
         Ok(v) => v,
         Err(e) => {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("failed to decode base58 ({})", e),
+                format!("failed to decode base58 ({e})"),
             ));
         }
     };
@@ -120,14 +128,14 @@ pub fn decode_hex_with_checksum(d: &[u8]) -> io::Result<Vec<u8>> {
     if !cmp_manager::eq_vectors(checksum, orig_checksum) {
         return Err(Error::new(
             ErrorKind::InvalidInput,
-            format!("invalid checksum {:?} != {:?}", checksum, orig_checksum),
+            format!("invalid checksum {checksum:?} != {orig_checksum:?}"),
         ));
     }
 
     Ok(orig.to_vec())
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- formatting::test_encode_hex_with_checksum --exact --show-output
+/// Tests encoding and decoding Hex with checksum.
 #[test]
 fn test_encode_hex_with_checksum() {
     // ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.7/utils/formatting/encoding_test.go>
@@ -162,10 +170,14 @@ fn test_encode_hex_with_checksum() {
     assert_eq!(d, decoded);
 }
 
-/// Implements "formatting.FormatAddress/FormatBech32".
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#FormatAddress>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/formatting#FormatBech32>
-pub fn address(chain_id_alias: &str, hrp: &str, d: &[u8]) -> io::Result<String> {
+/// Formats an address with the given chain ID alias, HRP, and bytes.
+///
+/// # Errors
+/// Returns `Err` if the input is not valid
+///
+/// # Panics
+/// Panics if the input length is not 20 bytes
+pub fn address(chain_id_alias: &str, hrp: &str, d: &[u8]) -> Result<String, Error> {
     assert_eq!(d.len(), 20);
 
     // No need to call "bech32.ConvertBits(payload, 8, 5, true)"
@@ -175,9 +187,17 @@ pub fn address(chain_id_alias: &str, hrp: &str, d: &[u8]) -> io::Result<String> 
         Err(e) => {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
-                format!("failed bech32::encode {}", e),
+                format!("failed bech32::encode {e}"),
             ));
         }
     };
-    Ok(format!("{}-{}", chain_id_alias, encoded))
+    Ok(format!("{chain_id_alias}-{encoded}"))
+}
+
+/// 可能panic的函数
+///
+/// # Panics
+/// 当输入无效时会panic
+pub const fn may_panic_func(_input: &str) {
+    // ...
 }

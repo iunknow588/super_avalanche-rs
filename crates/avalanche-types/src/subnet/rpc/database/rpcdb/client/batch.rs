@@ -22,9 +22,13 @@ use tonic::transport::Channel;
 
 pub const BASE_ELEMENT_SIZE: usize = 8;
 
+/// Key-value pair with delete flag
 struct KeyValue {
+    /// The key
     key: Vec<u8>,
+    /// The value
     value: Vec<u8>,
+    /// Whether this is a delete operation
     delete: bool,
 }
 
@@ -33,8 +37,11 @@ struct KeyValue {
 /// should not be used concurrently.
 #[derive(Clone)]
 pub struct Batch {
+    /// The database client
     db: DatabaseClient<Channel>,
+    /// The pending writes
     writes: Arc<RwLock<Vec<KeyValue>>>,
+    /// The total size of all keys and values
     size: usize,
 }
 
@@ -52,9 +59,7 @@ impl Batch {
 impl database::batch::Batch for Batch {
     /// Implements the [`crate::subnet::rpc::database::batch::Batch`] trait.
     async fn put(&mut self, key: &[u8], value: &[u8]) -> Result<()> {
-        let mut writes = self.writes.write().await;
-
-        writes.push(KeyValue {
+        self.writes.write().await.push(KeyValue {
             key: key.to_owned(),
             value: value.to_owned(),
             delete: false,
@@ -65,9 +70,7 @@ impl database::batch::Batch for Batch {
 
     /// Implements the [`crate::subnet::rpc::database::batch::Batch`] trait.
     async fn delete(&mut self, key: &[u8]) -> Result<()> {
-        let mut writes = self.writes.write().await;
-
-        writes.push(KeyValue {
+        self.writes.write().await.push(KeyValue {
             key: key.to_owned(),
             value: vec![],
             delete: true,
@@ -90,7 +93,7 @@ impl database::batch::Batch for Batch {
         let writes = self.writes.read().await;
         let mut key_set: HashSet<Vec<u8>> = HashSet::with_capacity(writes.len());
 
-        let mut db = self.db.clone();
+        // Use the database client
         for kv in writes.iter() {
             // continue if the key already existed
             if key_set.contains(&kv.key) {
@@ -100,23 +103,25 @@ impl database::batch::Batch for Batch {
 
             if kv.delete {
                 req.deletes.push(rpcdb::DeleteRequest {
-                    key: Bytes::from(kv.key.to_owned()),
-                })
+                    key: Bytes::from(kv.key.clone()),
+                });
             } else {
                 req.puts.push(rpcdb::PutRequest {
-                    key: Bytes::from(kv.key.to_owned()),
-                    value: Bytes::from(kv.value.to_owned()),
-                })
+                    key: Bytes::from(kv.key.clone()),
+                    value: Bytes::from(kv.value.clone()),
+                });
             }
         }
 
-        let resp = db
+        let resp = self
+            .db
+            .clone()
             .write_batch(req)
             .await
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("batch write request failed: {:?}", e),
+                    format!("batch write request failed: {e:?}"),
                 )
             })?
             .into_inner();
@@ -134,6 +139,7 @@ impl database::batch::Batch for Batch {
         } else {
             writes.clear();
         }
+        drop(writes);
         self.size = 0;
     }
 
@@ -141,15 +147,16 @@ impl database::batch::Batch for Batch {
     async fn replay(&self, k: Arc<Mutex<BoxedDatabase>>) -> Result<()> {
         let writes = self.writes.read().await;
         let mut db = k.lock().await;
+        // Drop db and writes after the function completes
 
         for kv in writes.iter() {
             if kv.delete {
                 db.delete(&kv.key).await.map_err(|e| {
-                    Error::new(ErrorKind::Other, format!("replay delete failed: {:?}", e))
+                    Error::new(ErrorKind::Other, format!("replay delete failed: {e:?}"))
                 })?;
             } else {
                 db.put(&kv.key, &kv.value).await.map_err(|e| {
-                    Error::new(ErrorKind::Other, format!("replay put failed: {:?}", e))
+                    Error::new(ErrorKind::Other, format!("replay put failed: {e:?}"))
                 })?;
             }
         }

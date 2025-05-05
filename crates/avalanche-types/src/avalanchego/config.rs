@@ -1,4 +1,4 @@
-//! AvalancheGo configuration.
+//! `AvalancheGo` configuration.
 use std::{
     collections::BTreeSet,
     fs::{self, File},
@@ -9,7 +9,8 @@ use std::{
 use crate::{avalanchego::genesis, constants, units};
 use serde::{Deserialize, Serialize};
 
-/// Represents AvalancheGo configuration.
+/// Represents `AvalancheGo` configuration.
+///
 /// All file paths must be valid on the remote machines.
 /// For example, you may configure cert paths on your local laptop
 /// but the actual Avalanche nodes run on the remote machines
@@ -145,7 +146,7 @@ pub struct Config {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_ipcs_enabled: Option<bool>,
 
-    /// A list of whitelisted/tracked subnet IDs (comma-separated).
+    /// A list of `whitelisted/tracked subnet IDs` (comma-separated).
     /// From avalanchego v1.9.7, it's renamed to "track-subnets".
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.8/config/keys.go>
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -257,9 +258,10 @@ pub const DEFAULT_CHAIN_ALIASES_PATH: &str = "/data/avalanche-configs/chains/ali
 
 pub const DEFAULT_DB_TYPE: &str = "leveldb";
 /// Default "db-dir" directory path for remote linux machines.
+///
 /// MUST BE matched with the attached physical storage volume path.
 /// MUST BE a valid path in remote host machine.
-/// ref. See "cfn-templates/avalanche-node/asg_amd64_ubuntu.yaml" "ASGLaunchTemplate"
+/// ref. See "cfn-templates/avalanche-node/asg_amd64_ubuntu.yaml" "`ASGLaunchTemplate`"
 pub const DEFAULT_DB_DIR: &str = "/data/db";
 /// Default "chain-data-dir" directory path for remote linux machines.
 /// MUST BE matched with the attached physical storage volume path.
@@ -268,7 +270,7 @@ pub const DEFAULT_CHAIN_DATA_DIR: &str = "/data/chainData";
 
 /// Default "log-dir" directory path for remote linux machines.
 /// MUST BE a valid path in remote host machine.
-/// ref. See "cfn-templates/avalanche-node/asg_amd64_ubuntu.yaml" "ASGLaunchTemplate"
+/// ref. See "cfn-templates/avalanche-node/asg_amd64_ubuntu.yaml" "`ASGLaunchTemplate`"
 pub const DEFAULT_LOG_DIR: &str = "/var/log/avalanchego";
 pub const DEFAULT_LOG_LEVEL: &str = "INFO";
 pub const DEFAULT_LOG_FORMAT: &str = "json";
@@ -277,6 +279,7 @@ pub const DEFAULT_LOG_FORMAT: &str = "json";
 /// NOTE: keep default value in sync with "avalanchego/config/flags.go".
 pub const DEFAULT_HTTP_PORT: u32 = 9650;
 /// Default HTTP host.
+///
 /// Open listener to "0.0.0.0" to allow all incoming traffic.
 /// e.g., If set to default "127.0.0.1", the external client
 /// cannot access "/ext/metrics". Set different values to
@@ -317,12 +320,16 @@ pub const DEFAULT_PLUGIN_DIR: &str = "/data/avalanche-plugins";
 
 /// If a subnet id is 2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt,
 /// the config file for this subnet is located at {subnet-config-dir}/2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt.json.
+///
 /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go>
 /// ref. <https://docs.avax.network/subnets/customize-a-subnet#chain-configs>
 pub const DEFAULT_SUBNET_CONFIG_DIR: &str = "/data/avalanche-configs/subnets";
 
 /// If a Subnet's chain id is 2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt,
-/// the config file for this chain is located at {chain-config-dir}/2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt/config.json.
+/// the config file for this chain is located at:
+///
+/// {chain-config-dir}/2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt/config.json.
+///
 /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go>
 /// ref. <https://docs.avax.network/subnets/customize-a-subnet#chain-configs>
 pub const DEFAULT_CHAIN_CONFIG_DIR: &str = "/data/avalanche-configs/chains";
@@ -330,18 +337,18 @@ pub const DEFAULT_CHAIN_CONFIG_DIR: &str = "/data/avalanche-configs/chains";
 /// MUST BE a valid path in remote host machine.
 pub const DEFAULT_PROFILE_DIR: &str = "/var/log/avalanchego-profile/avalanche";
 
-/// ref. [DefaultInboundThrottlerAtLargeAllocSize](https://github.com/ava-labs/avalanchego/blob/master/utils/constants/networking.go#L88)
+/// ref. [`DefaultInboundThrottlerAtLargeAllocSize`](https://github.com/ava-labs/avalanchego/blob/master/utils/constants/networking.go#L88)
 pub const DEFAULT_THROTTLER_INBOUND_AT_LARGE_ALLOC_SIZE: u64 = 6 * units::MIB;
-/// ref. [DefaultInboundThrottlerVdrAllocSize](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
+/// ref. [`DefaultInboundThrottlerVdrAllocSize`](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
 pub const DEFAULT_THROTTLER_INBOUND_VALIDATOR_ALLOC_SIZE: u64 = 32 * units::MIB;
-/// ref. [DefaultInboundThrottlerNodeMaxAtLargeBytes](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
+/// ref. [`DefaultInboundThrottlerNodeMaxAtLargeBytes`](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
 pub const DEFAULT_THROTTLER_INBOUND_NODE_MAX_AT_LARGE_BYTES: u64 = 2 * units::MIB;
 
-/// ref. [DefaultOutboundThrottlerAtLargeAllocSize](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
+/// ref. [``DefaultOutboundThrottlerAtLargeAllocSize``](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
 pub const DEFAULT_THROTTLER_OUTBOUND_AT_LARGE_ALLOC_SIZE: u64 = 32 * units::MIB;
-/// ref. [DefaultOutboundThrottlerVdrAllocSize](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
+/// ref. [``DefaultOutboundThrottlerVdrAllocSize``](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
 pub const DEFAULT_THROTTLER_OUTBOUND_VALIDATOR_ALLOC_SIZE: u64 = 32 * units::MIB;
-/// ref. [DefaultOutboundThrottlerNodeMaxAtLargeBytes](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
+/// ref. [``DefaultOutboundThrottlerNodeMaxAtLargeBytes``](https://github.com/ava-labs/avalanchego/blob/v1.9.11/config/flags.go)
 pub const DEFAULT_THROTTLER_OUTBOUND_NODE_MAX_AT_LARGE_BYTES: u64 = 2 * units::MIB;
 
 pub const DEFAULT_NETWORK_COMPRESSION_TYPE: &str = "zstd";
@@ -357,6 +364,7 @@ impl Default for Config {
 impl Config {
     /// The defaults do not match with the ones in avalanchego,
     /// as this is for avalanche-ops based deployments.
+    #[must_use]
     pub fn default_main() -> Self {
         Self {
             config_file: Some(String::from(DEFAULT_CONFIG_FILE_PATH)),
@@ -472,6 +480,7 @@ impl Config {
 
     /// The defaults do not match with the ones in avalanchego,
     /// as this is for avalanche-ops based deployments.
+    #[must_use]
     pub fn default_fuji() -> Self {
         let mut cfg = Self::default_main();
         cfg.network_id = 5;
@@ -480,6 +489,7 @@ impl Config {
 
     /// The defaults do not match with the ones in avalanchego,
     /// as this is for avalanche-ops based deployments.
+    #[must_use]
     pub fn default_custom() -> Self {
         let mut cfg = Self::default_main();
         cfg.network_id = constants::DEFAULT_CUSTOM_NETWORK_ID;
@@ -488,17 +498,19 @@ impl Config {
     }
 
     /// Returns true if the configuration is mainnet.
-    pub fn is_mainnet(&self) -> bool {
+    #[must_use]
+    pub const fn is_mainnet(&self) -> bool {
         self.network_id == 1
     }
 
     /// Returns true if the configuration is a custom network
     /// thus requires a custom genesis file.
-    pub fn is_custom_network(&self) -> bool {
+    #[must_use]
+    pub const fn is_custom_network(&self) -> bool {
         !self.is_mainnet() && (self.network_id == 0 || self.network_id > 5)
     }
 
-    pub fn add_track_subnets(&mut self, ids: Option<String>) {
+    pub fn add_track_subnets(&mut self, ids: &Option<String>) {
         let mut all_ids = BTreeSet::new();
         if let Some(existing) = &self.track_subnets {
             let ss: Vec<&str> = existing.split(',').collect();
@@ -515,23 +527,36 @@ impl Config {
         }
 
         let mut ids = Vec::new();
-        for id in all_ids.iter() {
+        for id in &all_ids {
             ids.push(id.trim().to_string());
         }
 
         if !ids.is_empty() {
-            self.track_subnets = Some(ids.join(","))
+            self.track_subnets = Some(ids.join(","));
         }
     }
 
     /// Converts to string with JSON encoder.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JSON serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
     /// Saves the current configuration to disk
     /// and overwrites the file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file path is empty, or if there's an issue with file operations.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.config_file` is `None` when `file_path` is `None`. This should never happen
+    /// due to the check at the beginning of the function.
     pub fn sync(&self, file_path: Option<String>) -> io::Result<()> {
         if file_path.is_none() && self.config_file.is_none() {
             return Err(Error::new(
@@ -539,13 +564,16 @@ impl Config {
                 "empty config_file path",
             ));
         }
-        let p = file_path.unwrap_or_else(|| {
-            self.config_file
-                .clone()
-                .expect("unexpected None config_file")
-        });
 
-        log::info!("mkdir avalanchego configuration dir for '{}'", p);
+        // At this point, either file_path is Some or self.config_file is Some
+        let p = match file_path {
+            Some(path) => path,
+            None => self.config_file.clone().ok_or_else(|| {
+                Error::new(ErrorKind::InvalidInput, "unexpected None config_file")
+            })?,
+        };
+
+        log::info!("mkdir `AvalancheGo` configuration dir for  '{p}'");
         let path = Path::new(&p);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -553,47 +581,67 @@ impl Config {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
-        log::info!("syncing avalanchego Config to '{}'", p);
+        log::info!("syncing avalanchego Config to  '{p}'");
         let mut f = File::create(p)?;
         f.write_all(&d)?;
 
         Ok(())
     }
 
+    /// Loads the configuration from disk.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed.
     pub fn load(file_path: &str) -> io::Result<Self> {
-        log::info!("loading avalanchego config from {}", file_path);
+        log::info!("loading avalanchego config from {file_path}");
 
         if !Path::new(file_path).exists() {
             return Err(Error::new(
                 ErrorKind::NotFound,
-                format!("file {} does not exists", file_path),
+                format!("file {file_path} does not exists"),
             ));
         }
 
         let f = File::open(file_path).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to open {} ({})", file_path, e),
+                format!("failed to open {file_path} ({e})"),
             )
         })?;
         serde_json::from_reader(f)
-            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {}", e)))
+            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {e}")))
     }
 
     /// Validates the configuration.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.genesis_file` is `Some` but cannot be unwrapped.
+    ///
+    /// Validates the configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the configuration is invalid.
+    #[allow(clippy::too_many_lines)]
     pub fn validate(&self) -> io::Result<()> {
-        log::info!("validating the avalanchego configuration");
+        log::info!("validating the `AvalancheGo` configuration");
 
         // mainnet does not need genesis file
         if !self.is_custom_network() && self.genesis_file.is_some() {
+            let genesis_path = self
+                .genesis_file
+                .as_ref()
+                .ok_or_else(|| Error::new(ErrorKind::InvalidInput, "unexpected None genesis"))?;
+
             return Err(Error::new(
                 ErrorKind::InvalidInput,
                 format!(
                     "non-empty '--genesis={}' for network_id {}",
-                    self.genesis_file.clone().expect("unexpected None genesis"),
-                    self.network_id,
+                    genesis_path, self.network_id,
                 ),
             ));
         }
@@ -610,23 +658,22 @@ impl Config {
         }
 
         // custom network requires genesis file
-        if self.genesis_file.is_some()
-            && !Path::new(&self.genesis_file.clone().expect("unexpected None genesis")).exists()
-        {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                format!(
-                    "non-empty '--genesis={}' but genesis file does not exist",
-                    self.genesis_file.clone().expect("unexpected None genesis")
-                ),
-            ));
-        }
+        if let Some(genesis_path) = &self.genesis_file {
+            if !Path::new(genesis_path).exists() {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("non-empty '--genesis={genesis_path}' but genesis file does not exist"),
+                ));
+            }
 
-        // network ID must match with the one in genesis file
-        if self.genesis_file.is_some() {
-            let genesis_file_path = self.genesis_file.clone().expect("unexpected None genesis");
-            let genesis_config =
-                genesis::Genesis::load(&genesis_file_path).expect("unexpected None genesis config");
+            // network ID must match with the one in genesis file
+            let genesis_config = genesis::Genesis::load(genesis_path).map_err(|e| {
+                Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("failed to load genesis: {e}"),
+                )
+            })?;
+
             if genesis_config.network_id.ne(&self.network_id) {
                 return Err(Error::new(
                     ErrorKind::InvalidInput,
@@ -639,11 +686,13 @@ impl Config {
         }
 
         // staking
-        if self.sybil_protection_enabled.is_some() && !self.sybil_protection_enabled.unwrap() {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "'sybil_protection_enabled' must be true",
-            ));
+        if let Some(sybil_protection_enabled) = self.sybil_protection_enabled {
+            if !sybil_protection_enabled {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "'sybil_protection_enabled' must be true",
+                ));
+            }
         }
         if self.staking_tls_cert_file.is_none() {
             return Err(Error::new(
@@ -679,11 +728,13 @@ impl Config {
         }
 
         // continuous profiles
-        if self.profile_continuous_enabled.is_some() && !self.profile_continuous_enabled.unwrap() {
-            return Err(Error::new(
-                ErrorKind::InvalidInput,
-                "'profile-continuous-enabled' must be true",
-            ));
+        if let Some(profile_continuous_enabled) = self.profile_continuous_enabled {
+            if !profile_continuous_enabled {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "'profile-continuous-enabled' must be true",
+                ));
+            }
         }
         if self.profile_continuous_freq.is_some() && self.profile_continuous_enabled.is_none() {
             return Err(Error::new(
@@ -714,7 +765,7 @@ fn test_config() {
     let ret = config.encode_json();
     assert!(ret.is_ok());
     let s = ret.unwrap();
-    log::info!("config: {}", s);
+    log::info!("config: {s}");
 
     let p = random_manager::tmp_path(10, Some(".yaml")).unwrap();
     let ret = config.sync(Some(p.clone()));
@@ -723,7 +774,7 @@ fn test_config() {
     let config_loaded = Config::load(&p).unwrap();
     assert_eq!(config, config_loaded);
 
-    config.add_track_subnets(Some("x,y,a,b,d,f".to_string()));
+    config.add_track_subnets(&Some("x,y,a,b,d,f".to_string()));
     println!("{}", config.track_subnets.clone().unwrap());
     assert_eq!(config.track_subnets.unwrap(), "a,b,d,f,x,y");
 

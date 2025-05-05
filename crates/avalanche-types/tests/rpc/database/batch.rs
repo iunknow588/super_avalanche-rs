@@ -25,15 +25,16 @@ async fn batch_put_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    // 直接合并临时变量的创建和使用
+    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    ));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key = "hello".as_bytes();
-    let value = "world".as_bytes();
+    let key = b"hello";
+    let value = b"world";
 
     // new batch add key
     let mut batch = db.new_batch().await.unwrap();
@@ -75,15 +76,16 @@ async fn batch_delete_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    // 直接合并临时变量的创建和使用
+    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    ));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key = "hello".as_bytes();
-    let value = "world".as_bytes();
+    let key = b"hello";
+    let value = b"world";
 
     db.put(key, value).await.unwrap();
 
@@ -120,15 +122,16 @@ async fn batch_reset_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    // 直接合并临时变量的创建和使用
+    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    ));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key = "hello".as_bytes();
-    let value = "world".as_bytes();
+    let key = b"hello";
+    let value = b"world";
 
     db.put(key, value).await.unwrap();
 
@@ -137,8 +140,8 @@ async fn batch_reset_test() {
     let resp = batch.delete(key).await;
     assert!(resp.is_ok());
 
-    // reset batch
-    let _ = batch.reset().await;
+    // reset batch - 使用 () 而不是 _
+    () = batch.reset().await;
 
     // write batch
     let resp = batch.write().await;

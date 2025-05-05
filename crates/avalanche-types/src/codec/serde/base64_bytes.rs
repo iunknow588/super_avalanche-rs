@@ -2,6 +2,10 @@ use base64::Engine;
 use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
+/// 将字节序列序列化为base64字符串。
+///
+/// # Errors
+/// 序列化器失败时返回错误。
 pub fn serialize<S>(x: &Vec<u8>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -9,6 +13,10 @@ where
     serializer.serialize_str(&base64::engine::general_purpose::STANDARD.encode(x))
 }
 
+/// 从base64字符串反序列化为字节序列。
+///
+/// # Errors
+/// 字符串格式不合法或反序列化失败时返回错误。
 pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
 where
     D: Deserializer<'de>,
@@ -42,8 +50,8 @@ impl<'de> DeserializeAs<'de, Vec<u8>> for Base64Bytes {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// codec::serde::base64_bytes::test_custom_de_serializer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `codec::serde::base64_bytes::test_custom_de_serializer` --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     use serde::Serialize;
@@ -64,12 +72,12 @@ fn test_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 

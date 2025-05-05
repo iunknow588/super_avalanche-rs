@@ -4,13 +4,21 @@ use primitive_types::H160;
 use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
+/// 将H160序列化为带0x前缀的16进制字符串。
+///
+/// # Errors
+/// 序列化器失败时返回错误。
 pub fn serialize<S>(x: &H160, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&format!("0x{:x}", *x))
+    serializer.serialize_str(&format!("0x{x:x}"))
 }
 
+/// 从带0x前缀的16进制字符串反序列化为H160。
+///
+/// # Errors
+/// 字符串格式不合法或反序列化失败时返回错误。
 pub fn deserialize<'de, D>(deserializer: D) -> Result<H160, D::Error>
 where
     D: Deserializer<'de>,
@@ -44,7 +52,7 @@ impl<'de> DeserializeAs<'de, H160> for Hex0xH160 {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- codec::serde::hex_0x_primitive_types_h160::test_custom_de_serializer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `codec::serde::hex_0x_primitive_types_h160::test_custom_de_serializer` --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     use serde::Serialize;
@@ -77,12 +85,12 @@ fn test_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 

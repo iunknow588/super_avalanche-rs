@@ -62,12 +62,12 @@ impl Default for UnsignedTx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::test_json_deserialize --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::test_json_deserialize` --exact --show-output
 #[test]
 fn test_json_deserialize() {
     let parsed_tx: Tx = serde_json::from_str(
         "
-    
+
     {
         \"unsignedTx\": {
             \"networkID\": 1_000_000,
@@ -117,12 +117,12 @@ fn test_json_deserialize() {
             }
         ]
     }
-    
+
     ",
     )
     .unwrap();
 
-    println!("{:?}", parsed_tx);
+    println!("{parsed_tx:?}");
 
     assert_eq!(parsed_tx.unsigned_tx.network_id, 1_000_000);
     assert_eq!(
@@ -134,7 +134,7 @@ fn test_json_deserialize() {
         245_952_587_549_460_688
     );
     assert_eq!(
-        parsed_tx.unsigned_tx.transferable_outputs.clone().unwrap()[0]
+        parsed_tx.unsigned_tx.transferable_outputs.unwrap()[0]
             .transfer_output
             .clone()
             .unwrap()
@@ -152,17 +152,24 @@ pub struct StakeableLockIn {
 }
 
 impl StakeableLockIn {
+    #[must_use]
     pub fn type_name() -> String {
         "platformvm.StakeableLockIn".to_string()
     }
 
+    /// Returns the type ID for this transaction.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec registry.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::P_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::P_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 }
 
 impl Ord for StakeableLockIn {
-    fn cmp(&self, other: &StakeableLockIn) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.locktime
             .cmp(&(other.locktime)) // returns when "locktime"s are not Equal
             .then_with(
@@ -172,18 +179,18 @@ impl Ord for StakeableLockIn {
 }
 
 impl PartialOrd for StakeableLockIn {
-    fn partial_cmp(&self, other: &StakeableLockIn) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for StakeableLockIn {
-    fn eq(&self, other: &StakeableLockIn) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::test_sort_stakeable_lock_ins --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::test_sort_stakeable_lock_ins` --exact --show-output
 #[test]
 fn test_sort_stakeable_lock_ins() {
     let mut ins: Vec<StakeableLockIn> = Vec::new();
@@ -263,17 +270,25 @@ pub struct StakeableLockOut {
 }
 
 impl StakeableLockOut {
+    #[must_use]
     pub fn type_name() -> String {
         "platformvm.StakeableLockOut".to_string()
     }
 
+    /// 返回类型ID。
+    ///
+    /// # Panics
+    ///
+    /// 如果类型名称未在 `codec::P_TYPES` 中注册，则会 panic。
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::P_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::P_TYPES.get(&Self::type_name()).unwrap()))
+            .expect("type ID should fit in u32")
     }
 }
 
 impl Ord for StakeableLockOut {
-    fn cmp(&self, other: &StakeableLockOut) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.locktime
             .cmp(&(other.locktime)) // returns when "locktime"s are not Equal
             .then_with(
@@ -283,92 +298,92 @@ impl Ord for StakeableLockOut {
 }
 
 impl PartialOrd for StakeableLockOut {
-    fn partial_cmp(&self, other: &StakeableLockOut) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for StakeableLockOut {
-    fn eq(&self, other: &StakeableLockOut) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::test_sort_stakeable_lock_outs --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::test_sort_stakeable_lock_outs` --exact --show-output
 #[test]
 fn test_sort_stakeable_lock_outs() {
     use crate::ids::short;
     let mut outs: Vec<StakeableLockOut> = Vec::new();
     for i in (0..10).rev() {
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
                     addresses: vec![
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                        short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                     ],
                 },
             },
         });
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
                     addresses: vec![
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                     ],
                 },
             },
         });
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
@@ -379,73 +394,73 @@ fn test_sort_stakeable_lock_outs() {
     let mut sorted_outs: Vec<StakeableLockOut> = Vec::new();
     for i in 0..10 {
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             },
         });
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
                     addresses: vec![
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                     ],
                 },
             },
         });
         sorted_outs.push(StakeableLockOut {
-            locktime: i as u64,
+            locktime: u64::from(i),
             transfer_output: key::secp256k1::txs::transfer::Output {
-                amount: (i + 1) as u64,
+                amount: u64::from(i + 1),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: (i + 1) as u64,
-                    threshold: (i + 1) as u32,
+                    locktime: u64::from(i + 1),
+                    threshold: u32::from(i + 1),
                     addresses: vec![
-                        short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                        short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                        short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                     ],
                 },
             },
@@ -455,6 +470,8 @@ fn test_sort_stakeable_lock_outs() {
     assert_eq!(outs, sorted_outs);
 }
 
+/// 验证者信息。
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#Validator>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#AddValidatorArgs>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/api#Staker>

@@ -10,13 +10,14 @@ use crate::{
 use chrono::{DateTime, Utc};
 use tokio::time::{sleep, Duration, Instant};
 
-/// Represents P-chain "AddValidator" transaction.
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L325-L358> "NewAddValidatorTx"
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L428> "NewAddValidatorTx"
+/// Represents P-chain `AddValidator` transaction.
+///
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L325-L358> `NewAddValidatorTx`
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L428> `NewAddValidatorTx`
 #[derive(Clone, Debug)]
 pub struct Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::p::P<T>,
 
@@ -51,8 +52,14 @@ where
 
 impl<T> Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
+    /// Creates a new transaction with default values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the system time cannot be determined.
+    #[must_use]
     pub fn new(p: &crate::wallet::p::P<T>) -> Self {
         let now_unix = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -87,33 +94,37 @@ where
 
     /// Sets the validator node Id.
     #[must_use]
-    pub fn node_id(mut self, node_id: node::Id) -> Self {
+    pub const fn node_id(mut self, node_id: node::Id) -> Self {
         self.node_id = node_id;
         self
     }
 
     /// Sets the stake amount.
     #[must_use]
-    pub fn stake_amount(mut self, stake_amount: u64) -> Self {
+    pub const fn stake_amount(mut self, stake_amount: u64) -> Self {
         self.stake_amount = stake_amount;
         self
     }
 
     /// Sets the validate start time.
     #[must_use]
-    pub fn start_time(mut self, start_time: DateTime<Utc>) -> Self {
+    pub const fn start_time(mut self, start_time: DateTime<Utc>) -> Self {
         self.start_time = start_time;
         self
     }
 
     /// Sets the validate start time.
     #[must_use]
-    pub fn end_time(mut self, end_time: DateTime<Utc>) -> Self {
+    pub const fn end_time(mut self, end_time: DateTime<Utc>) -> Self {
         self.end_time = end_time;
         self
     }
 
-    /// Sets the validate start/end time in days from 'offset_seconds' later.
+    /// Sets the validate start/end time in days from `offset_seconds` later.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the timestamp conversion fails.
     #[must_use]
     pub fn validate_period_in_days(mut self, days: u64, offset_seconds: u64) -> Self {
         let now_unix = SystemTime::now()
@@ -136,50 +147,58 @@ where
 
     /// Sets the validate reward in percent.
     #[must_use]
-    pub fn reward_fee_percent(mut self, reward_fee_percent: u32) -> Self {
+    pub const fn reward_fee_percent(mut self, reward_fee_percent: u32) -> Self {
         self.reward_fee_percent = reward_fee_percent;
         self
     }
 
     /// Sets the check acceptance boolean flag.
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         self.check_acceptance = check_acceptance;
         self
     }
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the add validator transaction and returns the transaction Id.
-    /// The boolean return represents whether the "add_validator" request was
+    /// The boolean return represents whether the `add_validator` request was
     /// successfully issued or not (regardless of its acceptance).
     /// If the validator is already a validator, it returns an empty Id and false.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if the acceptance check fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the transaction metadata is missing.
     pub async fn issue(&self) -> Result<(ids::Id, bool)> {
         let picked_http_rpc = self.inner.inner.pick_base_http_url();
         log::info!(
@@ -208,7 +227,7 @@ where
                 message: format!("key address {} (balance {} nano-AVAX, network {}) does not have enough to cover stake amount + fee {}", self.inner.inner.p_address, cur_balance_p, self.inner.inner.network_name, self.stake_amount + self.inner.inner.add_primary_network_validator_fee),
                 retryable: false,
             });
-        };
+        }
         log::info!(
             "{} current P-chain balance {}",
             self.inner.inner.p_address,
@@ -270,13 +289,13 @@ where
             }
 
             return Err(Error::API {
-                message: format!("failed to issue add validator transaction {:?}", e),
+                message: format!("failed to issue add validator transaction {e:?}"),
                 retryable: false,
             });
         }
 
         let tx_id = resp.result.unwrap().tx_id;
-        log::info!("{} successfully issued", tx_id);
+        log::info!("{tx_id} successfully issued");
 
         if !self.check_acceptance {
             log::debug!("skipping checking acceptance...");
@@ -299,7 +318,7 @@ where
 
             let status = resp.result.unwrap().status;
             if status == platformvm::txs::status::Status::Committed {
-                log::info!("{} successfully committed", tx_id);
+                log::info!("{tx_id} successfully committed");
                 success = true;
                 break;
             }

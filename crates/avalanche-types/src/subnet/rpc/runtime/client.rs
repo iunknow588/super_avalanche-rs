@@ -11,10 +11,12 @@ use super::Initializer;
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/rpcchainvm/runtime#Initializer>
 #[derive(Debug, Clone)]
 pub struct Client {
+    /// The inner gRPC client for runtime operations
     inner: RuntimeClient<Channel>,
 }
 
 impl Client {
+    #[must_use]
     pub fn new(client_conn: Channel) -> Self {
         Self {
             inner: RuntimeClient::new(client_conn)
@@ -27,9 +29,8 @@ impl Client {
 #[tonic::async_trait]
 impl Initializer for Client {
     async fn initialize(&self, protocol_version: u32, vm_server_addr: &str) -> Result<()> {
-        let mut client = self.inner.clone();
-
-        client
+        self.inner
+            .clone()
             .initialize(InitializeRequest {
                 protocol_version,
                 addr: vm_server_addr.to_owned(),

@@ -14,52 +14,66 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn as_str(&self) -> &'static str {
+    /// Returns the string representation of the error.
+    #[must_use]
+    pub const fn as_str(&self) -> &'static str {
         match *self {
-            Error::DatabaseClosed => "database closed",
-            Error::NotFound => "not found",
-            Error::HeightIndexedVMNotImplemented => {
+            Self::DatabaseClosed => "database closed",
+            Self::NotFound => "not found",
+            Self::HeightIndexedVMNotImplemented => {
                 "vm does not implement HeightIndexedChainVM interface"
             }
-            Error::IndexIncomplete => "query failed because height index is incomplete",
-            Error::StateSyncableVMNotImplemented => {
+            Self::IndexIncomplete => "query failed because height index is incomplete",
+            Self::StateSyncableVMNotImplemented => {
                 "vm does not implement StateSyncableVM interface"
             }
         }
     }
 
-    pub fn to_i32(&self) -> i32 {
+    /// Converts the error to an integer code.
+    #[must_use]
+    pub const fn to_i32(&self) -> i32 {
         match self {
-            Error::DatabaseClosed => 1,
-            Error::NotFound => 2,
-            Error::HeightIndexedVMNotImplemented => 3,
-            Error::IndexIncomplete => 4,
-            Error::StateSyncableVMNotImplemented => 5,
+            Self::DatabaseClosed => 1,
+            Self::NotFound => 2,
+            Self::HeightIndexedVMNotImplemented => 3,
+            Self::IndexIncomplete => 4,
+            Self::StateSyncableVMNotImplemented => 5,
         }
     }
 
-    /// Returns coresponding io::Error.
+    /// Returns coresponding `io::Error`.
+    #[must_use]
     pub fn to_err(&self) -> io::Error {
         match *self {
-            Error::DatabaseClosed => {
-                io::Error::new(io::ErrorKind::Other, Error::DatabaseClosed.as_str())
+            Self::DatabaseClosed => {
+                io::Error::new(io::ErrorKind::Other, Self::DatabaseClosed.as_str())
             }
-            Error::NotFound => io::Error::new(io::ErrorKind::NotFound, Error::NotFound.as_str()),
-            Error::HeightIndexedVMNotImplemented => io::Error::new(
+            Self::NotFound => io::Error::new(io::ErrorKind::NotFound, Self::NotFound.as_str()),
+            Self::HeightIndexedVMNotImplemented => io::Error::new(
                 io::ErrorKind::Other,
-                Error::HeightIndexedVMNotImplemented.as_str(),
+                Self::HeightIndexedVMNotImplemented.as_str(),
             ),
-            Error::IndexIncomplete => {
-                io::Error::new(io::ErrorKind::Other, Error::IndexIncomplete.as_str())
+            Self::IndexIncomplete => {
+                io::Error::new(io::ErrorKind::Other, Self::IndexIncomplete.as_str())
             }
-            Error::StateSyncableVMNotImplemented => io::Error::new(
+            Self::StateSyncableVMNotImplemented => io::Error::new(
                 io::ErrorKind::Other,
-                Error::StateSyncableVMNotImplemented.as_str(),
+                Self::StateSyncableVMNotImplemented.as_str(),
             ),
         }
     }
 }
 
+/// Converts an integer error code to a Result.
+///
+/// # Errors
+///
+/// Returns an error if the error code corresponds to a known error type.
+///
+/// # Panics
+///
+/// Panics if the error code is not recognized.
 pub fn from_i32(err: i32) -> io::Result<()> {
     match err {
         0 => Ok(()),
@@ -74,6 +88,7 @@ pub fn from_i32(err: i32) -> io::Result<()> {
 
 /// Accepts an error and returns a corruption error if the original error is not "database closed"
 /// or "not found".
+#[must_use]
 pub fn is_corruptible(error: &io::Error) -> bool {
     match error {
         e if e.kind() == io::ErrorKind::NotFound => false,
@@ -82,18 +97,21 @@ pub fn is_corruptible(error: &io::Error) -> bool {
     }
 }
 
-/// Returns true if the io::Error is ErrorKind::NotFound and contains a string "not found".
+/// Returns true if the `io::Error` is `ErrorKind::NotFound` and contains a string "not found".
+#[must_use]
 pub fn is_not_found(error: &io::Error) -> bool {
     error.kind() == io::ErrorKind::NotFound && error.to_string() == Error::NotFound.as_str()
 }
 
-/// Returns an io::Error with ErrorKind::Other from a string.
+/// Returns an `io::Error` with `ErrorKind::Other` from a string.
+#[must_use]
 pub fn from_string(message: String) -> io::Error {
     io::Error::new(io::ErrorKind::Other, message)
 }
 
-/// Returns a common database error from a tonic Status or .
-pub fn from_status(status: Status) -> io::Error {
+/// Returns a common database error from a tonic Status.
+#[must_use]
+pub fn from_status(status: &Status) -> io::Error {
     match status.message() {
         m if m.contains("database closed") => Error::DatabaseClosed.to_err(),
         m if m.contains("not found") => Error::NotFound.to_err(),

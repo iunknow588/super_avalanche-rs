@@ -32,9 +32,14 @@ impl Default for ChainAliasRequest {
 }
 
 impl ChainAliasRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| ioError::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| ioError::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 

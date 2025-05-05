@@ -36,6 +36,10 @@ impl NamedService for HealthServer {
 /// This address is used by the Runtime client to send Initialize RPC to server.
 ///
 // Serve starts the RPC Chain VM server and performs a handshake with the VM runtime service.
+/// 启动 RPC Chain VM server 并与 VM runtime service 握手。
+///
+/// # Errors
+/// 如果环境变量缺失、gRPC 客户端或初始化失败，返回 `io::Error`。
 pub async fn serve<V>(vm: V, stop_ch: Receiver<()>) -> Result<()>
 where
     V: VmImpl,
@@ -55,34 +59,34 @@ where
         )
     })?;
 
-    let client_conn = utils::grpc::default_client(&runtime_server_addr)?
-        .connect_timeout(Duration::from_secs(runtime::DEFAULT_DIAL_TIMEOUT))
-        .connect()
-        .await
-        .map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!(
-                    "failed to create runtime client conn from {}: {e}",
-                    &runtime_server_addr
-                ),
-            )
-        })?;
-
-    let client = runtime::client::Client::new(client_conn);
-    client
-        .initialize(PROTOCOL_VERSION, &vm_server_addr.to_string())
-        .await
-        .map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("failed to initialize runtime: {e}"),
-            )
-        })?;
+    runtime::client::Client::new(
+        utils::grpc::default_client(&runtime_server_addr)?
+            .connect_timeout(Duration::from_secs(runtime::DEFAULT_DIAL_TIMEOUT))
+            .connect()
+            .await
+            .map_err(|e| {
+                Error::new(
+                    ErrorKind::Other,
+                    format!("failed to create runtime client conn from {runtime_server_addr}: {e}"),
+                )
+            })?,
+    )
+    .initialize(PROTOCOL_VERSION, &vm_server_addr.to_string())
+    .await
+    .map_err(|e| {
+        Error::new(
+            ErrorKind::Other,
+            format!("failed to initialize runtime: {e}"),
+        )
+    })?;
 
     serve_with_address(vm, vm_server_addr, stop_ch).await
 }
 
+/// 指定地址启动 RPC Chain VM server。
+///
+/// # Errors
+/// 如果 gRPC 服务创建或启动失败，返回 `io::Error`。
 pub async fn serve_with_address<V>(vm: V, addr: SocketAddr, mut stop_ch: Receiver<()>) -> Result<()>
 where
     V: VmImpl,
@@ -102,7 +106,7 @@ where
         .map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to create gRPC reflection service: {:?}", e),
+                format!("failed to create gRPC reflection service: {e:?}"),
             )
         })?;
 
@@ -112,8 +116,11 @@ where
         .add_service(VmServer::new(vm))
         .serve_with_shutdown(addr, stop_ch.recv().map(|_| ()))
         .await
-        .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {:?}", e)))?;
-    log::info!("grpc server shutdown complete: {}", addr);
+        .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {e:?}")))?;
+    log::info!("grpc server shutdown complete: {addr}");
 
     Ok(())
 }
+
+pub struct ShutdownRequest {}
+pub struct ShutdownResponse {}

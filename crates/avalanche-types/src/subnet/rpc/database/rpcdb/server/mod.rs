@@ -33,12 +33,16 @@ use zerocopy::AsBytes;
 
 /// Serves a [`crate::subnet::rpc::database::Database`] over over RPC.
 pub struct Server {
+    /// The underlying database
     inner: Arc<RwLock<BoxedDatabase>>,
+    /// Map of iterator IDs to iterators
     iterators: Arc<RwLock<HashMap<u64, BoxedIterator>>>,
+    /// Next iterator ID to assign
     next_iterator_id: AtomicU64,
 }
 
 impl Server {
+    #[must_use]
     pub fn new_boxed(db: BoxedDatabase) -> impl pb::rpcdb::database_server::Database {
         Self {
             inner: Arc::new(RwLock::new(db)),
@@ -86,7 +90,7 @@ impl pb::rpcdb::database_server::Database for Server {
         let mut db = self.inner.write().await;
 
         match db.put(req.key.as_bytes(), req.value.as_bytes()).await {
-            Ok(_) => Ok(Response::new(PutResponse {
+            Ok(()) => Ok(Response::new(PutResponse {
                 err: pb::rpcdb::Error::Unspecified.into(),
             })),
             Err(e) => Ok(Response::new(PutResponse {
@@ -103,7 +107,7 @@ impl pb::rpcdb::database_server::Database for Server {
         let mut db = self.inner.write().await;
 
         match db.delete(req.key.as_bytes()).await {
-            Ok(_) => Ok(Response::new(DeleteResponse {
+            Ok(()) => Ok(Response::new(DeleteResponse {
                 err: pb::rpcdb::Error::Unspecified.into(),
             })),
             Err(e) => Ok(Response::new(DeleteResponse {
@@ -126,7 +130,7 @@ impl pb::rpcdb::database_server::Database for Server {
         let db = self.inner.read().await;
 
         match db.close().await {
-            Ok(_) => Ok(Response::new(CloseResponse {
+            Ok(()) => Ok(Response::new(CloseResponse {
                 err: pb::rpcdb::Error::Unspecified.into(),
             })),
             Err(e) => Ok(Response::new(CloseResponse {
@@ -157,10 +161,10 @@ impl pb::rpcdb::database_server::Database for Server {
         request: Request<WriteBatchRequest>,
     ) -> Result<Response<WriteBatchResponse>, Status> {
         let req = request.into_inner();
-        let db = self.inner.read().await;
+        // Use the inner database
 
-        let mut batch = db.new_batch().await?;
-        for put in req.puts.iter() {
+        let mut batch = self.inner.read().await.new_batch().await?;
+        for put in &req.puts {
             let resp = batch.put(&put.key, &put.value).await;
             if let Err(e) = resp {
                 return Ok(Response::new(WriteBatchResponse {
@@ -169,7 +173,7 @@ impl pb::rpcdb::database_server::Database for Server {
             }
         }
 
-        for del in req.deletes.iter() {
+        for del in &req.deletes {
             let resp = batch.delete(&del.key).await;
             if let Err(e) = resp {
                 return Ok(Response::new(WriteBatchResponse {
@@ -179,7 +183,7 @@ impl pb::rpcdb::database_server::Database for Server {
         }
 
         match batch.write().await {
-            Ok(_) => {
+            Ok(()) => {
                 return Ok(Response::new(WriteBatchResponse {
                     err: pb::rpcdb::Error::Unspecified.into(),
                 }))
@@ -197,14 +201,16 @@ impl pb::rpcdb::database_server::Database for Server {
         req: Request<NewIteratorWithStartAndPrefixRequest>,
     ) -> Result<Response<NewIteratorWithStartAndPrefixResponse>, Status> {
         let req = req.into_inner();
-        let db = self.inner.read().await;
-        let it = db
+        // Use the inner database
+        let it = self
+            .inner
+            .read()
+            .await
             .new_iterator_with_start_and_prefix(&req.start, &req.prefix)
             .await?;
 
-        let mut iterators = self.iterators.write().await;
         let id = self.next_iterator_id.fetch_add(1, Ordering::SeqCst);
-        iterators.insert(id, it);
+        self.iterators.write().await.insert(id, it);
 
         Ok(Response::new(NewIteratorWithStartAndPrefixResponse { id }))
     }
@@ -215,8 +221,7 @@ impl pb::rpcdb::database_server::Database for Server {
     ) -> Result<Response<IteratorNextResponse>, Status> {
         let req = request.into_inner();
 
-        let mut iterators = self.iterators.write().await;
-        if let Some(it) = iterators.get_mut(&req.id) {
+        if let Some(it) = self.iterators.write().await.get_mut(&req.id) {
             let mut size: usize = 0;
             let mut data: Vec<PutRequest> = Vec::new();
 
@@ -243,10 +248,9 @@ impl pb::rpcdb::database_server::Database for Server {
     ) -> Result<Response<IteratorErrorResponse>, Status> {
         let req = request.into_inner();
 
-        let mut iterators = self.iterators.write().await;
-        if let Some(it) = iterators.get_mut(&req.id) {
+        if let Some(it) = self.iterators.write().await.get_mut(&req.id) {
             match it.error().await {
-                Ok(_) => {
+                Ok(()) => {
                     return Ok(Response::new(IteratorErrorResponse {
                         err: pb::rpcdb::Error::Unspecified.into(),
                     }))
@@ -268,11 +272,10 @@ impl pb::rpcdb::database_server::Database for Server {
     ) -> Result<Response<IteratorReleaseResponse>, Status> {
         let req = request.into_inner();
 
-        let mut iterators = self.iterators.write().await;
-        if let Some(it) = iterators.get_mut(&req.id) {
+        if let Some(it) = self.iterators.write().await.get_mut(&req.id) {
             match it.error().await {
-                Ok(_) => {
-                    let _ = it.release().await;
+                Ok(()) => {
+                    it.release().await;
                     return Ok(Response::new(IteratorReleaseResponse {
                         err: pb::rpcdb::Error::Unspecified.into(),
                     }));

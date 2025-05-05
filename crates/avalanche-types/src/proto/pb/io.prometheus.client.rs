@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -52,7 +53,7 @@ pub struct Histogram {
     pub sample_count: ::core::option::Option<u64>,
     #[prost(double, optional, tag="2")]
     pub sample_sum: ::core::option::Option<f64>,
-    /// Ordered in increasing order of upper_bound, +Inf bucket is optional.
+    /// Ordered in increasing order of `upper_bound`, `+Inf` bucket is optional.
     #[prost(message, repeated, tag="3")]
     pub bucket: ::prost::alloc::vec::Vec<Bucket>,
 }
@@ -75,7 +76,7 @@ pub struct Exemplar {
     pub label: ::prost::alloc::vec::Vec<LabelPair>,
     #[prost(double, optional, tag="2")]
     pub value: ::core::option::Option<f64>,
-    /// OpenMetrics-style.
+    /// `OpenMetrics`-style.
     #[prost(message, optional, tag="3")]
     pub timestamp: ::core::option::Option<super::super::super::google::protobuf::Timestamp>,
 }
@@ -119,10 +120,10 @@ pub enum MetricType {
     Histogram = 4,
 }
 impl MetricType {
-    /// String value of the enum field names used in the ProtoBuf definition.
+    /// String value of the enum field names used in the `ProtoBuf` definition.
     ///
     /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    /// (if the `ProtoBuf` definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
             MetricType::Counter => "COUNTER",
@@ -132,7 +133,7 @@ impl MetricType {
             MetricType::Histogram => "HISTOGRAM",
         }
     }
-    /// Creates an enum from field names used in the ProtoBuf definition.
+    /// Creates an enum from field names used in the `ProtoBuf` definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "COUNTER" => Some(Self::Counter),

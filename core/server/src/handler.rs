@@ -40,15 +40,18 @@ impl Default for Handler {
 }
 
 impl Handler {
+    /// Creates a new Handler with the specified host, port, and request timeout.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the host and port cannot be parsed into a valid socket address.
+    #[must_use]
     pub fn new(http_host: &str, listener_port: u16, request_timeout: Duration) -> Self {
         let url = format!("{http_host}:{listener_port}");
 
-        info!("parsing URL '{}' to socket address", url);
+        info!("parsing URL '{url}' to socket address");
         let socket_addr: SocketAddr = url.parse().unwrap();
-        info!(
-            "handler with socket {:?} (request timeout {:?})",
-            socket_addr, request_timeout,
-        );
+        info!("handler with socket {socket_addr:?} (request timeout {request_timeout:?})");
 
         Self {
             http_host: String::from(http_host),
@@ -58,6 +61,16 @@ impl Handler {
         }
     }
 
+    /// Starts the HTTP server and listens for incoming requests.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the server fails to bind to the socket address or
+    /// if there's an error while running the server.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the HTTP response builder fails to build a response.
     pub async fn start(self) -> Result<(), Box<dyn Error>> {
         info!("starting server");
 
@@ -66,7 +79,7 @@ impl Handler {
             async move {
                 Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
                     handle_request(remote_addr, req).or_else(|(status, body)| async move {
-                        println!("{}", body);
+                        println!("{body}");
                         Ok::<_, Infallible>(
                             Response::builder()
                                 .status(status)
@@ -96,10 +109,8 @@ async fn handle_request(
     let http_version = req.version();
     let method = req.method().clone();
     let uri_path = req.uri().path();
-    debug!(
-        "version {:?}, method {}, uri path {}, remote addr {}",
-        http_version, method, uri_path, remote_addr,
-    );
+    #[rustfmt::skip]
+    debug!("version {http_version:?}, method {method}, uri path {uri_path}, remote addr {remote_addr}");
 
     let resp = match uri_path {
         "/ping" => match method {
@@ -130,7 +141,7 @@ async fn handle_request(
                     .map_err(|e| {
                         (
                             StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("failed to read request body {}", e),
+                            format!("failed to read request body {e}"),
                         )
                     })?;
                 debug!("read request body {}", body.len());
@@ -154,7 +165,7 @@ async fn handle_request(
                     .map_err(|e| {
                         (
                             StatusCode::INTERNAL_SERVER_ERROR,
-                            format!("failed to read request body {}", e),
+                            format!("failed to read request body {e}"),
                         )
                     })?;
                 debug!("read request body {}", body.len());

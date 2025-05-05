@@ -23,16 +23,16 @@ async fn main() -> io::Result<()> {
 
     let k1 = key::secp256k1::private_key::Key::from_hex(private_key).unwrap();
     let key_info1 = k1.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info1);
+    log::info!("created hot key:\n\n{key_info1}\n");
 
     let k1_signer: ethers_signers::LocalWallet = k1.to_ethers_core_signing_key().into();
 
     let k2 = key::secp256k1::private_key::Key::generate().unwrap();
     let key_info2 = k2.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info2);
+    log::info!("created hot key:\n\n{key_info2}\n");
 
     let w = wallet::Builder::new(&k1)
-        .base_http_url(chain_rpc_url.clone())
+        .base_http_url(&chain_rpc_url)
         .build()
         .await
         .unwrap();
@@ -66,7 +66,7 @@ async fn main() -> io::Result<()> {
         .submit()
         .await
         .unwrap();
-    log::info!("evm ethers wallet SUCCESS with transaction id {}", tx_id);
+    log::info!("evm ethers wallet SUCCESS with transaction id {tx_id}");
 
     Ok(())
 }

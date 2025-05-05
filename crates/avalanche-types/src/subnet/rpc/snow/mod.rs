@@ -13,22 +13,24 @@ pub enum State {
 
 impl State {
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow#State.String>
-    pub fn as_str(&self) -> &str {
+    #[must_use]
+    pub const fn as_str(&self) -> &str {
         match self {
-            State::Initializing => "Initializing state",
-            State::StateSyncing => "State syncing state",
-            State::Bootstrapping => "Bootstrapping state",
-            State::NormalOp => "Normal operations state",
+            Self::Initializing => "Initializing state",
+            Self::StateSyncing => "State syncing state",
+            Self::Bootstrapping => "Bootstrapping state",
+            Self::NormalOp => "Normal operations state",
         }
     }
 
     /// Returns the u32 primitive representation of the state.
-    pub fn to_i32(&self) -> i32 {
+    #[must_use]
+    pub const fn to_i32(&self) -> i32 {
         match self {
-            State::Initializing => 1,
-            State::StateSyncing => 2,
-            State::Bootstrapping => 3,
-            State::NormalOp => 0,
+            Self::Initializing => 1,
+            Self::StateSyncing => 2,
+            Self::Bootstrapping => 3,
+            Self::NormalOp => 0,
         }
     }
 }
@@ -38,10 +40,10 @@ impl TryFrom<u32> for State {
 
     fn try_from(kind: u32) -> std::result::Result<Self, Self::Error> {
         match kind {
-            kind if kind == State::Initializing as u32 => Ok(State::Initializing),
-            kind if kind == State::StateSyncing as u32 => Ok(State::StateSyncing),
-            kind if kind == State::Bootstrapping as u32 => Ok(State::Bootstrapping),
-            kind if kind == State::NormalOp as u32 => Ok(State::NormalOp),
+            kind if kind == Self::Initializing as u32 => Ok(Self::Initializing),
+            kind if kind == Self::StateSyncing as u32 => Ok(Self::StateSyncing),
+            kind if kind == Self::Bootstrapping as u32 => Ok(Self::Bootstrapping),
+            kind if kind == Self::NormalOp as u32 => Ok(Self::NormalOp),
             _ => Err(()),
         }
     }
@@ -52,10 +54,10 @@ impl TryFrom<i32> for State {
 
     fn try_from(kind: i32) -> std::result::Result<Self, Self::Error> {
         match kind {
-            kind if kind == State::Initializing as i32 => Ok(State::Initializing),
-            kind if kind == State::StateSyncing as i32 => Ok(State::StateSyncing),
-            kind if kind == State::Bootstrapping as i32 => Ok(State::Bootstrapping),
-            kind if kind == State::NormalOp as i32 => Ok(State::NormalOp),
+            kind if kind == Self::Initializing as i32 => Ok(Self::Initializing),
+            kind if kind == Self::StateSyncing as i32 => Ok(Self::StateSyncing),
+            kind if kind == Self::Bootstrapping as i32 => Ok(Self::Bootstrapping),
+            kind if kind == Self::NormalOp as i32 => Ok(Self::NormalOp),
             _ => Err(()),
         }
     }

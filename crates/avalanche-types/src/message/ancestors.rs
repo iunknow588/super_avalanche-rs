@@ -11,7 +11,7 @@ pub struct Message {
 
 impl Default for Message {
     fn default() -> Self {
-        Message {
+        Self {
             msg: p2p::Ancestors {
                 chain_id: prost::bytes::Bytes::new(),
                 request_id: 0,
@@ -30,27 +30,32 @@ impl Message {
     }
 
     #[must_use]
-    pub fn request_id(mut self, request_id: u32) -> Self {
+    pub const fn request_id(mut self, request_id: u32) -> Self {
         self.msg.request_id = request_id;
         self
     }
 
     #[must_use]
-    pub fn containers(mut self, containers: Vec<Vec<u8>>) -> Self {
+    pub fn containers(mut self, containers: &[Vec<u8>]) -> Self {
         let mut containers_bytes: Vec<prost::bytes::Bytes> = Vec::with_capacity(containers.len());
         for b in containers {
-            containers_bytes.push(prost::bytes::Bytes::from(b));
+            containers_bytes.push(prost::bytes::Bytes::from(b.clone()));
         }
         self.msg.containers = containers_bytes;
         self
     }
 
     #[must_use]
-    pub fn gzip_compress(mut self, gzip_compress: bool) -> Self {
+    pub const fn gzip_compress(mut self, gzip_compress: bool) -> Self {
         self.gzip_compress = gzip_compress;
         self
     }
 
+    /// Serializes the message into bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails.
     pub fn serialize(&self) -> io::Result<Vec<u8>> {
         let msg = p2p::Message {
             message: Some(p2p::message::Message::Ancestors(self.msg.clone())),
@@ -84,18 +89,30 @@ impl Message {
         Ok(ProstMessage::encode_to_vec(&msg))
     }
 
+    /// Deserializes the message from bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the deserialization fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the message field is None.
     pub fn deserialize(d: impl AsRef<[u8]>) -> io::Result<Self> {
         let buf = bytes::Bytes::from(d.as_ref().to_vec());
         let p2p_msg: p2p::Message = ProstMessage::decode(buf).map_err(|e| {
             Error::new(
                 ErrorKind::InvalidData,
-                format!("failed prost::Message::decode '{}'", e),
+                format!("failed prost::Message::decode '{e}'"),
             )
         })?;
 
-        match p2p_msg.message.unwrap() {
+        match p2p_msg
+            .message
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "message field is None"))?
+        {
             // was not compressed
-            p2p::message::Message::Ancestors(msg) => Ok(Message {
+            p2p::message::Message::Ancestors(msg) => Ok(Self {
                 msg,
                 gzip_compress: false,
             }),
@@ -107,11 +124,16 @@ impl Message {
                     ProstMessage::decode(prost::bytes::Bytes::from(decompressed)).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidData,
-                            format!("failed prost::Message::decode '{}'", e),
+                            format!("failed prost::Message::decode '{e}'"),
                         )
                     })?;
-                match decompressed_msg.message.unwrap() {
-                    p2p::message::Message::Ancestors(msg) => Ok(Message {
+                match decompressed_msg.message.ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidData,
+                        "message field is None after decompression",
+                    )
+                })? {
+                    p2p::message::Message::Ancestors(msg) => Ok(Self {
                         msg,
                         gzip_compress: false,
                     }),
@@ -128,7 +150,7 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
 /// message::ancestors::test_message --exact --show-output
 #[test]
 fn test_message() {
@@ -137,20 +159,21 @@ fn test_message() {
         .is_test(true)
         .try_init();
 
+    let containers = vec![
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+        random_manager::secure_bytes(30).unwrap(),
+    ];
     let msg1_with_no_compression = Message::default()
         .chain_id(ids::Id::from_slice(
             &random_manager::secure_bytes(32).unwrap(),
         ))
         .request_id(random_manager::u32())
-        .containers(vec![
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-            random_manager::secure_bytes(30).unwrap(),
-        ]);
+        .containers(&containers);
 
     let data1 = msg1_with_no_compression.serialize().unwrap();
     let msg1_with_no_compression_deserialized = Message::deserialize(data1).unwrap();

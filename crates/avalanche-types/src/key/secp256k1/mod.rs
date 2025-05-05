@@ -35,10 +35,16 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 /// Key interface that "only" allows "sign" operations.
-/// Trait is used here to limit access to the underlying private/secret key.
+///
+/// Trait is used here to limit access to the underlying private/secret key
 /// or to enable secure remote key management service integration (e.g., KMS ECC_SECG_P256K1).
 #[async_trait]
 pub trait SignOnly {
+    /// Returns the signing key for this key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signing key cannot be retrieved.
     fn signing_key(&self) -> Result<k256::ecdsa::SigningKey>;
 
     /// Signs the 32-byte SHA256 output message with the ECDSA private key and the recoverable code.
@@ -54,13 +60,34 @@ pub trait SignOnly {
 /// Key interface that "only" allows "read" operations.
 pub trait ReadOnly {
     fn key_type(&self) -> KeyType;
-    /// Implements "crypto.PublicKeySECP256K1R.Address()" and "formatting.FormatAddress".
+    /// Implements "`crypto.PublicKeySECP256K1R.Address()`" and "formatting.FormatAddress".
     /// "human readable part" (hrp) must be valid output from "constants.GetHRP(networkID)".
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/constants>
+    /// Returns the human-readable address for this key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the address cannot be formatted.
     fn hrp_address(&self, network_id: u32, chain_id_alias: &str) -> Result<String>;
+
+    /// Returns the short address for this key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the short address cannot be derived.
     fn short_address(&self) -> Result<short::Id>;
+
+    /// Returns the short address bytes for this key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the short address bytes cannot be derived.
     fn short_address_bytes(&self) -> Result<Vec<u8>>;
+
+    /// Returns the Ethereum address for this key.
     fn eth_address(&self) -> String;
+
+    /// Returns the H160 address for this key.
     fn h160_address(&self) -> primitive_types::H160;
 }
 
@@ -76,7 +103,7 @@ lazy_static! {
 
         let key_infos: Vec<Info> = serde_json::from_slice(&key_file.data).unwrap();
         let mut keys: Vec<crate::key::secp256k1::private_key::Key> = Vec::new();
-        for ki in key_infos.iter() {
+        for ki in &key_infos {
             keys.push(ki.to_private_key());
         }
         keys
@@ -94,7 +121,7 @@ lazy_static! {
     };
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::test_keys --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::test_keys` --exact --show-output
 #[test]
 fn test_keys() {
     let _ = env_logger::builder()
@@ -151,7 +178,7 @@ pub struct Info {
 
 impl Default for Info {
     fn default() -> Self {
-        Info {
+        Self {
             id: None,
             key_type: KeyType::Unknown(String::new()),
             mnemonic_phrase: None,
@@ -165,65 +192,94 @@ impl Default for Info {
     }
 }
 
-impl From<&crate::key::secp256k1::private_key::Key> for Info {
-    fn from(sk: &crate::key::secp256k1::private_key::Key) -> Self {
-        sk.to_info(1).unwrap()
+impl TryFrom<&crate::key::secp256k1::private_key::Key> for Info {
+    type Error = Error;
+
+    fn try_from(sk: &crate::key::secp256k1::private_key::Key) -> Result<Self> {
+        sk.to_info(1)
     }
 }
 
 impl Info {
+    /// Loads key information from a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file does not exist or cannot be parsed.
     pub fn load(file_path: &str) -> Result<Self> {
-        log::info!("loading Info from {}", file_path);
+        log::info!("loading Info from {file_path}");
 
         if !Path::new(file_path).exists() {
             return Err(Error::Other {
-                message: format!("file {} does not exists", file_path),
+                message: format!("file {file_path} does not exists"),
                 retryable: false,
             });
         }
 
         let f = File::open(file_path).map_err(|e| Error::Other {
-            message: format!("failed to open {} ({})", file_path, e),
+            message: format!("failed to open {file_path} ({e})"),
             retryable: false,
         })?;
         serde_yaml::from_reader(f).map_err(|e| Error::Other {
-            message: format!("failed serde_yaml::from_reader {}", e),
+            message: format!("failed serde_yaml::from_reader {e}"),
             retryable: false,
         })
     }
 
-    pub fn sync(&self, file_path: String) -> std::io::Result<()> {
-        log::info!("syncing key info to '{}'", file_path);
-        let path = Path::new(&file_path);
-        let parent_dir = path.parent().unwrap();
+    /// Syncs key information to a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or written to.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the parent directory cannot be determined.
+    pub fn sync(&self, file_path: &str) -> std::io::Result<()> {
+        log::info!("syncing key info to '{file_path}'");
+        let path = Path::new(file_path);
+        let parent_dir = path.parent().ok_or_else(|| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "failed to get parent directory",
+            )
+        })?;
         fs::create_dir_all(parent_dir)?;
 
         let d = serde_json::to_vec(self).map_err(|e| {
             std::io::Error::new(
                 std::io::ErrorKind::Other,
-                format!("failed to serialize JSON {}", e),
+                format!("failed to serialize JSON {e}"),
             )
         })?;
 
-        let mut f = File::create(&file_path)?;
+        let mut f = File::create(file_path)?;
         f.write_all(&d)?;
 
         Ok(())
     }
 
+    /// Converts the key information to a private key.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the private key CB58 string is missing or invalid.
+    #[must_use]
     pub fn to_private_key(&self) -> crate::key::secp256k1::private_key::Key {
-        crate::key::secp256k1::private_key::Key::from_cb58(self.private_key_cb58.clone().unwrap())
-            .unwrap()
+        crate::key::secp256k1::private_key::Key::from_cb58(
+            self.private_key_cb58.as_ref().unwrap().clone(),
+        )
+        .unwrap()
     }
 }
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl fmt::Display for Info {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = serde_yaml::to_string(&self).unwrap();
-        write!(f, "{}", s)
+        let s = serde_yaml::to_string(&self).map_err(|_| fmt::Error)?;
+        write!(f, "{s}")
     }
 }
 
@@ -250,11 +306,10 @@ pub enum KeyType {
 impl std::convert::From<&str> for KeyType {
     fn from(s: &str) -> Self {
         match s {
-            "hot" => KeyType::Hot,
-            "aws-kms" => KeyType::AwsKms,
-            "aws_kms" => KeyType::AwsKms,
+            "hot" => Self::Hot,
+            "aws-kms" | "aws_kms" => Self::AwsKms,
 
-            other => KeyType::Unknown(other.to_owned()),
+            other => Self::Unknown(other.to_owned()),
         }
     }
 }
@@ -263,13 +318,13 @@ impl std::str::FromStr for KeyType {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        Ok(KeyType::from(s))
+        Ok(Self::from(s))
     }
 }
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for KeyType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -278,17 +333,19 @@ impl std::fmt::Display for KeyType {
 
 impl KeyType {
     /// Returns the `&str` value of the enum member.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
-            KeyType::Hot => "hot",
-            KeyType::AwsKms => "aws-kms",
+            Self::Hot => "hot",
+            Self::AwsKms => "aws-kms",
 
-            KeyType::Unknown(s) => s.as_ref(),
+            Self::Unknown(s) => s.as_ref(),
         }
     }
 
     /// Returns all the `&str` values of the enum members.
-    pub fn values() -> &'static [&'static str] {
+    #[must_use]
+    pub const fn values() -> &'static [&'static str] {
         &[
             "hot",     //
             "aws-kms", //
@@ -309,36 +366,36 @@ pub struct ChainAddresses {
     pub p: String,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::test_keys_address --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::test_keys_address` --exact --show-output
 #[test]
 fn test_keys_address() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .is_test(true)
-        .try_init();
-
     #[derive(RustEmbed)]
     #[folder = "artifacts/"]
     #[prefix = "artifacts/"]
     struct Asset;
 
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .is_test(true)
+        .try_init();
+
     for asset in ["artifacts/test.insecure.secp256k1.key.infos.json"] {
         let key_file = Asset::get(asset).unwrap();
         let key_contents = std::str::from_utf8(key_file.data.as_ref()).unwrap();
         let key_infos: Vec<Info> = serde_json::from_slice(key_contents.as_bytes()).unwrap();
-        log::info!("loaded {}", asset);
+        log::info!("loaded {asset}");
 
         for (pos, ki) in key_infos.iter().enumerate() {
-            log::info!("checking the key info at {}", pos);
+            log::info!("checking the key info at {pos}");
 
             let sk = crate::key::secp256k1::private_key::Key::from_cb58(
-                &ki.private_key_cb58.clone().unwrap(),
+                ki.private_key_cb58.as_ref().unwrap().clone(),
             )
             .unwrap();
             assert_eq!(
                 sk,
                 crate::key::secp256k1::private_key::Key::from_hex(
-                    ki.private_key_hex.clone().unwrap()
+                    ki.private_key_hex.as_ref().unwrap().clone()
                 )
                 .unwrap(),
             );

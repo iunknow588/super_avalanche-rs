@@ -5,8 +5,11 @@ pub mod unary;
 
 use avalanche_types::ids::{bag::Bag, Id};
 
+#[cfg(test)]
+extern crate env_logger;
+
 /// Represents a node interface for binary trie.
-/// ref. "avalanchego/snow/consensus/snowball/tree.go#node"
+/// See: `avalanchego/snow/consensus/snowball/tree.go#node`.
 #[derive(Clone, Debug)]
 pub enum Node {
     Unary(unary::node::Node),
@@ -26,7 +29,7 @@ impl Node {
     /// Patricia trie places into each node the bit index to be tested
     /// in order to decide which path to take out of that node.
     /// Thus, it can skip directly to the bit where a significant
-    /// decision is to be made by tracking "decided_prefix".
+    /// decision is to be made by tracking `decided_prefix`.
     pub fn decided_prefix(&self) -> i64 {
         match self {
             Node::Unary(n) => n.decided_prefix(),
@@ -42,6 +45,7 @@ impl Node {
         }
     }
 
+    #[must_use]
     pub fn add(&mut self, new_choice: &Id) -> Node {
         match self {
             Node::Unary(n) => n.add(new_choice),
@@ -49,7 +53,7 @@ impl Node {
         }
     }
 
-    pub fn record_poll(&mut self, votes: Bag, reset: bool) -> (Node, bool) {
+    pub fn record_poll(&mut self, votes: &Bag, reset: bool) -> (Node, bool) {
         match self {
             Node::Unary(n) => n.record_poll(votes, reset),
             Node::Binary(n) => n.record_poll(votes, reset),

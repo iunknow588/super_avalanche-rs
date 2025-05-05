@@ -1,6 +1,8 @@
 use crate::{codec, errors::Result, hash, ids, key, txs};
 use serde::{Deserialize, Serialize};
 
+/// `CreateChainTx` is a transaction that creates a new chain.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#CreateChainTx>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#UnsignedTx>
@@ -9,7 +11,7 @@ pub struct Tx {
     /// The transaction ID is empty for unsigned tx
     /// as long as "avax.BaseTx.Metadata" is "None".
     /// Once Metadata is updated with signing and "Tx.Initialize",
-    /// Tx.ID() is non-empty.
+    /// `Tx.ID()` is non-empty.
     pub base_tx: txs::Tx,
     pub subnet_id: ids::Id,
     pub chain_name: String,
@@ -38,6 +40,7 @@ impl Default for Tx {
 }
 
 impl Tx {
+    #[must_use]
     pub fn new(base_tx: txs::Tx) -> Self {
         Self {
             base_tx,
@@ -48,6 +51,11 @@ impl Tx {
     /// Returns the transaction ID.
     /// Only non-empty if the embedded metadata is updated
     /// with the signing process.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.base_tx.metadata` is `Some` but cannot be unwrapped.
+    #[must_use]
     pub fn tx_id(&self) -> ids::Id {
         if self.base_tx.metadata.is_some() {
             let m = self.base_tx.metadata.clone().unwrap();
@@ -57,17 +65,37 @@ impl Tx {
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "platformvm.CreateChainTx".to_string()
     }
 
+    /// Returns the type ID for this transaction.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec registry.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::P_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::P_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx.Sign>
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/crypto#PrivateKeyED25519.SignHash>
-    pub async fn sign<T: key::secp256k1::SignOnly>(&mut self, signers: Vec<Vec<T>>) -> Result<()> {
+    /// Signs the transaction with the provided signers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `self.fx_ids` is `Some` but cannot be unwrapped.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signing process fails.
+    #[allow(clippy::too_many_lines)]
+    pub async fn sign<T: key::secp256k1::SignOnly + Send + Sync>(
+        &mut self,
+        signers: Vec<Vec<T>>,
+    ) -> Result<()> {
         // marshal "unsigned tx" with the codec version
         let type_id = Self::type_id();
         let packer = self.base_tx.pack(codec::VERSION, type_id)?;
@@ -94,8 +122,8 @@ impl Tx {
         // pack the fifth field "fx_ids" in the struct
         if self.fx_ids.is_some() {
             let fx_ids = self.fx_ids.as_ref().unwrap();
-            packer.pack_u32(fx_ids.len() as u32)?;
-            for fx_id in fx_ids.iter() {
+            packer.pack_u32(u32::try_from(fx_ids.len()).unwrap())?;
+            for fx_id in fx_ids {
                 packer.pack_bytes(fx_id.as_ref())?;
             }
         } else {
@@ -105,14 +133,14 @@ impl Tx {
         // pack the sixth field "genesis_data" in the struct
         // []byte is reflected as "reflect.Slice" in avalanchego
         // thus encode its length
-        packer.pack_u32(self.genesis_data.len() as u32)?;
+        packer.pack_u32(u32::try_from(self.genesis_data.len()).unwrap())?;
         packer.pack_bytes(&self.genesis_data)?;
 
         // pack the seventh field "subnet_auth" in the struct
         let subnet_auth_type_id = key::secp256k1::txs::Input::type_id();
         packer.pack_u32(subnet_auth_type_id)?;
-        packer.pack_u32(self.subnet_auth.sig_indices.len() as u32)?;
-        for sig_idx in self.subnet_auth.sig_indices.iter() {
+        packer.pack_u32(u32::try_from(self.subnet_auth.sig_indices.len()).unwrap())?;
+        for sig_idx in &self.subnet_auth.sig_indices {
             packer.pack_u32(*sig_idx)?;
         }
 
@@ -127,16 +155,16 @@ impl Tx {
         let tx_bytes_hash = hash::sha256(&tx_bytes_with_no_signature);
 
         // number of of credentials
-        let creds_len = signers.len() as u32;
+        let creds_len = u32::try_from(signers.len()).unwrap();
         // pack the fourth field in the struct
         packer.pack_u32(creds_len)?;
 
         // sign the hash with the signers (in case of multi-sig)
         // and combine all signatures into a secp256k1fx credential
         self.creds = Vec::new();
-        for keys in signers.iter() {
+        for keys in &signers {
             let mut sigs: Vec<Vec<u8>> = Vec::new();
-            for k in keys.iter() {
+            for k in keys {
                 let sig = k.sign_digest(&tx_bytes_hash).await?;
                 sigs.push(Vec::from(sig));
             }
@@ -150,13 +178,13 @@ impl Tx {
             // pack each "cred" which is "secp256k1fx.Credential"
             // marshal type ID for "secp256k1fx.Credential"
             let cred_type_id = key::secp256k1::txs::Credential::type_id();
-            for cred in self.creds.iter() {
+            for cred in &self.creds {
                 // marshal type ID for "secp256k1fx.Credential"
                 packer.pack_u32(cred_type_id)?;
 
                 // marshal fields for "secp256k1fx.Credential"
-                packer.pack_u32(cred.signatures.len() as u32)?;
-                for sig in cred.signatures.iter() {
+                packer.pack_u32(u32::try_from(cred.signatures.len()).unwrap())?;
+                for sig in &cred.signatures {
                     packer.pack_bytes(sig)?;
                 }
             }
@@ -177,7 +205,7 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::create_chain::test_create_chain_tx_serialization_with_one_signer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::create_chain::test_create_chain_tx_serialization_with_one_signer` --exact --show-output
 #[test]
 fn test_create_chain_tx_serialization_with_one_signer() {
     use crate::ids::short;

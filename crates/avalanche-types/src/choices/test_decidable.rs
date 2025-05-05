@@ -34,6 +34,7 @@ impl Default for TestDecidable {
 }
 
 impl TestDecidable {
+    #[must_use]
     pub fn new(id: Id, status: Status) -> Self {
         Self {
             id,
@@ -51,6 +52,7 @@ impl TestDecidable {
         self.reject_result = rs;
     }
 
+    #[must_use]
     pub fn create_decidable(
         id: Id,
         status: Status,
@@ -114,8 +116,8 @@ impl Decidable for TestDecidable {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib --
-/// decidable::test_decidable::test_decidable --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib --
+/// `decidable::test_decidable::test_decidable` --exact --show-output
 #[test]
 fn test_decidable() {
     let id = Id::from_slice(&[1, 2, 3]);

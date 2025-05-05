@@ -24,11 +24,11 @@ async fn main() -> io::Result<()> {
     let kms_key_arn = args().nth(2).expect("no KMS key ARN given");
     log::info!("running with {kms_key_arn}");
 
-    let chain_id = random_manager::u64() % 3000;
+    let chain_id = random_manager::u64() % 3_000;
     let signer_nonce = U256::from(random_manager::u64() % 10);
-    let gas_limit = U256::from(random_manager::u64() % 10000);
-    let max_fee_per_gas = U256::from(random_manager::u64() % 10000);
-    let value = U256::from(random_manager::u64() % 100000);
+    let gas_limit = U256::from(random_manager::u64() % 10_000);
+    let max_fee_per_gas = U256::from(random_manager::u64() % 10_000);
+    let value = U256::from(random_manager::u64() % 100_000);
 
     let shared_config = aws_manager::load_config(None, None, None).await;
     let kms_manager = kms::Manager::new(&shared_config);
@@ -38,13 +38,13 @@ async fn main() -> io::Result<()> {
             .unwrap();
 
     let key_info1 = k1.to_info(1).unwrap();
-    log::info!("loaded key\n\n{}\n(network Id 1)\n", key_info1);
+    log::info!("loaded key\n\n{key_info1}\n(network Id 1)\n");
 
     let k1_signer = KmsAwsSigner::new(k1, U256::from(chain_id)).unwrap();
 
     let k2 = key::secp256k1::private_key::Key::generate().unwrap();
     let key_info2 = k2.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info2);
+    log::info!("created hot key:\n\n{key_info2}\n");
 
     let tx = eip1559::Transaction::new()
         .chain_id(chain_id)
@@ -56,7 +56,7 @@ async fn main() -> io::Result<()> {
         .value(value);
 
     let signed_bytes = tx.sign_as_typed_transaction(k1_signer).await.unwrap();
-    log::info!("signed_bytes: {}", signed_bytes);
+    log::info!("signed_bytes: {signed_bytes}");
 
     let pending = chain_rpc_provider
         .send_raw_transaction(signed_bytes)

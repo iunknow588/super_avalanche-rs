@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// Represents peer-to-peer messages.
 /// Only one type can be non-null.

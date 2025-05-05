@@ -38,23 +38,23 @@ pub enum Path {
 /// new returns a Url from path-based components.
 /// By default the scheme is http.
 /// In case of an error marshaling to a Url, a non-retryable error is returned.
+///
+/// # Errors
+///
+/// Returns an error if the URL cannot be built.
 pub fn try_create_url(
-    path: Path,
+    path: &Path,
     scheme: Option<&str>,
     host: &str,
     port: Option<u16>,
 ) -> Result<Uri, Error> {
     Builder::new()
-        .authority(if let Some(port) = port {
-            format!("{host}:{port}")
-        } else {
-            host.to_string()
-        })
+        .authority(port.map_or_else(|| host.to_string(), |port| format!("{host}:{port}")))
         .scheme(scheme.unwrap_or(Scheme::HTTP.as_str()))
         .path_and_query(path.to_string())
         .build()
         .map_err(|e| Error::Other {
-            message: format!("http://{host}{path} failed url::try_create_url '{}'", e),
+            message: format!("http://{host}{path} failed url::try_create_url '{e}'"),
             retryable: false,
         })
 }
@@ -70,7 +70,7 @@ mod tests {
 
         assert_eq!(
             super::try_create_url(
-                Path::Admin,
+                &Path::Admin,
                 test_table[0].0,
                 test_table[0].1,
                 test_table[0].2
@@ -81,7 +81,7 @@ mod tests {
         );
         assert_eq!(
             super::try_create_url(
-                Path::Liveness,
+                &Path::Liveness,
                 test_table[0].0,
                 test_table[0].1,
                 test_table[0].2
@@ -91,7 +91,7 @@ mod tests {
             "http://127.0.0.1:9650/ext/health/liveness".to_string()
         );
         assert_eq!(
-            super::try_create_url(Path::C, test_table[0].0, test_table[0].1, test_table[0].2)
+            super::try_create_url(&Path::C, test_table[0].0, test_table[0].1, test_table[0].2)
                 .unwrap()
                 .to_string(),
             "http://127.0.0.1:9650/ext/bc/C/rpc".to_string()

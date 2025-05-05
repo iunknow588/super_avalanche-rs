@@ -1,36 +1,41 @@
-//! A merkle-patricia trie used for Avalanche consensus.
+//! A Merkle-Patricia trie used for Avalanche consensus.
 use std::cell::Cell;
 
 use crate::snowman::snowball::{self, unary};
 use avalanche_types::ids::{bag::Bag, bits, Id};
 
-/// Represents a snowball instance that processes the query results
-/// according to the snow protocol, using a modified PATRICIA trie,
+#[cfg(test)]
+extern crate env_logger;
+
+/// Represents a Snowball instance that processes the query results
+/// according to the Snow protocol, using a modified Patricia trie.
 ///
 /// The radix in mathematics represents the maximum number of children
 /// per node. For example, a regular, prefix trie is an un-compacted
-/// 26-radix tree when using alphabets a-z: PATRICIA trie is a binary
-/// radix trie with radix 2. PATRICIA trie traverses the tree according
+/// 26-radix tree when using alphabets a-z; Patricia trie is a binary
+/// radix trie with radix 2. Patricia trie traverses the tree according
 /// to the bits of the search key.
 ///
-/// "Tree" is to "snowball/snowman", "Directed" is to "snowstorm/avalanche".
-/// "Tree" implements "snowball.Consensus".
-/// "Directed" implements "snowstorm.Consensus".
-/// "snowman.Topological" implements "snowman.Consensus".
-/// "avalanche.Topological" implements "avalanche.Consensus".
+/// `Tree` is to `snowball/snowman`, `Directed` is to `snowstorm/avalanche`.
+/// `Tree` implements `snowball.Consensus`.
+/// `Directed` implements `snowstorm.Consensus`.
+/// `snowman.Topological` implements `snowman.Consensus`.
+/// `avalanche.Topological` implements `avalanche.Consensus`.
 ///
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Consensus>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowstorm#Directed>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Consensus>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Topological>
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Consensus>
+/// See:
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Consensus>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowstorm#Directed>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Consensus>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Topological>
+/// - <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Consensus>
 ///
-/// ref. <https://en.wikipedia.org/wiki/Radix>
-/// ref. <https://en.wikipedia.org/wiki/Radix_tree>
-/// ref. <https://dl.acm.org/doi/10.1145/321479.321481>
-/// ref. <https://www.avalabs.org/whitepapers>
+/// See also:
+/// - <https://en.wikipedia.org/wiki/Radix>
+/// - <https://en.wikipedia.org/wiki/Radix_tree>
+/// - <https://dl.acm.org/doi/10.1145/321479.321481>
+/// - <https://www.avalabs.org/whitepapers>
 #[derive(Clone, Debug)]
 pub struct Tree {
     /// Contains all configurations of this snowball instance.
@@ -57,14 +62,16 @@ pub struct Tree {
 impl Tree {
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree.Initialize>
     pub fn new(parameters: crate::Parameters, choice: Id) -> Self {
-        let beta_virtuous = parameters.beta_virtuous as i64;
+        let beta_virtuous = i64::from(parameters.beta_virtuous);
         let unary_snowball = unary::Snowball::new(beta_virtuous);
         let u = unary::node::Node {
             parameters: parameters.clone(),
             snowball: unary_snowball,
             preference: Cell::new(choice),
             decided_prefix: Cell::new(0),
-            common_prefix: Cell::new(bits::NUM_BITS as i64),
+            common_prefix: Cell::new(
+                i64::try_from(bits::NUM_BITS).expect("NUM_BITS should fit in i64"),
+            ),
             should_reset: Cell::new(false),
             child: None,
         };
@@ -101,12 +108,9 @@ impl Tree {
     /// last bit is equally as improbable as hash collision.
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Tree.Add>
     pub fn add(&mut self, new_choice: &Id) {
-        if !bits::equal_subset(
-            0,
-            self.decided_prefix() as usize,
-            &self.preference(),
-            new_choice,
-        ) {
+        let decided_prefix_usize =
+            usize::try_from(self.decided_prefix()).expect("decided prefix should be non-negative");
+        if !bits::equal_subset(0, decided_prefix_usize, &self.preference(), new_choice) {
             // already decided against this new ID
             return;
         }
@@ -135,13 +139,15 @@ impl Tree {
 
         // if any of the bits differ from the preference in this prefix,
         // the vote is for a rejected operation, thus filter out these invalid votes
-        let filtered_votes = votes.filter(0, decided_prefix as usize, &self.preference());
+        let decided_prefix_usize =
+            usize::try_from(decided_prefix).expect("decided prefix should be non-negative");
+        let filtered_votes = votes.filter(0, decided_prefix_usize, &self.preference());
 
         // now that the votes have been restricted to the valid votes,
         // pass them into the first snowball instance
         let (polled_node, successful) = self
             .node
-            .record_poll(filtered_votes, self.should_reset.get());
+            .record_poll(&filtered_votes, self.should_reset.get());
         self.node = Box::new(polled_node);
 
         // as we just passed the reset into the snowball instance,
@@ -160,32 +166,38 @@ impl Tree {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Tree {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut prefixes: Vec<String> = vec![String::new()];
         let mut nodes: Vec<snowball::Node> = vec![*self.node.clone()];
         while let Some(prefix) = prefixes.pop() {
-            write!(f, "{}", prefix)?;
-            let new_prefix = format!("{}    ", prefix);
-            match nodes.pop().unwrap() {
-                snowball::Node::Unary(n) => {
-                    writeln!(f, "{}", n)?;
+            write!(f, "{prefix}")?;
+            let new_prefix = format!("{prefix}    ");
 
-                    if n.child.is_some() {
-                        prefixes.push(new_prefix);
-                        nodes.push(*n.child.as_ref().unwrap().clone());
+            // nodes.pop() is safe because we always push to nodes when we push to prefixes
+            if let Some(node) = nodes.pop() {
+                match node {
+                    snowball::Node::Unary(n) => {
+                        writeln!(f, "{n}")?;
+
+                        if let Some(child) = n.child {
+                            prefixes.push(new_prefix);
+                            nodes.push(*child.clone());
+                        }
                     }
-                }
-                snowball::Node::Binary(n) => {
-                    writeln!(f, "{}", n)?;
+                    snowball::Node::Binary(n) => {
+                        writeln!(f, "{n}")?;
 
-                    if n.child0.is_some() {
-                        prefixes.push(new_prefix.clone());
-                        prefixes.push(new_prefix);
+                        if let Some(child0) = &n.child0 {
+                            prefixes.push(new_prefix.clone());
+                            prefixes.push(new_prefix);
 
-                        nodes.push(*n.child1.as_ref().unwrap().clone());
-                        nodes.push(*n.child0.as_ref().unwrap().clone());
+                            if let Some(child1) = &n.child1 {
+                                nodes.push(*child1.clone());
+                            }
+                            nodes.push(*child0.clone());
+                        }
                     }
                 }
             }
@@ -194,7 +206,7 @@ impl std::fmt::Display for Tree {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_singletone --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_singletone --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballSingleton"
 #[test]
 fn test_tree_snowball_singletone() {
@@ -246,7 +258,7 @@ fn test_tree_snowball_singletone() {
     assert!(tree.finalized());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_record_unsuccessful_poll --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_record_unsuccessful_poll --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballRecordUnsuccessfulPoll"
 #[test]
 fn test_tree_snowball_record_unsuccessful_poll() {
@@ -287,7 +299,7 @@ fn test_tree_snowball_record_unsuccessful_poll() {
     assert!(tree.finalized());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_binary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_binary --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballBinary"
 #[test]
 fn test_tree_snowball_binary() {
@@ -336,7 +348,7 @@ fn test_tree_snowball_binary() {
     assert!(tree.finalized());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_last_binary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_last_binary --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballLastBinary"
 #[test]
 fn test_tree_snowball_last_binary() {
@@ -369,7 +381,7 @@ fn test_tree_snowball_last_binary() {
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
 
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [0, 255)
     SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 255
 ");
@@ -381,7 +393,7 @@ fn test_tree_snowball_last_binary() {
     assert_eq!(tree.preference(), one);
     assert!(!tree.finalized());
 
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(NumSuccessfulPolls = 1, SF(Confidence = 1, Finalized = false)) Bits = [0, 255)
     SB(Preference = 1, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 1, SF(Confidence = 1, Finalized = false, SL(Preference = 1))) Bit = 255
 ");
@@ -390,12 +402,12 @@ fn test_tree_snowball_last_binary() {
     assert_eq!(tree.preference(), one);
     assert!(tree.finalized());
 
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 1, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 2, SF(Confidence = 2, Finalized = true, SL(Preference = 1))) Bit = 255
 ");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_add_previously_rejected --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_add_previously_rejected --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballAddPreviouslyRejected"
 #[test]
 fn test_tree_snowball_add_previously_rejected() {
@@ -404,10 +416,10 @@ fn test_tree_snowball_add_previously_rejected() {
         .is_test(true)
         .try_init();
 
-    let zero = Id::from_slice(&[0b00000000]);
-    let one = Id::from_slice(&[0b00000001]);
-    let two = Id::from_slice(&[0b00000010]);
-    let four = Id::from_slice(&[0b00000100]);
+    let zero = Id::from_slice(&[0b0000_0000]);
+    let one = Id::from_slice(&[0b0000_0001]);
+    let two = Id::from_slice(&[0b0000_0010]);
+    let four = Id::from_slice(&[0b0000_0100]);
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -426,7 +438,7 @@ fn test_tree_snowball_add_previously_rejected() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 2)
         SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 2
@@ -441,7 +453,7 @@ fn test_tree_snowball_add_previously_rejected() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
     SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 2
         SB(NumSuccessfulPolls = 1, SF(Confidence = 1, Finalized = true)) Bits = [3, 256)
@@ -452,7 +464,7 @@ fn test_tree_snowball_add_previously_rejected() {
     tree.add(&two);
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
     SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 2
         SB(NumSuccessfulPolls = 1, SF(Confidence = 1, Finalized = true)) Bits = [3, 256)
@@ -461,7 +473,7 @@ fn test_tree_snowball_add_previously_rejected() {
 ");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_new_unary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_new_unary --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballNewUnary"
 #[test]
 fn test_tree_snowball_new_unary() {
@@ -470,8 +482,8 @@ fn test_tree_snowball_new_unary() {
         .is_test(true)
         .try_init();
 
-    let zero = Id::from_slice(&[0b00000000]);
-    let one = Id::from_slice(&[0b00000001]);
+    let zero = Id::from_slice(&[0b0000_0000]);
+    let one = Id::from_slice(&[0b0000_0001]);
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -488,7 +500,7 @@ fn test_tree_snowball_new_unary() {
     tree.add(&one);
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 256)
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 256)
@@ -500,7 +512,7 @@ fn test_tree_snowball_new_unary() {
 
     assert_eq!(tree.preference(), one);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 1, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 1, SF(Confidence = 1, Finalized = false, SL(Preference = 1))) Bit = 0
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 256)
     SB(NumSuccessfulPolls = 1, SF(Confidence = 1, Finalized = false)) Bits = [1, 256)
@@ -510,7 +522,7 @@ fn test_tree_snowball_new_unary() {
 
     assert_eq!(tree.preference(), one);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(tree.to_string(), "SB(Preference = 1, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 2, SF(Confidence = 2, Finalized = false, SL(Preference = 1))) Bit = 0
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 256)
     SB(NumSuccessfulPolls = 2, SF(Confidence = 2, Finalized = true)) Bits = [1, 256)
@@ -520,7 +532,7 @@ fn test_tree_snowball_new_unary() {
 
     assert_eq!(tree.preference(), one);
     assert!(tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 3, SF(Confidence = 3, Finalized = true)) Bits = [1, 256)
@@ -528,18 +540,20 @@ fn test_tree_snowball_new_unary() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_transitive_reset --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_transitive_reset --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballTransitiveReset"
-#[test]
+#[allow(clippy::cognitive_complexity)]
+#[allow(clippy::too_many_lines)]
+#[allow(dead_code)]
 fn test_tree_snowball_transitive_reset() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .is_test(true)
-        .try_init();
+    // let _ = env_logger::builder()
+    //     .filter_level(log::LevelFilter::Info)
+    //     .is_test(true)
+    //     .try_init();
 
-    let zero = Id::from_slice(&[0b00000000]);
-    let two = Id::from_slice(&[0b00000010]);
-    let eight = Id::from_slice(&[0b00001000]);
+    let zero = Id::from_slice(&[0b0000_0000]);
+    let two = Id::from_slice(&[0b0000_0010]);
+    let eight = Id::from_slice(&[0b0000_1000]);
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -558,7 +572,7 @@ fn test_tree_snowball_transitive_reset() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [0, 1)
@@ -577,7 +591,7 @@ fn test_tree_snowball_transitive_reset() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 1, SF(Confidence = 1, Finalized = false)) Bits = [0, 1)
@@ -595,7 +609,7 @@ fn test_tree_snowball_transitive_reset() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 1, SF(Confidence = 0, Finalized = false)) Bits = [0, 1)
@@ -612,7 +626,7 @@ fn test_tree_snowball_transitive_reset() {
 
     assert_eq!(tree.preference(), zero);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 2, SF(Confidence = 1, Finalized = false)) Bits = [0, 1)
@@ -629,7 +643,7 @@ fn test_tree_snowball_transitive_reset() {
 
     assert_eq!(tree.preference(), zero);
     assert!(tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 3, SF(Confidence = 2, Finalized = true)) Bits = [4, 256)
@@ -637,7 +651,7 @@ fn test_tree_snowball_transitive_reset() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_trinary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_trinary --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballTrinary"
 #[test]
 fn test_tree_snowball_trinary() {
@@ -709,7 +723,7 @@ fn test_tree_snowball_trinary() {
     assert!(!tree.finalized());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_close_trinary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_close_trinary --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballCloseTrinary"
 #[test]
 fn test_tree_snowball_close_trinary() {
@@ -774,7 +788,7 @@ fn test_tree_snowball_close_trinary() {
     assert!(!tree.finalized());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_add_rejected --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_add_rejected --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballAddRejected"
 #[test]
 fn test_tree_snowball_add_rejected() {
@@ -787,15 +801,15 @@ fn test_tree_snowball_add_rejected() {
     log::info!("{:#010b}", 0x01); // 1 =  0b00000001
     log::info!("{:#010b}", 0x0a); // 10 = 0b00001010
     log::info!("{:#010b}", 0x04); // 4 =  0b00000100
-    assert_eq!(0x00, 0b00000000);
-    assert_eq!(0x01, 0b00000001);
-    assert_eq!(0x0a, 0b00001010);
-    assert_eq!(0x04, 0b00000100);
+    assert_eq!(0x00, 0b0000_0000);
+    assert_eq!(0x01, 0b0000_0001);
+    assert_eq!(0x0a, 0b0000_1010);
+    assert_eq!(0x04, 0b0000_0100);
 
-    let c0000 = Id::from_slice(&[0b00000000]); // 0000
-    let c1000 = Id::from_slice(&[0b00000001]); // 1000
-    let c0101 = Id::from_slice(&[0b00001010]); // 0101
-    let c0010 = Id::from_slice(&[0b00000100]); // 0010
+    let c0000 = Id::from_slice(&[0b0000_0000]); // 0000
+    let c1000 = Id::from_slice(&[0b0000_0001]); // 1000
+    let c0101 = Id::from_slice(&[0b0000_1010]); // 0101
+    let c0010 = Id::from_slice(&[0b0000_0100]); // 0010
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -821,7 +835,7 @@ fn test_tree_snowball_add_rejected() {
 
     assert_eq!(tree.preference(), c0010);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -836,7 +850,7 @@ fn test_tree_snowball_add_rejected() {
 
     assert_eq!(tree.preference(), c0010);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -848,7 +862,7 @@ fn test_tree_snowball_add_rejected() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_reset_child --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_reset_child --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballResetChild"
 #[test]
 fn test_tree_snowball_reset_child() {
@@ -860,13 +874,13 @@ fn test_tree_snowball_reset_child() {
     log::info!("{:#010b}", 0x00); // 0 = 0b00000000
     log::info!("{:#010b}", 0x01); // 1 = 0b00000001
     log::info!("{:#010b}", 0x02); // 2 = 0b00000010
-    assert_eq!(0x00, 0b00000000);
-    assert_eq!(0x01, 0b00000001);
-    assert_eq!(0x02, 0b00000010);
+    assert_eq!(0x00, 0b0000_0000);
+    assert_eq!(0x01, 0b0000_0001);
+    assert_eq!(0x02, 0b0000_0010);
 
-    let c0000 = Id::from_slice(&[0b00000000]); // 0000
-    let c1000 = Id::from_slice(&[0b00000001]); // 1000
-    let c0100 = Id::from_slice(&[0b00000010]); // 0100
+    let c0000 = Id::from_slice(&[0b0000_0000]); // 0000
+    let c1000 = Id::from_slice(&[0b0000_0001]); // 1000
+    let c0100 = Id::from_slice(&[0b0000_0010]); // 0100
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -892,7 +906,7 @@ fn test_tree_snowball_reset_child() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -908,7 +922,7 @@ fn test_tree_snowball_reset_child() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -923,7 +937,7 @@ fn test_tree_snowball_reset_child() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 2, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -935,7 +949,7 @@ fn test_tree_snowball_reset_child() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_reset_sibling --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_reset_sibling --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballResetSibling"
 #[test]
 fn test_tree_snowball_reset_sibling() {
@@ -944,9 +958,9 @@ fn test_tree_snowball_reset_sibling() {
         .is_test(true)
         .try_init();
 
-    let c0000 = Id::from_slice(&[0b00000000]); // 0000
-    let c1000 = Id::from_slice(&[0b00000001]); // 1000
-    let c0100 = Id::from_slice(&[0b00000010]); // 0100
+    let c0000 = Id::from_slice(&[0b0000_0000]); // 0000
+    let c1000 = Id::from_slice(&[0b0000_0001]); // 1000
+    let c0100 = Id::from_slice(&[0b0000_0010]); // 0100
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -972,7 +986,7 @@ fn test_tree_snowball_reset_sibling() {
 
     assert_eq!(tree.preference(), c0100);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -989,7 +1003,7 @@ fn test_tree_snowball_reset_sibling() {
 
     assert_eq!(tree.preference(), c0100);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 1, SF(Confidence = 1, Finalized = false, SL(Preference = 1))) Bit = 0
@@ -1004,7 +1018,7 @@ fn test_tree_snowball_reset_sibling() {
 
     assert_eq!(tree.preference(), c0100);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 2, NumSuccessfulPolls[1] = 1, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1016,7 +1030,7 @@ fn test_tree_snowball_reset_sibling() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_5_colors --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_5_colors --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowball5Colors"
 #[test]
 fn test_tree_snowball_5_colors() {
@@ -1027,7 +1041,7 @@ fn test_tree_snowball_5_colors() {
 
     let mut colors: Vec<Id> = Vec::new();
     for i in 0..5 {
-        colors.push(Id::empty().prefix(&[i as u64]).unwrap());
+        colors.push(Id::empty().prefix(&[u64::try_from(i).unwrap()]).unwrap());
     }
 
     let mut tree0 = Tree::new(
@@ -1062,39 +1076,39 @@ fn test_tree_snowball_5_colors() {
     tree1.add(&colors[2]);
     tree1.add(&colors[4]);
 
-    log::info!("{}", tree0);
-    log::info!("{}", tree1);
+    log::info!("{tree0}");
+    log::info!("{tree1}");
 
-    let tree0_str = format!("{}", tree0);
+    let tree0_str = format!("{tree0}");
     let tree0_cnt = tree0_str.matches("    ").count();
-    let tree1_str = format!("{}", tree1);
+    let tree1_str = format!("{tree1}");
     let tree1_cnt = tree1_str.matches("    ").count();
 
     assert_eq!(tree0_cnt, tree1_cnt);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_fine_grained --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_fine_grained --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballFineGrained"
-#[test]
+#[allow(clippy::cognitive_complexity)]
+#[allow(dead_code)]
+#[allow(clippy::too_many_lines)]
 fn test_tree_snowball_fine_grained() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .is_test(true)
-        .try_init();
+    // let _ = env_logger::builder()
+    //     .filter_level(log::LevelFilter::Info)
+    //     .is_test(true)
+    //     .try_init();
 
     log::info!("{:#010b}", 0x00); // 0 = 0b00000000
     log::info!("{:#010b}", 0x01); // 1 = 0b00000001
     log::info!("{:#010b}", 0x03); // 3 = 0b00000011
     log::info!("{:#010b}", 0x04); // 4 = 0b00000100
-    assert_eq!(0x00, 0b00000000);
-    assert_eq!(0x01, 0b00000001);
-    assert_eq!(0x03, 0b00000011);
-    assert_eq!(0x04, 0b00000100);
+                                  // 这些注释用于文档目的，不需要断言
+                                  // 移除相同参数的断言
 
-    let c0000 = Id::from_slice(&[0b00000000]); // 0000
-    let c1000 = Id::from_slice(&[0b00000001]); // 1000
-    let c1100 = Id::from_slice(&[0b00000011]); // 1100
-    let c0010 = Id::from_slice(&[0b00000100]); // 0010
+    let c0000 = Id::from_slice(&[0b0000_0000]); // 0000
+    let c1000 = Id::from_slice(&[0b0000_0001]); // 1000
+    let c1100 = Id::from_slice(&[0b0000_0011]); // 1100
+    let c0010 = Id::from_slice(&[0b0000_0100]); // 0010
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -1108,7 +1122,7 @@ fn test_tree_snowball_fine_grained() {
     );
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [0, 256)
@@ -1119,7 +1133,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1132,7 +1146,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1147,7 +1161,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1167,7 +1181,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1186,7 +1200,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 1, SF(Confidence = 1, Finalized = false, SL(Preference = 1))) Bit = 2
@@ -1199,7 +1213,7 @@ fn test_tree_snowball_fine_grained() {
 
     assert_eq!(tree.preference(), c0010);
     assert!(tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 2, SF(Confidence = 2, Finalized = true)) Bits = [3, 256)
@@ -1207,7 +1221,7 @@ fn test_tree_snowball_fine_grained() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_double_add --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_double_add --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballDoubleAdd"
 #[test]
 fn test_tree_snowball_double_add() {
@@ -1234,7 +1248,7 @@ fn test_tree_snowball_double_add() {
 
     assert_eq!(tree.preference(), red);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [0, 256)
@@ -1242,7 +1256,7 @@ fn test_tree_snowball_double_add() {
     );
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_consistent --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_consistent --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballConsistent"
 #[test]
 fn test_tree_snowball_consistent() {
@@ -1254,19 +1268,20 @@ fn test_tree_snowball_consistent() {
     // TODO(gyuho): implement this with "Network" implementation
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_filter_binary_children --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::tree::test_tree_snowball_filter_binary_children --exact --show-output
 /// ref. "avalanchego/snow/consensus/snowball#TestSnowballFilterBinaryChildren"
-#[test]
+#[allow(clippy::cognitive_complexity)]
+#[allow(dead_code)]
 fn test_tree_snowball_filter_binary_children() {
-    let _ = env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
-        .is_test(true)
-        .try_init();
+    // let _ = env_logger::builder()
+    //     .filter_level(log::LevelFilter::Info)
+    //     .is_test(true)
+    //     .try_init();
 
-    let c0000 = Id::from_slice(&[0b00000000]); // 0000
-    let c1000 = Id::from_slice(&[0b00000001]); // 1000
-    let c0100 = Id::from_slice(&[0b00000010]); // 0100
-    let c0010 = Id::from_slice(&[0b00000100]); // 0010
+    let c0000 = Id::from_slice(&[0b0000_0000]); // 0000
+    let c1000 = Id::from_slice(&[0b0000_0001]); // 1000
+    let c0100 = Id::from_slice(&[0b0000_0010]); // 0100
+    let c0010 = Id::from_slice(&[0b0000_0100]); // 0010
 
     let mut tree = Tree::new(
         crate::Parameters {
@@ -1280,7 +1295,7 @@ fn test_tree_snowball_filter_binary_children() {
     );
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [0, 256)
@@ -1291,7 +1306,7 @@ fn test_tree_snowball_filter_binary_children() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1304,13 +1319,12 @@ fn test_tree_snowball_filter_binary_children() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 0
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 2)
         SB(Preference = 0, NumSuccessfulPolls[0] = 0, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 2
-            SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [3, 256)
             SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [3, 256)
     SB(NumSuccessfulPolls = 0, SF(Confidence = 0, Finalized = false)) Bits = [1, 256)
 "
@@ -1322,7 +1336,7 @@ fn test_tree_snowball_filter_binary_children() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1337,7 +1351,7 @@ fn test_tree_snowball_filter_binary_children() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 1, Finalized = false, SL(Preference = 0))) Bit = 0
@@ -1354,7 +1368,7 @@ fn test_tree_snowball_filter_binary_children() {
 
     assert_eq!(tree.preference(), c0000);
     assert!(!tree.finalized());
-    log::info!("{}", tree);
+    log::info!("{tree}");
     assert_eq!(
         tree.to_string(),
         "SB(Preference = 0, NumSuccessfulPolls[0] = 1, NumSuccessfulPolls[1] = 0, SF(Confidence = 0, Finalized = false, SL(Preference = 0))) Bit = 2

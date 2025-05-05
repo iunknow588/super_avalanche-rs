@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// Generated client implementations.
 pub mod writer_client {

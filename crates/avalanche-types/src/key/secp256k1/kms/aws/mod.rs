@@ -14,7 +14,8 @@ use aws_sdk_kms::types::{KeySpec, KeyUsageType};
 use ethers_core::types::Signature as EthSig;
 use tokio::time::{sleep, Duration, Instant};
 
-/// Represents AWS KMS asymmetric elliptic curve key pair ECC_SECG_P256K1.
+/// Represents AWS KMS asymmetric elliptic curve key pair `ECC_SECG_P256K1`.
+///
 /// Note that the actual private key never leaves KMS.
 /// Private key signing operation must be done via AWS KMS API.
 /// ref. <https://docs.aws.amazon.com/kms/latest/APIReference/API_CreateKey.html>
@@ -45,6 +46,10 @@ pub struct Key {
 
 impl Key {
     /// Generates a new key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key creation fails or if the public key cannot be retrieved.
     pub async fn create(kms_manager: kms::Manager, tags: HashMap<String, String>) -> Result<Self> {
         let key = kms_manager
             .create_key(
@@ -67,6 +72,10 @@ impl Key {
     }
 
     /// Loads the key from its Arn or Id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key cannot be loaded or if the public key cannot be derived.
     pub async fn from_arn(kms_manager: kms::Manager, arn: &str) -> Result<Self> {
         let (id, _desc) = kms_manager
             .describe_key(arn)
@@ -125,6 +134,10 @@ impl Key {
     }
 
     /// Schedules to delete the KMS key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the key deletion cannot be scheduled.
     pub async fn delete(&self, pending_window_in_days: i32) -> Result<()> {
         self.kms_manager
             .schedule_to_delete(&self.arn, pending_window_in_days)
@@ -139,11 +152,16 @@ impl Key {
             })
     }
 
-    pub fn to_public_key(&self) -> key::secp256k1::public_key::Key {
+    #[must_use]
+    pub const fn to_public_key(&self) -> key::secp256k1::public_key::Key {
         self.public_key
     }
 
     /// Converts to Info.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the addresses cannot be generated.
     pub fn to_info(&self, network_id: u32) -> Result<key::secp256k1::Info> {
         let short_addr = self.public_key.to_short_id()?;
         let eth_addr = self.public_key.to_eth_address();
@@ -172,6 +190,15 @@ impl Key {
         })
     }
 
+    /// Signs a digest using the KMS key.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signing operation fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the digest length is not equal to `hash::SHA256_OUTPUT_LEN`.
     pub async fn sign_digest(&self, digest: &[u8]) -> Result<EthSig> {
         // ref. "crypto/sha256.Size"
         assert_eq!(digest.len(), hash::SHA256_OUTPUT_LEN);
@@ -228,7 +255,7 @@ impl Key {
 
         let sig =
             key::secp256k1::signature::decode_signature(&raw_der).map_err(|e| Error::Other {
-                message: format!("failed decode_signature {}", e),
+                message: format!("failed decode_signature {e}"),
                 retryable: false,
             })?;
 
@@ -242,8 +269,7 @@ impl Key {
         )
         .map_err(|e| Error::Other {
             message: format!(
-                "failed key::secp256k1::signature::sig_from_digest_bytes_trial_recovery {}",
-                e
+                "failed key::secp256k1::signature::sig_from_digest_bytes_trial_recovery {e}"
             ),
             retryable: false,
         })?;

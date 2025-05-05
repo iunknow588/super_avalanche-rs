@@ -1,8 +1,8 @@
 //! The consensus execution context.
 use avalanche_types::ids::{node::Id as NodeId, Id};
 
-/// Represents the current execution.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow#Context>
+/// Represents the current execution context.
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow#Context>.
 pub struct Context {
     network_id: u32,
 

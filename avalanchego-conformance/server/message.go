@@ -520,7 +520,7 @@ func (s *server) GetAcceptedFrontier(ctx context.Context, req *rpcpb.GetAccepted
 }
 
 func (s *server) GetAcceptedStateSummary(ctx context.Context, req *rpcpb.GetAcceptedStateSummaryRequest) (*rpcpb.GetAcceptedStateSummaryResponse, error) {
-	zap.L().Debug("received GetAcceptedStateSummary request")
+	zap.L().Debug("received `GetAcceptedStateSummary` request")
 
 	compressType := compression.TypeNone
 	if req.GzipCompressed {
@@ -585,7 +585,7 @@ func (s *server) GetAcceptedStateSummary(ctx context.Context, req *rpcpb.GetAcce
 }
 
 func (s *server) GetAccepted(ctx context.Context, req *rpcpb.GetAcceptedRequest) (*rpcpb.GetAcceptedResponse, error) {
-	zap.L().Debug("received GetAccepted request")
+	zap.L().Debug("received `GetAccepted` request")
 
 	mc, err := message.NewCreator(logging.NoLog{}, prometheus.NewRegistry(), "", compression.TypeNone, 10*time.Second)
 	if err != nil {
@@ -665,7 +665,7 @@ func (s *server) GetAncestors(ctx context.Context, req *rpcpb.GetAncestorsReques
 }
 
 func (s *server) GetStateSummaryFrontier(ctx context.Context, req *rpcpb.GetStateSummaryFrontierRequest) (*rpcpb.GetStateSummaryFrontierResponse, error) {
-	zap.L().Debug("received GetStateSummaryFrontier request")
+	zap.L().Debug("received `GetStateSummaryFrontier` request")
 
 	mc, err := message.NewCreator(logging.NoLog{}, prometheus.NewRegistry(), "", compression.TypeNone, 10*time.Second)
 	if err != nil {

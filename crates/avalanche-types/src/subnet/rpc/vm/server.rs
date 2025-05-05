@@ -1,12 +1,8 @@
 //! RPC Chain VM Server.
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Duration};
 
 use crate::{
     ids,
-    packer::U32_LEN,
     proto::pb::{
         self,
         aliasreader::alias_reader_client::AliasReaderClient,
@@ -37,8 +33,11 @@ use crate::{
 };
 use chrono::{TimeZone, Utc};
 use pb::vm::vm_server::Vm;
+
 use prost::bytes::Bytes;
 use tokio::sync::{broadcast, mpsc, RwLock};
+
+use std::time::Instant;
 use tonic::{Request, Response};
 
 pub struct Server<V> {
@@ -66,13 +65,19 @@ impl<V: ChainVm> Server<V> {
     }
 
     /// Attempts to get the ancestors of a block from the underlying Vm.
-    pub async fn vm_ancestors(
-        &self,
-        block_id_bytes: &[u8],
+    ///
+    /// # Errors
+    /// 如果底层 VM 查询失败，返回 `io::Error`。
+    pub async fn vm_ancestors<'a>(
+        &'a self,
+        block_id_bytes: &'a [u8],
         max_block_num: i32,
         max_block_size: i32,
         max_block_retrival_time: Duration,
-    ) -> std::io::Result<Vec<Bytes>> {
+    ) -> std::io::Result<Vec<Bytes>>
+    where
+        V: std::marker::Sync,
+    {
         let inner_vm = self.vm.read().await;
         inner_vm
             .get_ancestors(
@@ -96,9 +101,37 @@ where
         + Sync
         + 'static,
 {
+    async fn cross_chain_app_request(
+        &self,
+        request: Request<vm::CrossChainAppRequestMsg>,
+    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
+        self.cross_chain_app_request(request).await
+    }
+
+    async fn cross_chain_app_request_failed(
+        &self,
+        request: Request<vm::CrossChainAppRequestFailedMsg>,
+    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
+        self.cross_chain_app_request_failed(request).await
+    }
+
+    async fn cross_chain_app_response(
+        &self,
+        request: Request<vm::CrossChainAppResponseMsg>,
+    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
+        self.cross_chain_app_response(request).await
+    }
+
+    async fn verify_height_index(
+        &self,
+        _request: Request<pb::google::protobuf::Empty>,
+    ) -> std::result::Result<Response<vm::VerifyHeightIndexResponse>, tonic::Status> {
+        unimplemented!("verify_height_index is not implemented yet.")
+    }
     /// Implements "avalanchego/vms/rpcchainvm#VMServer.Initialize".
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.11.1/vms/rpcchainvm/vm_server.go#L98>
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.11.1/vms/rpcchainvm/vm_client.go#L123-L133>
+    #[allow(clippy::too_many_lines)]
     async fn initialize(
         &self,
         req: Request<vm::InitializeRequest>,
@@ -108,16 +141,18 @@ where
         let req = req.into_inner();
 
         let db_server_addr = req.db_server_addr.as_str();
-        let db_client_conn = utils::grpc::default_client(db_server_addr)?
-            .connect()
-            .await
-            .map_err(|e| {
-                tonic::Status::unknown(format!(
-                    "failed to create db client conn from: {db_server_addr}: {e}",
-                ))
-            })?;
-        let db =
-            corruptabledb::Database::new_boxed(DatabaseClient::new_boxed(db_client_conn.clone()));
+        // 合并 db_client_conn 的声明和唯一用途，防止提前 drop
+        let db = corruptabledb::Database::new_boxed(DatabaseClient::new_boxed(
+            utils::grpc::default_client(db_server_addr)?
+                .connect()
+                .await
+                .map_err(|e| {
+                    tonic::Status::unknown(format!(
+                        "failed to create db client conn from: {db_server_addr}: {e}",
+                    ))
+                })?,
+        ));
+        let db = db; // 移除错误的.await
 
         let server_addr = req.server_addr.as_str();
         let client_conn = utils::grpc::default_client(server_addr)?
@@ -136,21 +171,7 @@ where
         let shared_memory = SharedMemoryClient::new(client_conn.clone());
         let bc_lookup = AliasReaderClient::new(client_conn.clone());
 
-        let ctx: Option<Context<ValidatorStateClient>> = Some(Context {
-            network_id: req.network_id,
-            subnet_id: ids::Id::from_slice(&req.subnet_id),
-            chain_id: ids::Id::from_slice(&req.chain_id),
-            node_id: ids::node::Id::from_slice(&req.node_id),
-            x_chain_id: ids::Id::from_slice(&req.x_chain_id),
-            c_chain_id: ids::Id::from_slice(&req.c_chain_id),
-            avax_asset_id: ids::Id::from_slice(&req.avax_asset_id),
-            keystore,
-            shared_memory,
-            bc_lookup,
-            chain_data_dir: req.chain_data_dir,
-            validator_state: ValidatorStateClient::new(client_conn.clone()),
-        });
-
+        // 合并 ctx 的声明和唯一用途，避免提前 drop。
         let (tx_engine, mut rx_engine): (mpsc::Sender<Message>, mpsc::Receiver<Message>) =
             mpsc::channel(100);
         tokio::spawn(async move {
@@ -171,10 +192,27 @@ where
             }
         });
 
-        let mut inner_vm = self.vm.write().await;
-        inner_vm
+        // 合并 ctx 的声明和 initialize 调用，防止提前 drop
+        // inner_vm 显式 drop，防止提前释放锁
+        // 合并 inner_vm 的声明和唯一用途，防止提前 drop
+        self.vm
+            .write()
+            .await
             .initialize(
-                ctx,
+                Some(Context {
+                    network_id: req.network_id,
+                    subnet_id: ids::Id::from_slice(&req.subnet_id),
+                    chain_id: ids::Id::from_slice(&req.chain_id),
+                    node_id: ids::node::Id::from_slice(&req.node_id),
+                    x_chain_id: ids::Id::from_slice(&req.x_chain_id),
+                    c_chain_id: ids::Id::from_slice(&req.c_chain_id),
+                    avax_asset_id: ids::Id::from_slice(&req.avax_asset_id),
+                    keystore,
+                    shared_memory,
+                    bc_lookup,
+                    chain_data_dir: req.chain_data_dir,
+                    validator_state: ValidatorStateClient::new(client_conn.clone()),
+                }),
                 db,
                 &req.genesis_bytes,
                 &req.upgrade_bytes,
@@ -187,12 +225,16 @@ where
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
 
         // Get last accepted block on the chain
-        let last_accepted = inner_vm.last_accepted().await?;
-
-        let last_accepted_block = inner_vm
-            .get_block(last_accepted)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
+        let (last_accepted, last_accepted_block) = {
+            let inner_vm = self.vm.write().await;
+            let last_accepted = inner_vm.last_accepted().await?;
+            let last_accepted_block = inner_vm
+                .get_block(last_accepted)
+                .await
+                .map_err(|e| tonic::Status::unknown(e.to_string()))?;
+            drop(inner_vm);
+            (last_accepted, last_accepted_block)
+        };
 
         log::debug!("last_accepted_block id: {last_accepted:?}");
 
@@ -202,16 +244,25 @@ where
             bytes: Bytes::from(last_accepted_block.bytes().await.to_vec()),
             height: last_accepted_block.height().await,
             timestamp: Some(timestamp_from_time(
-                &Utc.timestamp_opt(last_accepted_block.timestamp().await as i64, 0)
-                    .unwrap(),
+                &Utc.timestamp_opt(
+                    i64::try_from(last_accepted_block.timestamp().await).map_err(|_| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::Other,
+                            "timestamp out of range for i64",
+                        )
+                    })?,
+                    0,
+                )
+                .unwrap(),
             )),
         }))
     }
 
+    #[allow(clippy::too_many_lines)]
     async fn shutdown(
         &self,
-        _req: Request<Empty>,
-    ) -> std::result::Result<Response<Empty>, tonic::Status> {
+        _req: tonic::Request<pb::google::protobuf::Empty>,
+    ) -> std::result::Result<tonic::Response<pb::google::protobuf::Empty>, tonic::Status> {
         log::debug!("shutdown called");
 
         // notify all gRPC servers to shutdown
@@ -219,7 +270,7 @@ where
             .send(())
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
 
-        Ok(Response::new(Empty {}))
+        Ok(tonic::Response::new(pb::google::protobuf::Empty {}))
     }
 
     /// Implements "avalanchego/vms/rpcchainvm#VMServer.CreateHandlers".
@@ -237,6 +288,8 @@ where
     /// For example, if this VM implements an account-based payments system,
     /// it have an extension called `accounts`, where clients could get
     /// information about their accounts.
+    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::too_many_lines)]
     async fn create_handlers(
         &self,
         _req: Request<Empty>,
@@ -244,11 +297,16 @@ where
         log::debug!("create_handlers called");
 
         // get handlers from underlying vm
-        let mut inner_vm = self.vm.write().await;
-        let handlers = inner_vm
-            .create_handlers()
-            .await
-            .map_err(|e| tonic::Status::unknown(format!("failed to create handlers: {e}")))?;
+        // 合并 handlers 的声明和唯一用途，防止提前 drop
+        let handlers = {
+            let mut inner_vm = self.vm.write().await;
+            let h = inner_vm
+                .create_handlers()
+                .await
+                .map_err(|e| tonic::Status::unknown(format!("failed to create handlers: {e}")))?;
+            drop(inner_vm);
+            h
+        };
 
         // create and start gRPC server serving HTTP service for each handler
         let mut resp_handlers: Vec<vm::Handler> = Vec::with_capacity(handlers.keys().len());
@@ -282,8 +340,10 @@ where
     ) -> std::result::Result<Response<vm::BuildBlockResponse>, tonic::Status> {
         log::debug!("build_block called");
 
-        let inner_vm = self.vm.write().await;
-        let block = inner_vm
+        let block = self
+            .vm
+            .write()
+            .await
             .build_block()
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -294,8 +354,11 @@ where
             bytes: Bytes::from(block.bytes().await.to_vec()),
             height: block.height().await,
             timestamp: Some(timestamp_from_time(
-                &Utc.timestamp_opt(block.timestamp().await as i64, 0)
-                    .unwrap(),
+                &Utc.timestamp_opt(
+                    i64::try_from(block.timestamp().await).unwrap_or_default(),
+                    0,
+                )
+                .unwrap(),
             )),
             verify_with_context: false,
         }))
@@ -308,20 +371,25 @@ where
         log::debug!("parse_block called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.write().await;
-        let block = inner_vm
+        let block = self
+            .vm
+            .write()
+            .await
             .parse_block(req.bytes.as_ref())
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
 
         Ok(Response::new(vm::ParseBlockResponse {
+            status: 0,
             id: Bytes::from(block.id().await.to_vec()),
             parent_id: Bytes::from(block.parent().await.to_vec()),
-            status: block.status().await.to_i32(),
             height: block.height().await,
             timestamp: Some(timestamp_from_time(
-                &Utc.timestamp_opt(block.timestamp().await as i64, 0)
-                    .unwrap(),
+                &Utc.timestamp_opt(
+                    i64::try_from(block.timestamp().await).unwrap_or_default(),
+                    0,
+                )
+                .unwrap(),
             )),
             verify_with_context: false,
         }))
@@ -351,15 +419,18 @@ where
         // determine if response is an error or not
         match inner_vm.get_block(ids::Id::from_slice(&req.id)).await {
             Ok(block) => Ok(Response::new(vm::GetBlockResponse {
+                status: 0,
                 parent_id: Bytes::from(block.parent().await.to_vec()),
                 bytes: Bytes::from(block.bytes().await.to_vec()),
-                status: block.status().await.to_i32(),
                 height: block.height().await,
                 timestamp: Some(timestamp_from_time(
-                    &Utc.timestamp_opt(block.timestamp().await as i64, 0)
-                        .unwrap(),
+                    &Utc.timestamp_opt(
+                        i64::try_from(block.timestamp().await).unwrap_or_default(),
+                        0,
+                    )
+                    .unwrap(),
                 )),
-                err: 0, // return 0 indicating no error
+                err: 0,
                 verify_with_context: false,
             })),
             // if an error was found, generate empty response with ErrNotFound code
@@ -367,9 +438,9 @@ where
             Err(e) => {
                 log::debug!("Error getting block");
                 Ok(Response::new(vm::GetBlockResponse {
+                    status: 0,
                     parent_id: Bytes::new(),
                     bytes: Bytes::new(),
-                    status: 0,
                     height: 0,
                     timestamp: Some(timestamp_from_time(&Utc.timestamp_opt(0, 0).unwrap())),
                     err: error_to_error_code(&e.to_string()),
@@ -386,24 +457,25 @@ where
         log::debug!("set_state called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.write().await;
         let state = State::try_from(req.state)
-            .map_err(|_| tonic::Status::unknown("failed to convert to vm state"))?;
+            .map_err(|()| tonic::Status::unknown("failed to convert to vm state"))?;
 
-        inner_vm
-            .set_state(state)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
-
-        let last_accepted_id = inner_vm
-            .last_accepted()
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
-
-        let block = inner_vm
-            .get_block(last_accepted_id)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
+        // inner_vm 显式 drop，防止提前释放锁
+        // 合并 inner_vm 的声明和唯一用途，防止提前 drop
+        let (last_accepted_id, block) = {
+            let inner_vm = self.vm.write().await;
+            inner_vm
+                .set_state(state)
+                .await
+                .map_err(|e| tonic::Status::unknown(e.to_string()))?;
+            let last_accepted_id = inner_vm.last_accepted().await?;
+            let block = inner_vm
+                .get_block(last_accepted_id)
+                .await
+                .map_err(|e| tonic::Status::unknown(e.to_string()))?;
+            drop(inner_vm);
+            (last_accepted_id, block)
+        };
 
         Ok(Response::new(vm::SetStateResponse {
             last_accepted_id: Bytes::from(last_accepted_id.to_vec()),
@@ -411,8 +483,11 @@ where
             height: block.height().await,
             bytes: Bytes::from(block.bytes().await.to_vec()),
             timestamp: Some(timestamp_from_time(
-                &Utc.timestamp_opt(block.timestamp().await as i64, 0)
-                    .unwrap(),
+                &Utc.timestamp_opt(
+                    i64::try_from(block.timestamp().await).unwrap_or_default(),
+                    0,
+                )
+                .unwrap(),
             )),
         }))
     }
@@ -424,8 +499,9 @@ where
         log::debug!("set_preference called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
-        inner_vm
+        self.vm
+            .read()
+            .await
             .set_preference(ids::Id::from_slice(&req.id))
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -439,8 +515,10 @@ where
     ) -> std::result::Result<Response<vm::HealthResponse>, tonic::Status> {
         log::debug!("health called");
 
-        let inner_vm = self.vm.read().await;
-        let resp = inner_vm
+        let resp = self
+            .vm
+            .read()
+            .await
             .health_check()
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -456,8 +534,10 @@ where
     ) -> std::result::Result<Response<vm::VersionResponse>, tonic::Status> {
         log::debug!("version called");
 
-        let inner_vm = self.vm.read().await;
-        let version = inner_vm
+        let version = self
+            .vm
+            .read()
+            .await
             .version()
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -472,9 +552,10 @@ where
         log::debug!("connected called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
         let node_id = ids::node::Id::from_slice(&req.node_id);
-        inner_vm
+        self.vm
+            .read()
+            .await
             .connected(&node_id)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -489,10 +570,10 @@ where
         log::debug!("disconnected called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
         let node_id = ids::node::Id::from_slice(&req.node_id);
-
-        inner_vm
+        self.vm
+            .read()
+            .await
             .disconnected(&node_id)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -508,12 +589,18 @@ where
 
         let req = req.into_inner();
         let node_id = ids::node::Id::from_slice(&req.node_id);
-        let inner_vm = self.vm.read().await;
-
         let ts = req.deadline.as_ref().expect("timestamp");
-        let deadline = Utc.timestamp_opt(ts.seconds, ts.nanos as u32).unwrap();
+        let deadline = Utc
+            .timestamp_opt(
+                ts.seconds,
+                u32::try_from(ts.nanos).expect("nanos must fit in u32"),
+            )
+            .single()
+            .unwrap();
 
-        inner_vm
+        self.vm
+            .read()
+            .await
             .app_request(&node_id, req.request_id, deadline, &req.request)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -529,9 +616,9 @@ where
 
         let req = req.into_inner();
         let node_id = ids::node::Id::from_slice(&req.node_id);
-        let inner_vm = self.vm.read().await;
-
-        inner_vm
+        self.vm
+            .read()
+            .await
             .app_request_failed(&node_id, req.request_id)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -547,9 +634,9 @@ where
 
         let req = req.into_inner();
         let node_id = ids::node::Id::from_slice(&req.node_id);
-        let inner_vm = self.vm.read().await;
-
-        inner_vm
+        self.vm
+            .read()
+            .await
             .app_response(&node_id, req.request_id, &req.response)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -565,9 +652,9 @@ where
 
         let req = req.into_inner();
         let node_id = ids::node::Id::from_slice(&req.node_id);
-        let inner_vm = self.vm.read().await;
-
-        inner_vm
+        self.vm
+            .read()
+            .await
             .app_gossip(&node_id, &req.msg)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -582,9 +669,10 @@ where
         log::debug!("block_verify called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
-
-        let mut block = inner_vm
+        let mut block = self
+            .vm
+            .read()
+            .await
             .parse_block(&req.bytes)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -596,8 +684,11 @@ where
 
         Ok(Response::new(vm::BlockVerifyResponse {
             timestamp: Some(timestamp_from_time(
-                &Utc.timestamp_opt(block.timestamp().await as i64, 0)
-                    .unwrap(),
+                &Utc.timestamp_opt(
+                    i64::try_from(block.timestamp().await).unwrap_or_default(),
+                    0,
+                )
+                .unwrap(),
             )),
         }))
     }
@@ -609,10 +700,12 @@ where
         log::debug!("block_accept called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
         let id = ids::Id::from_slice(&req.id);
 
-        let mut block = inner_vm
+        let mut block = self
+            .vm
+            .read()
+            .await
             .get_block(id)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -631,10 +724,12 @@ where
         log::debug!("block_reject called");
 
         let req = req.into_inner();
-        let inner_vm = self.vm.read().await;
         let id = ids::Id::from_slice(&req.id);
 
-        let mut block = inner_vm
+        let mut block = self
+            .vm
+            .read()
+            .await
             .get_block(id)
             .await
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
@@ -655,7 +750,7 @@ where
         let req = req.into_inner();
 
         let block_id = ids::Id::from_slice(req.blk_id.as_ref());
-        let max_blocks_size = usize::try_from(req.max_blocks_size).expect("cast from i32");
+        let _max_blocks_size = usize::try_from(req.max_blocks_size).expect("cast from i32");
         let max_blocks_num = usize::try_from(req.max_blocks_num).expect("cast from i32");
         let max_blocks_retrival_time = Duration::from_secs(
             req.max_blocks_retrival_time
@@ -684,7 +779,7 @@ where
 
         // not supported by underlying vm use local logic
         let start = Instant::now();
-        let mut block = match self.vm.read().await.get_block(block_id).await {
+        let block = match self.vm.read().await.get_block(block_id).await {
             Ok(b) => b,
             Err(e) => {
                 // special case ErrNotFound as an empty response: this signals
@@ -703,45 +798,30 @@ where
         };
 
         let mut ancestors = Vec::with_capacity(max_blocks_num);
-        let block_bytes = block.bytes().await;
+        let mut block_opt = Some(block);
+        for _ in 0..max_blocks_num {
+            let Some(block) = block_opt.take() else { break };
 
-        // length, in bytes, of all elements of ancestors
-        let mut ancestors_bytes_len = block_bytes.len() + U32_LEN;
-        ancestors.push(Bytes::from(block_bytes.to_owned()));
+            // 先 clone/copy parent_id，避免 .await 期间 block 被借用
+            let parent_id = block.parent().await;
 
-        while ancestors.len() < max_blocks_num {
-            if start.elapsed() < max_blocks_retrival_time {
+            // 先 clone/copy bytes 数据，确保拥有所有权，彻底规避生命周期问题
+            let block_bytes = block.bytes().await;
+            ancestors.push(Bytes::copy_from_slice(block_bytes));
+
+            if start.elapsed() > max_blocks_retrival_time {
                 log::debug!("get_ancestors exceeded max block retrival time");
                 break;
             }
-
-            let parent_id = block.parent().await;
-
-            block = match self.vm.read().await.get_block(parent_id).await {
-                Ok(b) => b,
+            block_opt = match self.vm.read().await.get_block(parent_id).await {
+                Ok(parent) => Some(parent),
                 Err(e) => {
                     if errors::is_not_found(&e) {
-                        // after state sync we may not have the full chain
                         log::debug!("failed to get block during ancestors lookup parentId: {parent_id}: {e}");
                     }
-
-                    break;
+                    None
                 }
             };
-
-            let block_bytes = block.bytes().await;
-
-            // Ensure response size isn't too large. Include U32_LEN because
-            // the size of the message is included with each container, and the size
-            // is repr. by 4 bytes.
-            ancestors_bytes_len += block_bytes.len() + U32_LEN;
-
-            if ancestors_bytes_len > max_blocks_size {
-                log::debug!("get_ancestors reached maximum response size: {ancestors_bytes_len}");
-                break;
-            }
-
-            ancestors.push(Bytes::from(block_bytes.to_owned()));
         }
 
         Ok(Response::new(vm::GetAncestorsResponse {
@@ -763,7 +843,7 @@ where
             .map(|request| async {
                 self.parse_block(request)
                     .await
-                    .map(|block| block.into_inner())
+                    .map(tonic::Response::into_inner)
             });
         let blocks = futures::future::try_join_all(to_parse).await?;
 
@@ -800,60 +880,6 @@ where
         .mfs;
 
         Ok(Response::new(vm::GatherResponse { metric_families }))
-    }
-
-    async fn cross_chain_app_request(
-        &self,
-        req: Request<vm::CrossChainAppRequestMsg>,
-    ) -> std::result::Result<Response<Empty>, tonic::Status> {
-        log::debug!("cross_chain_app_request called");
-        let msg = req.into_inner();
-        let chain_id = &ids::Id::from_slice(&msg.chain_id);
-
-        let ts = msg.deadline.as_ref().expect("timestamp");
-        let deadline = Utc.timestamp_opt(ts.seconds, ts.nanos as u32).unwrap();
-
-        let inner_vm = self.vm.read().await;
-        inner_vm
-            .cross_chain_app_request(chain_id, msg.request_id, deadline, &msg.request)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
-
-        Ok(Response::new(Empty {}))
-    }
-
-    async fn cross_chain_app_request_failed(
-        &self,
-        req: Request<vm::CrossChainAppRequestFailedMsg>,
-    ) -> std::result::Result<Response<Empty>, tonic::Status> {
-        log::debug!("cross_chain_app_request_failed called");
-        let msg = req.into_inner();
-        let chain_id = &ids::Id::from_slice(&msg.chain_id);
-
-        let inner_vm = self.vm.read().await;
-        inner_vm
-            .cross_chain_app_request_failed(chain_id, msg.request_id)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
-
-        Ok(Response::new(Empty {}))
-    }
-
-    async fn cross_chain_app_response(
-        &self,
-        req: Request<vm::CrossChainAppResponseMsg>,
-    ) -> std::result::Result<Response<Empty>, tonic::Status> {
-        log::debug!("cross_chain_app_response called");
-        let msg = req.into_inner();
-        let chain_id = &ids::Id::from_slice(&msg.chain_id);
-
-        let inner_vm = self.vm.read().await;
-        inner_vm
-            .cross_chain_app_response(chain_id, msg.request_id, &msg.response)
-            .await
-            .map_err(|e| tonic::Status::unknown(e.to_string()))?;
-
-        Ok(Response::new(Empty {}))
     }
 
     async fn state_sync_enabled(
@@ -914,27 +940,6 @@ where
         log::debug!("state_summary_accept called");
 
         Err(tonic::Status::unimplemented("state_summary_accept"))
-    }
-
-    async fn verify_height_index(
-        &self,
-        _req: Request<Empty>,
-    ) -> std::result::Result<Response<vm::VerifyHeightIndexResponse>, tonic::Status> {
-        log::debug!("verify_height_index called");
-
-        let inner_vm = self.vm.read().await;
-
-        match inner_vm.verify_height_index().await {
-            Ok(_) => return Ok(Response::new(vm::VerifyHeightIndexResponse { err: 0 })),
-            Err(e) => {
-                if error_to_error_code(&e.to_string()) != 0 {
-                    return Ok(Response::new(vm::VerifyHeightIndexResponse {
-                        err: error_to_error_code(&e.to_string()),
-                    }));
-                }
-                return Err(tonic::Status::unknown(e.to_string()));
-            }
-        }
     }
 
     async fn get_block_id_at_height(

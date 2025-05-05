@@ -6,7 +6,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-/// To be persisted in "chain_config_dir".
+/// To be persisted in "`chain_config_dir`".
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/subnet-evm/plugin/evm#Config>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/subnet-evm/plugin/evm#Config.SetDefaults>
 /// ref. <https://github.com/ava-labs/subnet-evm/blob/v0.4.8/plugin/evm/config.go>
@@ -311,15 +312,23 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Encodes the chain config to JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
-    /// Saves the current chain config to disk
-    /// and overwrites the file.
+    /// Syncs the chain config to a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be written.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing subnet-evm chain config to '{}'", file_path);
+        log::info!("syncing subnet-evm chain config to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -327,7 +336,7 @@ impl Config {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -336,7 +345,7 @@ impl Config {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="subnet_evm" -- subnet_evm::chain_config::test_config --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="subnet_evm" -- subnet_evm::chain_config::test_config --exact --show-output
 #[test]
 fn test_config() {
     let _ = env_logger::builder().is_test(true).try_init();

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// Base transaction.
 ///
-/// The VM flow checker adds "fee_amount" and "output" amounts to the "produced",
+/// The VM flow checker adds "`fee_amount`" and "output" amounts to the "produced",
 /// and "input" amounts to the "consumed". The check fails with "errInsufficientFunds",
 /// if the "produced" amount ("fee" + "outputs") is greater than the "consumed" ("inputs").
 ///
@@ -22,12 +22,13 @@ pub struct Tx {
     /// The transaction ID is empty for unsigned tx
     /// as long as "avax.BaseTx.Metadata" is "None".
     /// Once Metadata is updated with signing and "Tx.Initialize",
-    /// Tx.ID() is non-empty.
+    /// `Tx.ID()` is non-empty.
     pub base_tx: txs::Tx,
     pub fx_creds: Vec<fx::Credential>,
 }
 
 impl Tx {
+    #[must_use]
     pub fn new(base_tx: txs::Tx) -> Self {
         Self {
             base_tx,
@@ -38,6 +39,11 @@ impl Tx {
     /// Returns the transaction ID.
     /// Only non-empty if the embedded metadata is updated
     /// with the signing process.
+    ///
+    /// # Panics
+    ///
+    /// 当 `metadata` 为 `Some` 但解包失败时会 panic。
+    #[must_use]
     pub fn tx_id(&self) -> ids::Id {
         if self.base_tx.metadata.is_some() {
             let m = self.base_tx.metadata.clone().unwrap();
@@ -47,17 +53,33 @@ impl Tx {
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "avm.BaseTx".to_string()
     }
 
+    /// 返回类型 ID
+    ///
+    /// # Panics
+    ///
+    /// 当类型名未在 `X_TYPES` 中注册时会 panic。
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::X_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::X_TYPES.get(&Self::type_name()).unwrap()))
+            .expect("type id out of range for u32")
     }
 
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/avm/txs#Tx.SignSECP256K1Fx>
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/crypto#PrivateKeyED25519.SignHash>
-    pub async fn sign<T: key::secp256k1::SignOnly>(&mut self, signers: Vec<Vec<T>>) -> Result<()> {
+    ///
+    /// # Errors
+    ///
+    /// 当序列化或签名过程失败时返回错误。
+    #[allow(clippy::future_not_send)]
+    pub async fn sign<T: key::secp256k1::SignOnly + Sync>(
+        &mut self,
+        signers: Vec<Vec<T>>,
+    ) -> Result<()> {
         // marshal "unsigned tx" with the codec version
         let type_id = Self::type_id();
         let packer = self.base_tx.pack(codec::VERSION, type_id)?;
@@ -79,16 +101,16 @@ impl Tx {
         let tx_bytes_hash = hash::sha256(&tx_bytes_with_no_signature);
 
         // number of of credentials
-        let fx_creds_len = signers.len() as u32;
+        let fx_creds_len = u32::try_from(signers.len())?;
         // pack the second field in the struct
         packer.pack_u32(fx_creds_len)?;
 
         // sign the hash with the signers (in case of multi-sig)
         // and combine all signatures into a secp256k1fx credential
         self.fx_creds = Vec::new();
-        for keys in signers.iter() {
+        for keys in &signers {
             let mut sigs: Vec<Vec<u8>> = Vec::new();
-            for k in keys.iter() {
+            for k in keys {
                 let sig = k.sign_digest(&tx_bytes_hash).await?;
                 sigs.push(Vec::from(sig));
             }
@@ -107,10 +129,11 @@ impl Tx {
             // pack each "fx_cred" which is "secp256k1fx.Credential"
             // marshal type ID for "secp256k1fx.Credential"
             let cred_type_id = key::secp256k1::txs::Credential::type_id();
-            for fx_cred in self.fx_creds.iter() {
+            for fx_cred in &self.fx_creds {
                 packer.pack_u32(cred_type_id)?;
-                packer.pack_u32(fx_cred.cred.signatures.len() as u32)?;
-                for sig in fx_cred.cred.signatures.iter() {
+                let sigs_len = u32::try_from(fx_cred.cred.signatures.len())?;
+                packer.pack_u32(sigs_len)?;
+                for sig in &fx_cred.cred.signatures {
                     packer.pack_bytes(sig)?;
                 }
             }
@@ -131,9 +154,10 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- avm::txs::test_tx_serialization_with_two_signers --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `avm::txs::test_tx_serialization_with_two_signers` --exact --show-output
 /// ref. "avalanchego/vms/avm.TestBaseTxSerialization"
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_tx_serialization_with_two_signers() {
     use crate::ids::short;
 
@@ -164,7 +188,7 @@ fn test_tx_serialization_with_two_signers() {
                 output_owners: key::secp256k1::txs::OutputOwners {
                     locktime: 0,
                     threshold: 1,
-                    addresses: vec![test_key_short_addr.clone()],
+                    addresses: vec![test_key_short_addr],
                 },
             }),
             ..txs::transferable::Output::default()
@@ -193,7 +217,7 @@ fn test_tx_serialization_with_two_signers() {
     };
 
     let keys1: Vec<key::secp256k1::private_key::Key> = vec![test_key.clone(), test_key.clone()];
-    let keys2: Vec<key::secp256k1::private_key::Key> = vec![test_key.clone(), test_key.clone()];
+    let keys2: Vec<key::secp256k1::private_key::Key> = vec![test_key.clone(), test_key];
     let signers: Vec<Vec<key::secp256k1::private_key::Key>> = vec![keys1, keys2];
     let mut tx_with_two_signers = Tx::new(unsigned_tx);
     ab!(tx_with_two_signers.sign(signers)).expect("failed to sign");

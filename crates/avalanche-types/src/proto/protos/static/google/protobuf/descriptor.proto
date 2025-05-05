@@ -165,8 +165,8 @@ message FieldDescriptorProto {
     TYPE_ENUM = 14;
     TYPE_SFIXED32 = 15;
     TYPE_SFIXED64 = 16;
-    TYPE_SINT32 = 17;  // Uses ZigZag encoding.
-    TYPE_SINT64 = 18;  // Uses ZigZag encoding.
+    TYPE_SINT32 = 17;  // Uses `ZigZag` encoding.
+    TYPE_SINT64 = 18;  // Uses `ZigZag` encoding.
   }
 
   enum Label {
@@ -348,7 +348,7 @@ message FileOptions {
 
 
   // Controls the name of the wrapper Java class generated for the .proto file.
-  // That class will always contain the .proto file's getDescriptor() method as
+  // That class will always contain the .proto file's `getDescriptor()` method as
   // well as any top-level extensions defined in the .proto file.
   // If java_multiple_files is disabled, then all the other classes from the
   // .proto file will be nested inside the single wrapper outer class.
@@ -357,8 +357,8 @@ message FileOptions {
   // If enabled, then the Java code generator will generate a separate .java
   // file for each top-level message, enum, and service defined in the .proto
   // file.  Thus, these types will *not* be nested inside the wrapper class
-  // named by java_outer_classname.  However, the wrapper class will still be
-  // generated to contain the file's getDescriptor() method as well as any
+  // named by `java_outer_classname`.  However, the wrapper class will still be
+  // generated to contain the file's `getDescriptor()` method as well as any
   // top-level extensions defined in the file.
   optional bool java_multiple_files = 10 [default = false];
 
@@ -378,8 +378,8 @@ message FileOptions {
   enum OptimizeMode {
     SPEED = 1;         // Generate complete code for parsing, serialization,
                        // etc.
-    CODE_SIZE = 2;     // Use ReflectionOps to implement these methods.
-    LITE_RUNTIME = 3;  // Generate code using MessageLite and the lite runtime.
+    CODE_SIZE = 2;     // Use `ReflectionOps` to implement these methods.
+    LITE_RUNTIME = 3;  // Generate code using `MessageLite` and the lite runtime.
   }
   optional OptimizeMode optimize_for = 9 [default = SPEED];
 
@@ -484,7 +484,7 @@ message MessageOptions {
   // the protocol compiler.
   optional bool message_set_wire_format = 1 [default = false];
 
-  // Disables the generation of the standard "descriptor()" accessor, which can
+  // Disables the generation of the standard "`descriptor()`" accessor, which can
   // conflict with a field of the same name.  This is meant to make migration
   // from proto1 easier; new code should avoid fields named "descriptor".
   optional bool no_standard_descriptor_accessor = 2 [default = false];

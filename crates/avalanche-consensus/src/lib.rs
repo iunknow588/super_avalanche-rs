@@ -1,10 +1,10 @@
 //! # avalanche-consensus
 //!
-//! avalanche-consensus includes the data structures and algorithms
+//! `avalanche-consensus` includes the data structures and algorithms
 //! necessary to execute the novel Avalanche consensus engine.
 //!
 //! Support is included for Snowball consensus, Slush, and blocks.
-//! See <https://docs.avax.network/learn/avalanche/avalanche-consensus>
+//! See: <https://docs.avax.network/learn/avalanche/avalanche-consensus>
 //! and the Avalanche whitepaper for more information.
 pub mod context;
 pub mod snowman;
@@ -12,8 +12,11 @@ pub mod snowman;
 use avalanche_types::errors::{Error, Result};
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+extern crate env_logger;
+
 /// Represents consensus parameters.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Parameters>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Parameters>.
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {
@@ -65,7 +68,7 @@ impl Default for Parameters {
             concurrent_repolls: 4,
             optimal_processing: 50,
             max_outstanding_items: 1024,
-            max_item_processing_time: 120000000000, // 2-min
+            max_item_processing_time: 120_000_000_000, // 2-min
             mixed_query_num_push_to_validators: 10,
             mixed_query_num_push_to_non_validators: 0,
         }
@@ -75,6 +78,7 @@ impl Default for Parameters {
 impl Parameters {
     /// Validates the consensus configuration.
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Parameters.Verify>
+    #[allow(clippy::too_many_lines)]
     pub fn verify(&self) -> Result<()> {
         if self.alpha <= self.k / 2 {
             return Err(Error::Other {
@@ -200,7 +204,7 @@ impl Parameters {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowball::test_parameters --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowball::test_parameters --exact --show-output
 #[test]
 fn test_parameters() {
     let parameters = Parameters::default();

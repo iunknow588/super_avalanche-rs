@@ -14,11 +14,11 @@ use tokio::time::Duration;
 
 // With EIP-1559, the fees are: units of gas used * (base fee + priority fee).
 // The expensive but highly guaranteed way of getting transaction in is:
-// set very high "max_fee_per_gas" and very low "max_priority_fee_per_gas".
-// For example, set "max_fee_per_gas" 500 GWEI and "max_priority_fee_per_gas" 10 GWEI.
+// set very high "`max_fee_per_gas`" and very low "`max_priority_fee_per_gas`".
+// For example, set "`max_fee_per_gas`" 500 GWEI and "`max_priority_fee_per_gas`" 10 GWEI.
 // If the base fee is 25 GWEI, it will only cost: units of gas used * (25 + 10).
 // If the base fee is 200 GWEI, it will only cost: units of gas used * (200 + 10).
-// Therefore, we can set the "max_fee_per_gas" to the actual maximum
+// Therefore, we can set the "`max_fee_per_gas`" to the actual maximum
 // we are willing to pay without manual intervention.
 // ref. <https://docs.avax.network/quickstart/adjusting-gas-price-during-high-network-activity>
 lazy_static! {
@@ -34,7 +34,7 @@ lazy_static! {
 
 impl<T, S> evm::Evm<T, S>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
     S: ethers_signers::Signer + Clone,
     S::Error: 'static,
 {
@@ -44,6 +44,7 @@ where
     }
 }
 /// Represents an EIP-1559 Ethereum transaction (dynamic fee transaction in coreth/subnet-evm).
+///
 /// ref. <https://ethereum.org/en/developers/docs/transactions>
 /// ref. <https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md>
 /// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/types/transaction/eip1559.rs>
@@ -52,7 +53,7 @@ where
 #[derive(Clone, Debug)]
 pub struct Tx<T, S>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
     S: ethers_signers::Signer + Clone,
     S::Error: 'static,
 {
@@ -73,21 +74,21 @@ where
     pub signer_nonce: Option<U256>,
 
     /// Maximum transaction fee as a premium.
-    /// Maps to subnet-evm DynamicFeeTx "GasTipCap".
+    /// Maps to subnet-evm `DynamicFeeTx` "`GasTipCap`".
     /// ref. <https://ethereum.org/en/developers/docs/gas/>
     pub max_priority_fee_per_gas: Option<U256>,
 
     /// Maximum amount that the originator is willing to pay for this transaction.
-    /// Maps to subnet-evm DynamicFeeTx "GasFeeCap".
+    /// Maps to subnet-evm `DynamicFeeTx` `GasFeeCap`.
     /// ref. <https://ethereum.org/en/developers/docs/gas/>
     ///
     /// With EIP-1559, the fees are: units of gas used * (base fee + priority fee).
     /// The expensive but highly guaranteed way of getting transaction in is:
-    /// set very high "max_fee_per_gas" and very low "max_priority_fee_per_gas".
-    /// For example, set "max_fee_per_gas" 500 GWEI and "max_priority_fee_per_gas" 10 GWEI.
+    /// set very high "`max_fee_per_gas`" and very low "`max_priority_fee_per_gas`".
+    /// For example, set "`max_fee_per_gas`" 500 GWEI and "`max_priority_fee_per_gas`" 10 GWEI.
     /// If the base fee is 25 GWEI, it will only cost: units of gas used * (25 + 10).
     /// If the base fee is 200 GWEI, it will only cost: units of gas used * (200 + 10).
-    /// Therefore, we can set the "max_fee_per_gas" to the actual maximum
+    /// Therefore, we can set the "`max_fee_per_gas`" to the actual maximum
     /// we are willing to pay without manual intervention.
     /// ref. <https://docs.avax.network/quickstart/adjusting-gas-price-during-high-network-activity>
     pub max_fee_per_gas: Option<U256>,
@@ -108,12 +109,12 @@ where
     ///
     /// With EIP-1559, the fees are: units of gas used * (base fee + priority fee).
     /// The base fee is set by the protocol (via chain fee configuration).
-    /// The priority fee is set by the user (via "max_priority_fee_per_gas").
+    /// The priority fee is set by the user (via "`max_priority_fee_per_gas`").
     ///
-    /// In addition, the user can also set "max_fee_per_gas" for the transaction.
+    /// In addition, the user can also set "`max_fee_per_gas`" for the transaction.
     /// The surplus from the max fee and the actual fee is refunded to the user.
     /// For instance, the refunds are: max fee - (base fee + priority fee).
-    /// The "max_fee_per_gas" can limit the maximum amount to pay for the transaction.
+    /// The "`max_fee_per_gas`" can limit the maximum amount to pay for the transaction.
     /// ref. <https://ethereum.org/en/developers/docs/gas/>
     ///
     /// This is different than "gas limit" in the chain fee configuration.
@@ -133,14 +134,14 @@ where
     /// Arbitrary data.
     pub data: Option<Vec<u8>>,
 
-    /// Set "true" to check whether a transaction is confirmed using "eth_getTransactionReceipt".
+    /// Set "true" to check whether a transaction is confirmed using "`eth_getTransactionReceipt`".
     /// If false, returns the transaction Id immediately after signing and sending the transaction.
     /// The transaction may still be pending.
     /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactionreceipt>
     pub check_receipt: bool,
 
     /// Set "true" to poll transfer status after issuance for its acceptance
-    /// by calling "eth_getTransactionByHash".
+    /// by calling "`eth_getTransactionByHash`".
     /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactionbyhash>
     pub check_acceptance: bool,
 
@@ -157,7 +158,7 @@ where
 
 impl<T, S> Tx<T, S>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
     S: ethers_signers::Signer + Clone,
     S::Error: 'static,
 {
@@ -192,14 +193,14 @@ where
         self
     }
 
-    /// Same as "GasTipCap" in subnet-evm.
+    /// Same as "`GasTipCap`" in subnet-evm.
     #[must_use]
     pub fn max_priority_fee_per_gas(mut self, max_priority_fee_per_gas: impl Into<U256>) -> Self {
         self.max_priority_fee_per_gas = Some(max_priority_fee_per_gas.into());
         self
     }
 
-    /// Same as "GasFeeCap" in subnet-evm.
+    /// Same as "`GasFeeCap`" in subnet-evm.
     #[must_use]
     pub fn max_fee_per_gas(mut self, max_fee_per_gas: impl Into<U256>) -> Self {
         self.max_fee_per_gas = Some(max_fee_per_gas.into());
@@ -240,16 +241,16 @@ where
 
     /// Sets the check receipt boolean flag.
     #[must_use]
-    pub fn check_receipt(mut self, check_receipt: bool) -> Self {
+    pub const fn check_receipt(mut self, check_receipt: bool) -> Self {
         self.check_receipt = check_receipt;
         self
     }
 
     /// Sets the check acceptance boolean flag.
-    /// If "true", overwrites "check_receipt" with "true".
-    /// If "false", does not overwrite "check_receipt" with "false".
+    /// If "true", overwrites "`check_receipt`" with "true".
+    /// If "false", does not overwrite "`check_receipt`" with "false".
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         if check_acceptance {
             self.check_receipt = true;
         }
@@ -259,45 +260,51 @@ where
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the transaction and returns the transaction Id.
     /// ref. "coreth,subnet-evm/internal/ethapi.SubmitTransaction"
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if checking acceptance times out.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the transaction receipt is None.
     pub async fn submit(&mut self) -> Result<H256> {
-        let max_priority_fee_per_gas = if let Some(v) = self.max_priority_fee_per_gas {
-            format!("{} GWEI", super::wei_to_gwei(v))
-        } else {
-            "default".to_string()
-        };
-        let max_fee_per_gas = if let Some(v) = self.max_fee_per_gas {
-            format!("{} GWEI", super::wei_to_gwei(v))
-        } else {
-            "default".to_string()
-        };
+        let max_priority_fee_per_gas = self.max_priority_fee_per_gas.map_or_else(
+            || "default".to_string(),
+            |v| format!("{} GWEI", super::wei_to_gwei(v)),
+        );
+        let max_fee_per_gas = self.max_fee_per_gas.map_or_else(
+            || "default".to_string(),
+            |v| format!("{} GWEI", super::wei_to_gwei(v)),
+        );
 
         log::info!(
             "submit tx [chain Id {}, value {:?}, from {}, recipient {:?}, chain RPC URL {}, max_priority_fee_per_gas {max_priority_fee_per_gas}, max_fee_per_gas {max_fee_per_gas}, gas_limit {:?}, dry_mode {}]",
@@ -311,7 +318,7 @@ where
         );
 
         let signer_nonce = if let Some(signer_nonce) = self.signer_nonce {
-            log::info!("using the existing signer nonce '{}'", signer_nonce);
+            log::info!("using the existing signer nonce '{signer_nonce}'");
             signer_nonce
         } else {
             let fetched_nonce =
@@ -322,12 +329,12 @@ where
                     .map_err(|e| {
                         // TODO: check retryable
                         Error::Other {
-                            message: format!("failed initialize_nonce '{}'", e),
+                            message: format!("failed initialize_nonce '{e}'"),
                             retryable: false,
                         }
                     })?;
 
-            log::info!("no signer nonce, thus fetched/cached '{}'", fetched_nonce);
+            log::info!("no signer nonce, thus fetched/cached '{fetched_nonce}'");
             self.signer_nonce = Some(fetched_nonce);
 
             fetched_nonce
@@ -394,19 +401,18 @@ where
                     .map_err(|e| {
                         // TODO: check retryable
                         Error::API {
-                            message: format!("failed estimate_gas '{}' for dry mode", e),
+                            message: format!("failed estimate_gas '{e}' for dry mode"),
                             retryable: false,
                         }
                     })?;
 
                 log::info!(
-                    "dry-mode caching estimated gas limit {} and updating 'gas' in typed tx",
-                    estimated_gas
+                    "dry-mode caching estimated gas limit {estimated_gas} and updating 'gas' in typed tx"
                 );
                 self.gas_limit = estimated_gas.into();
 
                 typed_tx.set_gas(estimated_gas);
-            };
+            }
 
             let signature = self
                 .inner
@@ -416,16 +422,13 @@ where
                 .map_err(|e| {
                     // TODO: check retryable
                     Error::API {
-                        message: format!("failed sign_transaction '{}' for dry-mode", e),
+                        message: format!("failed sign_transaction '{e}' for dry-mode"),
                         retryable: false,
                     }
                 })?;
             let precomputed_tx_hash = typed_tx.hash(&signature);
 
-            log::info!(
-                "dry-mode pre-computed tx hash '0x{:x}'",
-                precomputed_tx_hash
-            );
+            log::info!("dry-mode pre-computed tx hash '0x{precomputed_tx_hash:x}'");
             return Ok(precomputed_tx_hash);
         }
 
@@ -437,32 +440,33 @@ where
             .map_err(|e| {
                 // e.g., 'Custom { kind: Other, error: "failed to send_transaction '(code: -32000, message: nonce too low: address 0xaa3033DB04bE0C31967bfC9D0D01bF04a0038526 current nonce (1562) > tx nonce (1561), data: None)'" }'
                 // e.g., 'Custom { kind: Other, error: "failed to send_transaction '(code: -32000, message: replacement transaction underpriced, data: None)'" }'
-                let mut retryable = false;
-                if e.to_string().contains("nonce too low")
+                let retryable = if e.to_string().contains("nonce too low")
                     || e.to_string().contains("transaction underpriced")
                     || e.to_string().contains("dropped from mempool")
                 {
-                    log::warn!("tx submit failed with a retryable error; '{}'", e);
-                    retryable = true;
-                }
+                    log::warn!("tx submit failed with a retryable error; '{e}'");
+                    true
+                } else {
+                    false
+                };
                 Error::API {
-                    message: format!("failed to send_transaction '{}'", e),
+                    message: format!("failed to send_transaction '{e}'"),
                     retryable,
                 }
             })?;
         let sent_tx_hash = H256(pending_tx.tx_hash().0);
         if !self.check_receipt {
-            log::info!("sent tx '0x{:x}'", sent_tx_hash);
+            log::info!("sent tx '0x{sent_tx_hash:x}'");
             return Ok(sent_tx_hash);
         }
 
-        // blocks until "eth_getTransactionReceipt" returns
+        // blocks until "`eth_getTransactionReceipt`" returns
         // thus this tx is confirmed (not pending)
-        log::info!("checking sent tx receipt '0x{:x}'", sent_tx_hash);
+        log::info!("checking sent tx receipt '0x{sent_tx_hash:x}'");
         let tx_receipt = pending_tx.await.map_err(|e| {
             // TODO: check retryable
             Error::API {
-                message: format!("failed to wait for pending tx '{}'", e),
+                message: format!("failed to wait for pending tx '{e}'"),
                 retryable: false,
             }
         })?;
@@ -478,10 +482,10 @@ where
 
         let tx_receipt = tx_receipt.unwrap();
         let tx_hash = H256(tx_receipt.transaction_hash.0);
-        log::info!("confirmed sent tx receipt '0x{:x}'", tx_hash);
+        log::info!("confirmed sent tx receipt '0x{tx_hash:x}'");
 
         if !self.check_acceptance {
-            log::debug!("skipping checking acceptance for '0x{:x}'", tx_hash);
+            log::debug!("skipping checking acceptance for '0x{tx_hash:x}'");
             return Ok(tx_hash);
         }
 
@@ -494,7 +498,7 @@ where
             .map_err(|e| {
                 // TODO: check retryable
                 Error::API {
-                    message: format!("failed eth_getTransactionByHash '{}'", e),
+                    message: format!("failed eth_getTransactionByHash '{e}'"),
                     retryable: false,
                 }
             })?;
@@ -520,14 +524,14 @@ where
                 });
             }
         } else {
-            log::warn!("transaction '0x{:x}' still pending", tx_hash);
+            log::warn!("transaction '0x{tx_hash:x}' still pending");
             return Err(Error::API {
                 message: "tx still pending".to_string(),
                 retryable: true,
             });
         }
 
-        log::info!("confirmed tx acceptance '0x{:x}'", tx_hash);
+        log::info!("confirmed tx acceptance '0x{tx_hash:x}'");
         Ok(tx_hash)
     }
 }

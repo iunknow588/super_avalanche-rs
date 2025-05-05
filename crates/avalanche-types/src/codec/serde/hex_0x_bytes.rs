@@ -1,7 +1,7 @@
 use serde::{Deserialize, Deserializer, Serializer};
 use serde_with::{formats, DeserializeAs, SerializeAs};
 
-/// ref. "serde_with::hex::Hex"
+/// ref. `serde_with::hex::Hex`
 pub struct Hex0xBytes<FORMAT: formats::Format = formats::Lowercase>(
     std::marker::PhantomData<FORMAT>,
 );
@@ -10,12 +10,16 @@ impl<T> SerializeAs<T> for Hex0xBytes<formats::Lowercase>
 where
     T: AsRef<[u8]>,
 {
+    /// 将字节序列序列化为带0x前缀的16进制字符串（小写）。
+    ///
+    /// # Errors
+    /// 序列化器失败时返回错误。
     fn serialize_as<S>(x: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let s = hex::encode(x);
-        serializer.serialize_str(&format!("0x{}", s))
+        serializer.serialize_str(&format!("0x{s}"))
     }
 }
 
@@ -23,12 +27,16 @@ impl<T> SerializeAs<T> for Hex0xBytes<formats::Uppercase>
 where
     T: AsRef<[u8]>,
 {
+    /// 将字节序列序列化为带0x前缀的16进制字符串（大写）。
+    ///
+    /// # Errors
+    /// 序列化器失败时返回错误。
     fn serialize_as<S>(x: &T, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         let s = hex::encode_upper(x);
-        serializer.serialize_str(&format!("0x{}", s))
+        serializer.serialize_str(&format!("0x{s}"))
     }
 }
 
@@ -37,6 +45,10 @@ where
     T: TryFrom<Vec<u8>>,
     FORMAT: formats::Format,
 {
+    /// 从带0x前缀的16进制字符串反序列化为字节序列。
+    ///
+    /// # Errors
+    /// 字符串格式不合法、长度不匹配或反序列化失败时返回错误。
     fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
     where
         D: Deserializer<'de>,
@@ -46,16 +58,15 @@ where
             .and_then(|vec: Vec<u8>| {
                 let length = vec.len();
                 vec.try_into().map_err(|_e: T::Error| {
-                    serde::de::Error::custom(format_args!(
-                        "Can't convert a Byte Vector of length {} to the output type.",
-                        length
+                    serde::de::Error::custom(format!(
+                        "Can't convert a Byte Vector of length {length} to the output type."
                     ))
                 })
             })
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- codec::serde::hex_0x_bytes::test_custom_de_serializer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `codec::serde::hex_0x_bytes::test_custom_de_serializer` --exact --show-output
 #[test]
 fn test_custom_de_serializer() {
     use serde::Serialize;
@@ -73,12 +84,12 @@ fn test_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 

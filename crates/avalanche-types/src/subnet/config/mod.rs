@@ -9,23 +9,23 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-/// To be persisted in "subnet_config_dir".
+/// To be persisted in "`subnet_config_dir`".
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/chains#SubnetConfig>
 ///
 /// If a Subnet's chain id is 2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt,
 /// the config file for this chain is located at {subnet-config-dir}/2ebCneCbwthjQ1rYT41nhd7M76Hc6YmosMAQrTFhBq8qeqh6tt.json
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Config {
-    /// Embeds "gossip_config" at the same level as other fields.
+    /// Embeds "`gossip_config`" at the same level as other fields.
     #[serde(flatten)]
     pub gossip_sender_config: gossip::SenderConfig,
 
     #[serde(default)]
     pub validator_only: bool,
 
-    /// Embeds "gossip_config" at the same level as other fields.
+    /// Embeds "`gossip_config`" at the same level as other fields.
     pub consensus_parameters: consensus::Parameters,
 
     #[serde(default)]
@@ -46,15 +46,23 @@ impl Default for Config {
 }
 
 impl Config {
+    ///
+    /// # Errors
+    ///
+    /// 当序列化失败时返回错误。
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
     /// Saves the current subnet config to disk
     /// and overwrites the file.
+    ///
+    /// # Errors
+    ///
+    /// 当文件写入失败时返回错误。
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing subnet config to '{}'", file_path);
+        log::info!("syncing subnet config to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -62,7 +70,7 @@ impl Config {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -71,7 +79,7 @@ impl Config {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- subnet::config::test_config --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `subnet::config::test_config` --exact --show-output
 #[test]
 fn test_config() {
     let _ = env_logger::builder().is_test(true).try_init();

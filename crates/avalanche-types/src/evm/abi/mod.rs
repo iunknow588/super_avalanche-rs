@@ -4,17 +4,24 @@ use std::io::{self, Error, ErrorKind};
 
 use ethers_core::abi::{Function, Token};
 
-/// ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/abi.rs> "encode_args"
-pub fn encode_calldata(func: Function, arg_tokens: &[Token]) -> io::Result<Vec<u8>> {
+/// ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/abi.rs> "`encode_args`"
+///
+/// # Errors
+/// Returns an error if the input encoding fails.
+pub fn encode_calldata(func: &Function, arg_tokens: &[Token]) -> io::Result<Vec<u8>> {
     // ref. "abi.encodeWithSelector"
     func.encode_input(arg_tokens)
-        .map_err(|e| Error::new(ErrorKind::Other, format!("failed to encode_input {}", e)))
+        .map_err(|e| Error::new(ErrorKind::Other, format!("failed to encode_input {e}")))
 }
 
 /// TODO: implement this with "foundry 4-byte decode"
-/// ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/selectors.rs> "decode_calldata"
+///
+/// ref. <https://github.com/foundry-rs/foundry/blob/master/common/src/selectors.rs> "`decode_calldata`"
 /// ref. <sig.eth.samczsun.com>
 /// ref. <https://tools.deth.net/calldata-decoder>
+///
+/// # Errors
+/// Returns an error if the calldata is too short or if the implementation is not complete.
 pub fn decode_calldata(calldata: &str) -> io::Result<(Function, Vec<Token>)> {
     let calldata = calldata.strip_prefix("0x").unwrap_or(calldata);
     if calldata.len() < 8 {
@@ -31,16 +38,15 @@ pub fn decode_calldata(calldata: &str) -> io::Result<(Function, Vec<Token>)> {
     unimplemented!("not yet")
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
-/// -- evm::abi::test_encode_calldata_register_name --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm"
+/// -- `evm::abi::test_encode_calldata_register_name` --exact --show-output
 #[test]
 fn test_encode_calldata_register_name() {
+    use ethers_core::abi::{Param, ParamType, StateMutability};
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .is_test(true)
         .try_init();
-
-    use ethers_core::abi::{Function, Param, ParamType, StateMutability, Token};
 
     // parsed function of "register(string name)"
     let func = Function {
@@ -55,26 +61,21 @@ fn test_encode_calldata_register_name() {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::String("abc".to_string())];
-    let calldata = encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
-/// -- evm::abi::test_encode_calldata_register_mint --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm"
+/// -- `evm::abi::test_encode_calldata_register_mint` --exact --show-output
 #[test]
 fn test_encode_calldata_register_mint() {
+    use ethers_core::abi::{Param, ParamType, StateMutability};
+    use ethers_core::types::{H160, U256};
+    use std::str::FromStr;
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .is_test(true)
         .try_init();
-
-    use std::str::FromStr;
-
-    use ethers_core::{
-        abi::{Function, Param, ParamType, StateMutability, Token},
-        types::{H160, U256},
-    };
-
     // parsed function of "mint(address receiver, uint amount)"
     let func = Function {
         name: "mint".to_string(),
@@ -101,26 +102,21 @@ fn test_encode_calldata_register_mint() {
         ),
         Token::Uint(U256::from_str_radix("0x12345", 16).unwrap()),
     ];
-    let calldata = encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm"
-/// -- evm::abi::test_encode_calldata_send --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm"
+/// -- `evm::abi::test_encode_calldata_send` --exact --show-output
 #[test]
 fn test_encode_calldata_send() {
+    use ethers_core::abi::{Param, ParamType, StateMutability};
+    use ethers_core::types::{H160, U256};
+    use std::str::FromStr;
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .is_test(true)
         .try_init();
-
-    use std::str::FromStr;
-
-    use ethers_core::{
-        abi::{Function, Param, ParamType, StateMutability, Token},
-        types::{H160, U256},
-    };
-
     // parsed function of "send(address receiver, uint amount)"
     let func = Function {
         name: "send".to_string(),
@@ -147,18 +143,15 @@ fn test_encode_calldata_send() {
         ),
         Token::Uint(U256::from(1)),
     ];
-    let calldata = encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::abi::test_encode_calldata_forward_request --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm" -- `evm::abi::test_encode_calldata_forward_request` --exact --show-output
 #[test]
 fn test_encode_calldata_forward_request() {
-    use ethers_core::{
-        abi::{Function, Param, ParamType, StateMutability, Token},
-        types::{H160, H256, U256},
-    };
-
+    use ethers_core::abi::{Param, ParamType, StateMutability};
+    use ethers_core::types::{H160, H256, U256};
     let _ = env_logger::builder()
         .filter_level(log::LevelFilter::Debug)
         .is_test(true)
@@ -232,6 +225,6 @@ fn test_encode_calldata_forward_request() {
         Token::Bytes(vec![1, 2, 3]),
         Token::Bytes(vec![1, 2, 3]),
     ];
-    let calldata = encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata));
 }

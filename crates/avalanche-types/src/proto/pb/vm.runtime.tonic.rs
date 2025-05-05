@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// Generated client implementations.
 pub mod runtime_client {

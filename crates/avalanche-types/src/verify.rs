@@ -6,5 +6,9 @@ use crate::errors::Result;
 pub trait Verifiable {
     /// Verifies the block or vertex.
     /// The protocol must ensure that its parents has already been verified.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if verification fails.
     fn verify(&self) -> Result<()>;
 }

@@ -36,11 +36,11 @@ async fn main() -> io::Result<()> {
 
     let k = key::secp256k1::private_key::Key::from_hex(private_key).unwrap();
     let key_info = k.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info);
+    log::info!("created hot key:\n\n{key_info}\n");
     let signer: ethers_signers::LocalWallet = k.to_ethers_core_signing_key().into();
 
     let w = wallet::Builder::new(&k)
-        .base_http_url(chain_rpc_url.clone())
+        .base_http_url(&chain_rpc_url)
         .build()
         .await
         .unwrap();
@@ -55,17 +55,14 @@ async fn main() -> io::Result<()> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![];
-    let increment_calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
-    log::info!(
-        "increment calldata: 0x{}",
-        hex::encode(increment_calldata.clone())
-    );
+    let increment_calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
+    log::info!("increment calldata: 0x{}", hex::encode(&increment_calldata));
 
     // as if forwarder appends the original EIP712 signer
     // this does not work because the msg.sender is not a trusted forwarder
     // let no_gas_key = key::secp256k1::private_key::Key::generate().unwrap();
     // let no_gas_key_info = no_gas_key.to_info(1).unwrap();
-    // log::info!("created hot key:\n\n{}\n", no_gas_key_info);
+    // log::info!("created hot key:\n\n{no_gas_key_info}\n");
     // let mut calldata = calldata.clone();
     // calldata.extend(no_gas_key_info.h160_address.to_fixed_bytes().to_vec());
 
@@ -79,7 +76,7 @@ async fn main() -> io::Result<()> {
         .submit()
         .await
         .unwrap();
-    log::info!("evm ethers wallet SUCCESS with transaction id {}", tx_id);
+    log::info!("evm ethers wallet SUCCESS with transaction id {tx_id}");
 
     Ok(())
 }

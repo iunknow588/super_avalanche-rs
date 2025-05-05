@@ -25,11 +25,13 @@ use crate::subnet::rpc::database::iterator::BoxedIterator;
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/database#Iterator>
 pub struct Iterator {
+    /// The iterator ID
     id: u64,
-    /// List of PutRequests.
+    /// List of `PutRequests`.
     data: Vec<rpcdb::PutRequest>,
     /// Collects first error reported by iterator.
     error: Arc<RwLock<utils::Errors>>,
+    /// The database client
     db: DatabaseClient<Channel>,
     /// True if the underlying database is closed.
     closed: Arc<AtomicBool>,
@@ -58,6 +60,7 @@ impl database::iterator::Iterator for Iterator {
         // Short-circuit and set an error if the underlying database has been closed
         let mut db = self.db.clone();
         let mut errs = self.error.write().await;
+        // Drop errs after the function completes
         if self.closed.load(Ordering::Relaxed) {
             errs.add(&Error::DatabaseClosed.to_err());
             return Ok(false);
@@ -77,8 +80,8 @@ impl database::iterator::Iterator for Iterator {
                 return Ok(!self.data.is_empty());
             }
             Err(s) => {
-                log::error!("iterator next request failed: {:?}", s);
-                errs.add(&errors::from_status(s));
+                log::error!("iterator next request failed: {s:?}");
+                errs.add(&errors::from_status(&s));
                 return Ok(false);
             }
         }
@@ -87,6 +90,7 @@ impl database::iterator::Iterator for Iterator {
     /// Implements the [`crate::subnet::rpc::database::iterator::Iterator`] trait.
     async fn error(&mut self) -> Result<()> {
         let mut errs = self.error.write().await;
+        // Drop errs after the function completes
         errs.err()?;
 
         let mut db = self.db.clone();
@@ -103,8 +107,8 @@ impl database::iterator::Iterator for Iterator {
                 return Ok(());
             }
             Err(s) => {
-                log::error!("iterator error request failed: {:?}", s);
-                let err = errors::from_status(s);
+                log::error!("iterator error request failed: {s:?}");
+                let err = errors::from_status(&s);
                 errs.add(&err);
                 return Err(err);
             }
@@ -142,8 +146,8 @@ impl database::iterator::Iterator for Iterator {
                 }
             }
             Err(s) => {
-                log::error!("iterator release request failed: {:?}", s);
-                errs.add(&errors::from_status(s));
+                log::error!("iterator release request failed: {s:?}");
+                errs.add(&errors::from_status(&s));
             }
         }
     }

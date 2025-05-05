@@ -4,6 +4,10 @@ use num_bigint::BigInt;
 use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
+/// 将 `BigInt` 序列化为带0x前缀的16进制字符串。
+///
+/// # Errors
+/// 序列化器失败时返回错误。
 pub fn serialize<S>(x: &BigInt, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -11,6 +15,10 @@ where
     serializer.serialize_str(&big_int_to_lower_hex(x))
 }
 
+/// 从带0x前缀的16进制字符串反序列化为`BigInt`。
+///
+/// # Errors
+/// 字符串格式不合法或反序列化失败时返回错误。
 pub fn deserialize<'de, D>(deserializer: D) -> Result<BigInt, D::Error>
 where
     D: Deserializer<'de>,
@@ -42,8 +50,8 @@ impl<'de> DeserializeAs<'de, BigInt> for Hex0xBigInt {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// codec::serde::hex_0x_big_int::test_custom_de_serializer --exact
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `codec::serde::hex_0x_big_int::test_custom_de_serializer` --exact
 /// --show-output
 #[test]
 fn test_custom_de_serializer() {
@@ -65,12 +73,12 @@ fn test_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 
@@ -97,14 +105,11 @@ fn from_hex_to_big_int(s: &str) -> io::Result<BigInt> {
     let sb = s.trim_start_matches("0x").as_bytes();
 
     // ref. https://docs.rs/num-bigint/latest/num_bigint/struct.BigInt.html
-    let b = match BigInt::parse_bytes(sb, 16) {
-        Some(v) => v,
-        None => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("failed to parse hex big int {} (parse returned None)", s),
-            ));
-        }
+    let Some(b) = BigInt::parse_bytes(sb, 16) else {
+        return Err(Error::new(
+            ErrorKind::Other,
+            format!("failed to parse hex big int {s} (parse returned None)"),
+        ));
     };
     Ok(b)
 }
@@ -113,5 +118,5 @@ fn from_hex_to_big_int(s: &str) -> io::Result<BigInt> {
 /// NOTE: copied from "big-num-manager".
 /// ref. <https://doc.rust-lang.org/nightly/core/fmt/trait.LowerHex.html>
 fn big_int_to_lower_hex(v: &BigInt) -> String {
-    format!("{:#x}", v)
+    format!("{v:#x}")
 }

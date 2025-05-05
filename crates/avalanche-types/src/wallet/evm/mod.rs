@@ -23,7 +23,7 @@ use url::Url;
 #[derive(Clone, Debug)]
 pub struct Evm<T, S>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
     S: ethers_signers::Signer + Clone,
     S::Error: 'static,
 {
@@ -35,10 +35,10 @@ where
     pub eth_signer: S,
 
     /// Middleware created on the picked RPC endpoint and signer address.
-    /// ref. "ethers-middleware::signer::SignerMiddleware"
-    /// ref. "ethers-signers::LocalWallet"
-    /// ref. "ethers-signers::wallet::Wallet"
-    /// ref. "ethers-signers::wallet::Wallet::sign_transaction_sync"
+    /// ref. "`ethers-middleware::signer::SignerMiddleware`"
+    /// ref. "`ethers-signers::LocalWallet`"
+    /// ref. "`ethers-signers::wallet::Wallet`"
+    /// ref. "`ethers-signers::wallet::Wallet::sign_transaction_sync`"
     /// ref. <https://github.com/giantbrain0216/ethers_rs/blob/master/ethers-middleware/tests/nonce_manager.rs>
     #[allow(clippy::type_complexity)]
     pub middleware: Arc<
@@ -52,11 +52,14 @@ where
 
 impl<T, S> Evm<T, S>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
     S: ethers_signers::Signer + Clone,
     S::Error: 'static,
 {
     /// Fetches the current balance of the wallet owner.
+    /// # Errors
+    ///
+    /// Returns an error if the balance fetch fails.
     pub async fn balance(&self) -> Result<U256> {
         let cur_balance =
             jsonrpc_client_evm::get_balance(&self.chain_rpc_url, self.inner.h160_address).await?;
@@ -66,11 +69,14 @@ where
 
 impl<T> wallet::Wallet<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     /// Sets the chain RPC URLs (can be different than base HTTP URLs).
-    /// e.g., "{base_http_url}/ext/bc/{chain_id_alias}/rpc"
-    /// Set "chain_id_alias" to either "C" or subnet-evm chain Id.
+    /// e.g., "`{base_http_url}/ext/bc/{chain_id_alias}/rpc`"
+    /// Set "`chain_id_alias`" to either "C" or subnet-evm chain Id.
+    /// # Errors
+    ///
+    /// Returns an error if the EVM wallet creation fails.
     pub fn evm<S>(&self, eth_signer: &S, chain_rpc_url: &str, chain_id: U256) -> Result<Evm<T, S>>
     where
         S: ethers_signers::Signer + Clone,
@@ -86,7 +92,7 @@ where
         )?;
         let provider_arc = Arc::new(provider);
 
-        let nonce_middleware = new_middleware(Arc::clone(&provider_arc), eth_signer, chain_id)?;
+        let nonce_middleware = new_middleware(&provider_arc, eth_signer, chain_id)?;
         let middleware = Arc::new(nonce_middleware);
 
         Ok(Evm::<T, S> {
@@ -106,6 +112,11 @@ where
 
 /// Make sure to not create multiple providers for the ease of nonce management.
 /// ref. "`Provider::<RetryClient<Http>>::new_client`".
+/// Creates a new provider with the given parameters.
+///
+/// # Errors
+///
+/// Returns an error if the provider creation fails.
 pub fn new_provider(
     chain_rpc_url: &str,
     connect_timeout: Duration,
@@ -114,7 +125,7 @@ pub fn new_provider(
     backoff_timeout: Duration,
 ) -> Result<Provider<RetryClient<Http>>> {
     let u = Url::parse(chain_rpc_url).map_err(|e| Error::Other {
-        message: format!("failed to parse chain RPC URL {}", e),
+        message: format!("failed to parse chain RPC URL {e}"),
         retryable: false,
     })?;
 
@@ -128,7 +139,7 @@ pub fn new_provider(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -138,7 +149,7 @@ pub fn new_provider(
         Http::new_with_client(u, http_cli),
         Box::new(HttpRateLimitRetryPolicy),
         max_retries,
-        backoff_timeout.as_millis() as u64,
+        u64::try_from(backoff_timeout.as_millis()).unwrap_or(u64::MAX),
     );
 
     let provider = Provider::new(retry_client).interval(Duration::from_millis(2000u64));
@@ -146,9 +157,13 @@ pub fn new_provider(
 }
 
 /// Make sure to not create multiple providers for the ease of nonce management.
+///
+/// # Errors
+///
+/// Returns an error if the middleware creation fails.
 #[allow(clippy::type_complexity)]
 pub fn new_middleware<S>(
-    provider: Arc<Provider<RetryClient<Http>>>,
+    provider: &Arc<Provider<RetryClient<Http>>>,
     eth_signer: &S,
     chain_id: U256,
 ) -> Result<
@@ -166,7 +181,7 @@ where
     // TODO: this can lead to file descriptor leaks!!!
     // ref. <https://github.com/gakonst/ethers-rs/issues/2269>
     let gas_escalator_middleware =
-        GasEscalatorMiddleware::new(Arc::clone(&provider), escalator, Frequency::PerBlock);
+        GasEscalatorMiddleware::new(Arc::clone(provider), escalator, Frequency::PerBlock);
 
     let signer_middleware = SignerMiddleware::new(
         gas_escalator_middleware,

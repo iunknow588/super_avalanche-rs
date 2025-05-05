@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// Generated client implementations.
 pub mod app_sender_client {

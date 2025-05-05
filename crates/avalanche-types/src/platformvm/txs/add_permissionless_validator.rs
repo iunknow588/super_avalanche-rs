@@ -5,6 +5,8 @@ use crate::{
 };
 use serde::{Deserialize, Serialize};
 
+/// `AddPermissionlessValidatorTx` is a transaction that adds a permissionless validator to a subnet.
+///
 /// ref. <https://github.com/ava-labs/avalanchego/blob/master/vms/platformvm/txs/add_permissionless_validator_tx.go>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#AddPermissionlessValidatorTx>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx>
@@ -15,7 +17,7 @@ pub struct Tx {
     /// The transaction ID is empty for unsigned tx
     /// as long as "avax.BaseTx.Metadata" is "None".
     /// Once Metadata is updated with signing and "Tx.Initialize",
-    /// Tx.ID() is non-empty.
+    /// `Tx.ID()` is non-empty.
     pub base_tx: txs::Tx,
     pub validator: platformvm::txs::Validator,
 
@@ -23,10 +25,10 @@ pub struct Tx {
     /// ref. "github.com/ava-labs/avalanchego/utils/constants.PrimaryNetworkID" (ids.Empty).
     #[serde(rename = "subnetID")]
     pub subnet_id: ids::Id,
-    /// If the \[subnet_id\] is the primary network,
-    /// \[signer\] is the BLS key for this validator.
-    /// If the \[subnet_id\] is not the primary network,
-    /// \[signer\] is empty.
+    /// If the [`subnet_id`] is the primary network,
+    /// `signer` is the BLS key for this validator.
+    /// If the [`subnet_id`] is not the primary network,
+    /// `signer` is empty.
     pub signer: Option<key::bls::ProofOfPossession>,
 
     #[serde(rename = "stake")]
@@ -59,6 +61,7 @@ impl Default for Tx {
 }
 
 impl Tx {
+    #[must_use]
     pub fn new(base_tx: txs::Tx) -> Self {
         Self {
             base_tx,
@@ -69,6 +72,11 @@ impl Tx {
     /// Returns the transaction ID.
     /// Only non-empty if the embedded metadata is updated
     /// with the signing process.
+    ///
+    /// # Panics
+    ///
+    /// Panics if metadata is Some but contains invalid data.
+    #[must_use]
     pub fn tx_id(&self) -> ids::Id {
         if self.base_tx.metadata.is_some() {
             let m = self.base_tx.metadata.clone().unwrap();
@@ -78,17 +86,35 @@ impl Tx {
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "platformvm.AddPermissionlessValidatorTx".to_string()
     }
 
+    /// Returns the type ID for this transaction.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec registry.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::P_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::P_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 
+    /// Signs the transaction with the provided signers.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any of the required fields are missing or invalid.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if signing fails.
+    ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm/txs#Tx.Sign>
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/crypto#PrivateKeyED25519.SignHash>
-    pub async fn sign<T: key::secp256k1::SignOnly + Clone>(
+    #[allow(clippy::too_many_lines, clippy::future_not_send)]
+    pub async fn sign<T: key::secp256k1::SignOnly + Clone + Send + Sync>(
         &mut self,
         signers: Vec<Vec<T>>,
     ) -> Result<()> {
@@ -129,9 +155,9 @@ impl Tx {
 
         // pack the third field "stake" in the struct
         if let Some(stake_transferable_outputs) = &self.stake_transferable_outputs {
-            packer.pack_u32(stake_transferable_outputs.len() as u32)?;
+            packer.pack_u32(u32::try_from(stake_transferable_outputs.len())?)?;
 
-            for transferable_output in stake_transferable_outputs.iter() {
+            for transferable_output in stake_transferable_outputs {
                 // "TransferableOutput.Asset" is struct and serialize:"true"
                 // but embedded inline in the struct "TransferableOutput"
                 // so no need to encode type ID
@@ -177,8 +203,10 @@ impl Tx {
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#OutputOwners
                         packer.pack_u64(transfer_output.output_owners.locktime)?;
                         packer.pack_u32(transfer_output.output_owners.threshold)?;
-                        packer.pack_u32(transfer_output.output_owners.addresses.len() as u32)?;
-                        for addr in transfer_output.output_owners.addresses.iter() {
+                        packer.pack_u32(u32::try_from(
+                            transfer_output.output_owners.addresses.len(),
+                        )?)?;
+                        for addr in &transfer_output.output_owners.addresses {
                             packer.pack_bytes(addr.as_ref())?;
                         }
                     }
@@ -207,28 +235,20 @@ impl Tx {
                             .pack_u64(stakeable_lock_out.transfer_output.output_owners.locktime)?;
                         packer
                             .pack_u32(stakeable_lock_out.transfer_output.output_owners.threshold)?;
-                        packer.pack_u32(
+                        packer.pack_u32(u32::try_from(
                             stakeable_lock_out
                                 .transfer_output
                                 .output_owners
                                 .addresses
-                                .len() as u32,
-                        )?;
-                        for addr in stakeable_lock_out
-                            .transfer_output
-                            .output_owners
-                            .addresses
-                            .iter()
-                        {
+                                .len(),
+                        )?)?;
+                        for addr in &stakeable_lock_out.transfer_output.output_owners.addresses {
                             packer.pack_bytes(addr.as_ref())?;
                         }
                     }
                     _ => {
                         return Err(Error::Other {
-                            message: format!(
-                                "unexpected type ID {} for TransferableOutput",
-                                type_id_transferable_out
-                            ),
+                            message: format!("unexpected type ID {type_id_transferable_out} for TransferableOutput"),
                             retryable: false,
                         });
                     }
@@ -244,16 +264,16 @@ impl Tx {
         packer.pack_u32(output_owners_type_id)?;
         packer.pack_u64(self.validator_rewards_owner.locktime)?;
         packer.pack_u32(self.validator_rewards_owner.threshold)?;
-        packer.pack_u32(self.validator_rewards_owner.addresses.len() as u32)?;
-        for addr in self.validator_rewards_owner.addresses.iter() {
+        packer.pack_u32(u32::try_from(self.validator_rewards_owner.addresses.len())?)?;
+        for addr in &self.validator_rewards_owner.addresses {
             packer.pack_bytes(addr.as_ref())?;
         }
 
         packer.pack_u32(output_owners_type_id)?;
         packer.pack_u64(self.delegator_rewards_owner.locktime)?;
         packer.pack_u32(self.delegator_rewards_owner.threshold)?;
-        packer.pack_u32(self.delegator_rewards_owner.addresses.len() as u32)?;
-        for addr in self.delegator_rewards_owner.addresses.iter() {
+        packer.pack_u32(u32::try_from(self.delegator_rewards_owner.addresses.len())?)?;
+        for addr in &self.delegator_rewards_owner.addresses {
             packer.pack_bytes(addr.as_ref())?;
         }
 
@@ -271,16 +291,16 @@ impl Tx {
         let tx_bytes_hash = hash::sha256(&tx_bytes_with_no_signature);
 
         // number of of credentials
-        let creds_len = signers.len() as u32;
+        let creds_len = u32::try_from(signers.len())?;
         // pack the fourth field in the struct
         packer.pack_u32(creds_len)?;
 
         // sign the hash with the signers (in case of multi-sig)
         // and combine all signatures into a secp256k1fx credential
         self.creds = Vec::new();
-        for keys in signers.iter() {
+        for keys in &signers {
             let mut sigs: Vec<Vec<u8>> = Vec::new();
-            for k in keys.iter() {
+            for k in keys {
                 let sig = k.sign_digest(&tx_bytes_hash).await?;
                 sigs.push(Vec::from(sig));
             }
@@ -294,13 +314,13 @@ impl Tx {
             // pack each "cred" which is "secp256k1fx.Credential"
             // marshal type ID for "secp256k1fx.Credential"
             let cred_type_id = key::secp256k1::txs::Credential::type_id();
-            for cred in self.creds.iter() {
+            for cred in &self.creds {
                 // marshal type ID for "secp256k1fx.Credential"
                 packer.pack_u32(cred_type_id)?;
 
                 // marshal fields for "secp256k1fx.Credential"
-                packer.pack_u32(cred.signatures.len() as u32)?;
-                for sig in cred.signatures.iter() {
+                packer.pack_u32(u32::try_from(cred.signatures.len())?)?;
+                for sig in &cred.signatures {
                     packer.pack_bytes(sig)?;
                 }
             }
@@ -321,8 +341,9 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- platformvm::txs::add_permissionless_validator::test_add_permissionless_validator_tx_serialization_with_one_signer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `platformvm::txs::add_permissionless_validator::test_add_permissionless_validator_tx_serialization_with_one_signer` --exact --show-output
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
     use crate::ids::{node, short};
     use std::str::FromStr;
@@ -436,7 +457,7 @@ fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
             threshold: 1,
             addresses: vec![short::Id::from_slice(&<Vec<u8>>::from([
                             0xfc,0xed,0xa8,0xf9,0x0f,0xcb,0x5d,0x30,0x61,0x4b, //
-                            0x99,0xd7,0x9f,0xc4,0xba,0xa2,0x93,0x07,0x76,0x26, //
+                            0x99,0xd7,0x9f,0xc4,0xba,0xa2, 0x93, 0x07, 0x76, 0x26, //
                         ]))],
         },
         delegation_shares: 1_000_000,
@@ -452,7 +473,7 @@ fn test_add_permissionless_validator_tx_serialization_with_one_signer() {
     ab!(tx.sign(signers)).expect("failed to sign");
     let tx_metadata = tx.base_tx.metadata.clone().unwrap();
     let tx_bytes_with_signatures = tx_metadata.tx_bytes_with_signatures;
-    log::info!("tx id {}", tx.tx_id().to_string());
+    log::info!("tx id {}", tx.tx_id());
     assert_eq!(
         tx.tx_id().to_string(),
         "22tDNpLuSpTfv8dweokq22KCo8hVTK4o2mgBESg1XQGHJegve5"

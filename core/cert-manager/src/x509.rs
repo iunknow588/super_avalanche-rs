@@ -11,16 +11,16 @@ use rcgen::{
 use rsa::{pkcs1::LineEnding, pkcs8::EncodePrivateKey, RsaPrivateKey};
 use rustls_pemfile::{read_one, Item};
 
-/// Type alias for DER-encoded private key with static lifetime
+/// Type alias for DER-encoded private key with static lifetime.
 type PrivateKeyDer = rustls::pki_types::PrivateKeyDer<'static>;
 
-/// Type alias for DER-encoded certificate with static lifetime
+/// Type alias for DER-encoded certificate with static lifetime.
 type CertificateDer = rustls::pki_types::CertificateDer<'static>;
 
-/// Represents a certificate authoriry.
+/// Represents a certificate authority.
 /// CA acts as a trusted third party.
-/// ref. <https://en.wikipedia.org/wiki/Certificate_authority>
-/// ref. <https://github.com/djc/sign-cert-remote/blob/main/src/main.rs>
+/// See: <https://en.wikipedia.org/wiki/Certificate_authority>
+/// See: <https://github.com/djc/sign-cert-remote/blob/main/src/main.rs>
 pub struct Ca {
     pub cert: Certificate,
 }

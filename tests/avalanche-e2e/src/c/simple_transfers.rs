@@ -65,7 +65,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
         .map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to get chainId for C-chain '{}'", e),
+                format!("failed to get chainId for C-chain '{e}'"),
             )
         })?;
 
@@ -105,7 +105,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
                 if !spec_rlocked.ignore_errors {
                     return Err(e);
                 } else {
-                    log::warn!("ignoring error {}", e);
+                    log::warn!("ignoring error {e}");
                 }
             }
         }

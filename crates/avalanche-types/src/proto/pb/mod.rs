@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 // @@protoc_insertion_point(attribute:aliasreader)
 pub mod aliasreader {

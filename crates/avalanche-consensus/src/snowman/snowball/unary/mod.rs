@@ -69,7 +69,7 @@ impl Snowflake {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Snowflake {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -81,7 +81,7 @@ impl std::fmt::Display for Snowflake {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowflake --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowflake --exact --show-output
 /// ref. "TestUnarySnowflake"
 #[test]
 fn test_snowflake() {
@@ -131,7 +131,7 @@ fn test_snowflake() {
     log::info!("{snf}");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowflake_extend --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowflake_extend --exact --show-output
 /// ref. "TestUnarySnowflake"
 #[test]
 fn test_snowflake_extend() {
@@ -230,13 +230,14 @@ impl Snowball {
     }
 
     pub fn record_unsuccessful_poll(&self) {
-        self.snowflake.record_unsuccessful_poll()
+        self.snowflake.record_unsuccessful_poll();
     }
 
     /// Extends to the binary snowball instance with the `choice` as the preference.
     pub fn extend(&self, beta: i64, choice: i64) -> binary::Snowball {
         let mut polls = [0_i64, 0_i64];
-        polls[choice as usize] = self.num_successful_polls.get();
+        polls[usize::try_from(choice).expect("choice should be non-negative")] =
+            self.num_successful_polls.get();
 
         binary::Snowball::new(
             binary::Snowflake::new(
@@ -253,7 +254,7 @@ impl Snowball {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Snowball {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -265,7 +266,7 @@ impl std::fmt::Display for Snowball {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowball_unary --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowball_unary --exact --show-output
 /// ref. "TestUnarySnowball"
 #[test]
 fn test_snowball_unary() {
@@ -314,8 +315,9 @@ fn test_snowball_unary() {
     log::info!("{snb}");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowball_extend --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::snowball::unary::test_snowball_extend --exact --show-output
 /// ref. "TestUnarySnowball"
+#[allow(clippy::cognitive_complexity)]
 #[test]
 fn test_snowball_extend() {
     let _ = env_logger::builder()

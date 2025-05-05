@@ -28,9 +28,11 @@ pub fn sha256(b: impl AsRef<[u8]>) -> Vec<u8> {
     panic!("unimplemented")
 }
 
-/// Converts bytes to the short address bytes (20-byte).
 /// e.g., "hashing.PubkeyBytesToAddress" and "ids.ToShortID"
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+///
+/// # Errors
+/// 如果 ripemd160 的结果不是 20 字节，则返回错误
 pub fn sha256_ripemd160<B>(b: B) -> io::Result<Vec<u8>>
 where
     B: AsRef<[u8]>,
@@ -58,7 +60,7 @@ where
     Ok(sha256_ripemd160.to_vec())
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- hash::test_sha256_ripemd160 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `hash::test_sha256_ripemd160` --exact --show-output
 #[test]
 fn test_sha256_ripemd160() {
     let d = sha256_ripemd160(<Vec<u8>>::from([
@@ -72,11 +74,12 @@ fn test_sha256_ripemd160() {
 }
 
 /// ref. <https://github.com/gakonst/ethers-rs/blob/master/ethers-core/src/utils/hash.rs> "keccak256"
+#[must_use]
 pub fn keccak256(b: impl AsRef<[u8]>) -> primitive_types::H256 {
     primitive_types::H256::from_slice(&Keccak256::digest(b.as_ref()))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- hash::test_keccak256 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `hash::test_keccak256` --exact --show-output
 #[test]
 fn test_keccak256() {
     let digest_input = <Vec<u8>>::from([

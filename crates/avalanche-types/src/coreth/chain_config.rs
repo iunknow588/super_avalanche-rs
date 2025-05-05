@@ -7,7 +7,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
-/// To be persisted in "chain_config_dir".
+/// To be persisted in "`chain_config_dir`".
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/coreth/plugin/evm#Config>
 /// ref. <https://github.com/ava-labs/coreth/blob/v0.11.5/plugin/evm/config.go>
 /// ref. <https://serde.rs/container-attrs.html>
@@ -251,15 +252,23 @@ impl Default for Config {
 }
 
 impl Config {
+    /// Encodes the chain config to JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
-    /// Saves the current chain config to disk
-    /// and overwrites the file.
+    /// Syncs the chain config to a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be written.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing Config to '{}'", file_path);
+        log::info!("syncing Config to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -267,7 +276,7 @@ impl Config {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -275,28 +284,33 @@ impl Config {
         Ok(())
     }
 
+    /// Loads the chain config from a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed.
     pub fn load(file_path: &str) -> io::Result<Self> {
-        log::info!("loading coreth chain config from {}", file_path);
+        log::info!("loading coreth chain config from {file_path}");
 
         if !Path::new(file_path).exists() {
             return Err(Error::new(
                 ErrorKind::NotFound,
-                format!("file {} does not exists", file_path),
+                format!("file {file_path} does not exists"),
             ));
         }
 
         let f = File::open(file_path).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to open {} ({})", file_path, e),
+                format!("failed to open {file_path} ({e})"),
             )
         })?;
         serde_json::from_reader(f)
-            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {}", e)))
+            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {e}")))
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- coreth::chain_config::test_config --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- coreth::chain_config::test_config --exact --show-output
 #[test]
 fn test_config() {
     let _ = env_logger::builder().is_test(true).try_init();

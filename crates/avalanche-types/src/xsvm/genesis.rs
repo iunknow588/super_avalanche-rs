@@ -36,6 +36,16 @@ pub const DEFAULT_INITIAL_AMOUNT: u64 = 1_000_000_000;
 
 impl Genesis {
     /// Creates a new Genesis object with "keys" number of generated pre-funded keys.
+    /// Creates a new genesis with allocations for the given seed keys.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the genesis creation fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a key's short address cannot be obtained.
+    #[allow(clippy::unwrap_in_result, clippy::explicit_iter_loop)]
     pub fn new<T: key::secp256k1::ReadOnly>(seed_keys: &[T]) -> io::Result<Self> {
         // maximize total supply
         let max_total_alloc = u64::MAX;
@@ -64,21 +74,34 @@ impl Genesis {
         Ok(genesis)
     }
 
+    /// Encodes the genesis to JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JSON serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
     /// Encodes the genesis to JSON bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JSON serialization fails.
     pub fn to_json_bytes(&self) -> io::Result<Vec<u8>> {
         serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode JSON {e}")))
     }
 
     /// Saves the current genesis to disk
     /// and overwrites the file in JSON format.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if file operations fail.
     pub fn sync_json(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing '{}' in JSON", file_path);
+        log::info!("syncing '{file_path}' in JSON");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -96,17 +119,28 @@ impl Genesis {
     /// Encodes the genesis to packer bytes.
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer>
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/codec#Manager>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if packing operations fail.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the allocation length cannot be converted to u32.
+    #[allow(clippy::unwrap_in_result)]
     pub fn to_packer_bytes(&self) -> errors::Result<Vec<u8>> {
         let packer = packer::Packer::new((1 << 31) - 1, 128);
 
         // codec version
         // ref. "avalanchego/codec.manager.Marshal"
         packer.pack_u16(CODEC_VERSION)?;
+        #[allow(clippy::cast_sign_loss)]
         packer.pack_u64(self.timestamp as u64)?;
 
         if let Some(allocs) = &self.allocations {
-            packer.pack_u32(allocs.len() as u32)?;
-            for alloc in allocs.iter() {
+            #[allow(clippy::cast_possible_truncation)]
+            packer.pack_u32(u32::try_from(allocs.len()).unwrap())?;
+            for alloc in allocs {
                 packer.pack_bytes(alloc.address.as_ref())?;
                 packer.pack_u64(alloc.balance)?;
             }
@@ -135,7 +169,7 @@ impl Default for Allocation {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- xsvm::genesis::test_encode_packer_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm" -- xsvm::genesis::test_encode_packer_bytes --exact --show-output
 #[test]
 fn test_encode_packer_bytes() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -167,7 +201,7 @@ fn test_encode_packer_bytes() {
     assert_eq!(genesis_packer_bytes, expected);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- xsvm::genesis::test_parse --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- xsvm::genesis::test_parse --exact --show-output
 #[test]
 fn test_parse() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -208,5 +242,5 @@ fn test_parse() {
     assert_eq!(resp, expected);
 
     let d = expected.encode_json().unwrap();
-    log::info!("{}", d);
+    log::info!("{d}");
 }

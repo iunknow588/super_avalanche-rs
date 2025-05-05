@@ -1,25 +1,22 @@
 //! Custom error types used in avalanche-types.
-use std::{cell::RefCell, fmt, rc::Rc};
-
-use thiserror::Error;
+use std::{cell::RefCell, fmt, num::TryFromIntError, rc::Rc};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Backing errors for all consensus operations.
-#[derive(Clone, Debug, Error)]
+#[derive(Clone, Debug)]
 pub enum Error {
-    /// GetUtxosResult 结果为 None
-    #[error("GetUtxosResult 结果为 None")]
+    /// `GetUtxosResult` 结果为 None
     UnexpectedNoneGetUtxosResult,
-    /// Utxos from GetUtxosResult 结果为 None
-    #[error("Utxos from GetUtxosResult 结果为 None")]
+    /// Utxos from `GetUtxosResult` 结果为 None
     UnexpectedNoneUtxosFromGetUtxosResult,
     /// 通用 None 错误
-    #[error("Unexpected None: {0}")]
     UnexpectedNone(String),
-    #[error("failed API (message: {message:?}, retryable: {retryable:?})")]
+    /// 整数转换错误
+    IntConversion(String),
+    /// API 错误
     API { message: String, retryable: bool },
-    #[error("failed for other reasons (message: {message:?}, retryable: {retryable:?})")]
+    /// 其他错误
     Other { message: String, retryable: bool },
 }
 
@@ -28,39 +25,47 @@ impl Error {
     #[must_use]
     pub fn message(&self) -> String {
         match self {
-            Error::API { message, .. } | Error::Other { message, .. } => message.clone(),
-            Error::UnexpectedNoneGetUtxosResult => "GetUtxosResult is None".to_string(),
-            Error::UnexpectedNoneUtxosFromGetUtxosResult => {
+            Self::API { message, .. } | Self::Other { message, .. } => message.clone(),
+            Self::UnexpectedNoneGetUtxosResult => "GetUtxosResult is None".to_string(),
+            Self::UnexpectedNoneUtxosFromGetUtxosResult => {
                 "Utxos from GetUtxosResult is None".to_string()
             }
-            Error::UnexpectedNone(msg) => format!("Unexpected None: {}", msg),
+            Self::UnexpectedNone(msg) => format!("Unexpected None: {msg}"),
+            Self::IntConversion(msg) => format!("Integer conversion error: {msg}"),
         }
     }
 
     #[inline]
     #[must_use]
-    pub fn retryable(&self) -> bool {
+    pub const fn retryable(&self) -> bool {
         match self {
-            Error::API { retryable, .. } | Error::Other { retryable, .. } => *retryable,
-            Error::UnexpectedNoneGetUtxosResult => false,
-            Error::UnexpectedNoneUtxosFromGetUtxosResult => false,
-            Error::UnexpectedNone(_) => false,
+            Self::API { retryable, .. } | Self::Other { retryable, .. } => *retryable,
+            _ => false,
         }
     }
 }
 
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.message())
+    }
+}
+
 #[derive(Debug)]
-pub struct Errors {
+pub struct AvalancheErrors {
+    /// Collection of errors
     d: Rc<RefCell<Vec<Error>>>,
 }
 
-impl Errors {
+impl AvalancheErrors {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             d: Rc::new(RefCell::new(Vec::new())),
         }
     }
 
+    #[must_use]
     pub fn errored(&self) -> bool {
         !self.d.borrow().is_empty()
     }
@@ -70,18 +75,24 @@ impl Errors {
     }
 }
 
-impl Default for Errors {
+impl Default for AvalancheErrors {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl fmt::Display for Errors {
+impl fmt::Display for AvalancheErrors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut errs: Vec<String> = Vec::new();
         for e in self.d.borrow().iter() {
             errs.push(e.message());
         }
         write!(f, "{}", errs.join(", "))
+    }
+}
+
+impl From<TryFromIntError> for Error {
+    fn from(err: TryFromIntError) -> Self {
+        Self::IntConversion(err.to_string())
     }
 }

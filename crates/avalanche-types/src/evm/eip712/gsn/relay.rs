@@ -22,6 +22,10 @@ use tokio::time::{sleep, Duration, Instant};
 use zerocopy::AsBytes;
 
 impl super::Tx {
+    /// Signs the transaction with the provided signer.
+    ///
+    /// # Errors
+    /// Returns an error if the signing process fails.
     pub async fn sign(
         &self,
         eth_signer: impl ethers_signers::Signer + Clone,
@@ -30,9 +34,12 @@ impl super::Tx {
     }
 
     /// Builds and signs the typed data with the signer and returns the
-    /// "RelayTransactionRequest" with the signature attached in the relay metadata.
-    /// Use "serde_json::to_vec" to encode to "ethers_core::types::Bytes"
-    /// and send the request via "eth_sendRawTransaction".
+    /// `RelayTransactionRequest` with the signature attached in the relay metadata.
+    /// Use `serde_json::to_vec`to encode to `ethers_core::types::Bytes`
+    /// and send the request via "`eth_sendRawTransaction`".
+    ///
+    /// # Errors
+    /// Returns an error if the signing process fails.
     pub async fn sign_to_request(
         &self,
         eth_signer: impl ethers_signers::Signer + Clone,
@@ -40,7 +47,13 @@ impl super::Tx {
         Request::sign_to_request(self, eth_signer).await
     }
 
-    /// "sign_to_request" but with estimated gas via RPC endpoints.
+    /// `sign_to_request` but with estimated gas via RPC endpoints.
+    ///
+    /// # Errors
+    /// Returns an error if the gas estimation or signing process fails.
+    ///
+    /// # Panics
+    /// Panics if JSON serialization fails.
     pub async fn sign_to_request_with_estimated_gas(
         &mut self,
         eth_signer: impl ethers_signers::Signer + Clone,
@@ -64,14 +77,17 @@ impl super::Tx {
         let estimated_gas = chain_rpc_provider
             .estimate_gas(&typed_tx, None)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed estimate_gas '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed estimate_gas '{e}'")))?;
         log::info!("estimated gas {estimated_gas} -- now signing again with updated gas");
 
         self.gas = estimated_gas;
         Request::sign_to_request(self, eth_signer).await
     }
 
-    /// "sign_to_request" but with estimated gas via RPC endpoints.
+    /// `sign_to_request` but with estimated gas via RPC endpoints.
+    ///
+    /// # Errors
+    /// Returns an error if the gas estimation or signing process fails after retries.
     pub async fn sign_to_request_with_estimated_gas_with_retries(
         &mut self,
         eth_signer: impl ethers_signers::Signer + Clone,
@@ -81,9 +97,7 @@ impl super::Tx {
         retry_increment_gas: U256,
     ) -> io::Result<Request> {
         log::info!(
-            "sign with retries estimated gas, retry timeout {:?}, retry interval {:?}, retry increment gas {retry_increment_gas}",
-            retry_timeout,
-            retry_interval,
+            "sign with retries estimated gas, retry timeout {retry_timeout:?}, retry interval {retry_interval:?}, retry increment gas {retry_increment_gas}",
         );
 
         let start = Instant::now();
@@ -121,7 +135,6 @@ impl super::Tx {
                     }
 
                     sleep(retry_interval).await;
-
                 }
             }
         }
@@ -130,6 +143,7 @@ impl super::Tx {
 }
 
 /// Used for gas relayer server, compatible with the OpenGSN request.
+///
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/common/src/types/RelayTransactionRequest.ts>
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/common/src/EIP712/RelayRequest.ts>
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/common/src/EIP712/ForwardRequest.ts>
@@ -153,10 +167,13 @@ pub struct Metadata {
 }
 
 impl Request {
-    /// Parses the eth_sendRawTransaction request and decodes the EIP-712 encoded typed
+    /// Parses the `eth_sendRawTransaction` request and decodes the EIP-712 encoded typed
     /// data and signature in the relay metadata,
     /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
-    pub fn from_send_raw_transaction(value: serde_json::Value) -> io::Result<Self> {
+    ///
+    /// # Errors
+    /// Returns an error if the request parsing or decoding fails.
+    pub fn from_send_raw_transaction(value: &serde_json::Value) -> io::Result<Self> {
         let params = value.get("params").ok_or_else(|| {
             Error::new(
                 ErrorKind::InvalidData,
@@ -177,7 +194,7 @@ impl Request {
         let hex_decoded = EthBytes::from_str(hex_encoded_tx).map_err(|e| {
             Error::new(
                 ErrorKind::InvalidData,
-                format!("failed to decode raw transaction {}", e),
+                format!("failed to decode raw transaction {e}"),
             )
         })?;
 
@@ -186,16 +203,22 @@ impl Request {
 
     /// Decodes the EIP-712 encoded typed data and signature in the relay metadata.
     /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
+    ///
+    /// # Errors
+    /// Returns an error if the decoding fails.
     pub fn decode_signed(b: impl AsRef<[u8]>) -> io::Result<Self> {
         serde_json::from_slice(b.as_ref()).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed serde_json::from_slice '{}'", e),
+                format!("failed serde_json::from_slice '{e}'"),
             )
         })
     }
 
     /// Signs the typed data with the signer and returns the signature.
+    ///
+    /// # Errors
+    /// Returns an error if the signing process fails.
     pub async fn sign(
         tx: &super::Tx,
         signer: impl ethers_signers::Signer + Clone,
@@ -203,15 +226,18 @@ impl Request {
         let sig = signer
             .sign_typed_data(tx)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed sign_typed_data '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed sign_typed_data '{e}'")))?;
 
         Ok(sig.to_vec())
     }
 
-    /// Signs the typed data with the signer and returns the "RelayTransactionRequest"
+    /// Signs the typed data with the signer and returns the "`RelayTransactionRequest`"
     /// with the signature attached in the relay metadata.
-    /// Use "serde_json::to_vec" to encode to "ethers_core::types::Bytes"
-    /// and send the request via "eth_sendRawTransaction".
+    /// Use `serde_json::to_vec`to encode to `ethers_core::types::Bytes`
+    /// and send the request via "`eth_sendRawTransaction`".
+    ///
+    /// # Errors
+    /// Returns an error if the signing process fails.
     pub async fn sign_to_request(
         tx: &super::Tx,
         signer: impl ethers_signers::Signer + Clone,
@@ -219,7 +245,7 @@ impl Request {
         let sig = signer
             .sign_typed_data(tx)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed sign_typed_data '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed sign_typed_data '{e}'")))?;
 
         Ok(Self {
             forward_request: tx.typed_data(),
@@ -230,6 +256,10 @@ impl Request {
     }
 
     /// Recovers the GSN transaction object based on the raw typed data and given type name and suffix data.
+    ///
+    /// # Errors
+    /// Returns an error if the recovery process fails due to missing or invalid fields.
+    #[allow(clippy::too_many_lines)]
     pub fn recover_tx(&self, type_name: &str, type_suffix_data: &str) -> io::Result<super::Tx> {
         let domain_name = if let Some(name) = &self.forward_request.domain.name {
             name.clone()
@@ -249,9 +279,7 @@ impl Request {
             ));
         };
 
-        let domain_chain_id = if let Some(chain_id) = &self.forward_request.domain.chain_id {
-            chain_id
-        } else {
+        let Some(domain_chain_id) = &self.forward_request.domain.chain_id else {
             return Err(Error::new(
                 ErrorKind::InvalidInput,
                 "forward_request.domain missing 'chain_id' field",
@@ -274,8 +302,7 @@ impl Request {
                     Error::new(
                         ErrorKind::InvalidInput,
                         format!(
-                            "forward_request.message.from[{v}] H160::from_str parse failed {:?}",
-                            e
+                            "forward_request.message.from[{v}] H160::from_str parse failed {e:?}",
                         ),
                     )
                 })?
@@ -298,8 +325,7 @@ impl Request {
                     Error::new(
                         ErrorKind::InvalidInput,
                         format!(
-                            "forward_request.message.to[{v}] H160::from_str parse failed {:?}",
-                            e
+                            "forward_request.message.to[{v}] H160::from_str parse failed {e:?}",
                         ),
                     )
                 })?
@@ -322,14 +348,14 @@ impl Request {
                     U256::from_str_radix(v, 16).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("forward_request.message.value[{v}] U256::from_str_radix parse failed {:?}", e),
+                            format!("forward_request.message.value[{v}] U256::from_str_radix parse failed {e:?}"),
                         )
                     })?
                 } else {
                     U256::from_str(v).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("forward_request.message.value[{v}] U256::from_str parse failed {:?}", e),
+                            format!("forward_request.message.value[{v}] U256::from_str parse failed {e:?}"),
                         )
                     })?
                 }
@@ -352,7 +378,7 @@ impl Request {
                     U256::from_str_radix(v, 16).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("forward_request.message.gas[{v}] U256::from_str_radix parse failed {:?}", e),
+                            format!("forward_request.message.gas[{v}] U256::from_str_radix parse failed {e:?}"),
                         )
                     })?
                 } else {
@@ -360,8 +386,7 @@ impl Request {
                         Error::new(
                             ErrorKind::InvalidInput,
                             format!(
-                                "forward_request.message.gas[{v}] U256::from_str parse failed {:?}",
-                                e
+                                "forward_request.message.gas[{v}] U256::from_str parse failed {e:?}",
                             ),
                         )
                     })?
@@ -385,14 +410,14 @@ impl Request {
                     U256::from_str_radix(v, 16).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("forward_request.message.nonce[{v}] U256::from_str_radix parse failed {:?}", e),
+                            format!("forward_request.message.nonce[{v}] U256::from_str_radix parse failed {e:?}"),
                         )
                     })?
                 } else {
                     U256::from_str(v).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidInput,
-                            format!("forward_request.message.nonce[{v}] U256::from_str parse failed {:?}", e),
+                            format!("forward_request.message.nonce[{v}] U256::from_str parse failed {e:?}"),
                         )
                     })?
                 }
@@ -414,7 +439,7 @@ impl Request {
                 hex::decode(v.trim_start_matches("0x")).map_err(|e| {
                     Error::new(
                         ErrorKind::InvalidInput,
-                        format!("failed hex::decode on 'data' field '{}'", e),
+                        format!("failed hex::decode on 'data' field '{e}'"),
                     )
                 })?
             } else {
@@ -439,8 +464,7 @@ impl Request {
                             Error::new(
                                 ErrorKind::InvalidInput,
                                 format!(
-                            "forward_request.message.validUntilTime[{v}] U256::from_str_radix parse failed {:?}",
-                            e
+                            "forward_request.message.validUntilTime[{v}] U256::from_str_radix parse failed {e:?}",
                         ),
                             )
                         })?
@@ -449,8 +473,7 @@ impl Request {
                         Error::new(
                             ErrorKind::InvalidInput,
                             format!(
-                                "forward_request.message.validUntilTime[{v}] U256::from_str parse failed {:?}",
-                                e
+                                "forward_request.message.validUntilTime[{v}] U256::from_str parse failed {e:?}",
                             ),
                         )
                     })?
@@ -485,6 +508,9 @@ impl Request {
     }
 
     /// Recovers the signature and signer address from its relay metadata signature field.
+    ///
+    /// # Errors
+    /// Returns an error if the signature recovery process fails.
     pub fn recover_signature(
         &self,
         type_name: &str,
@@ -493,22 +519,21 @@ impl Request {
         let sig = Signature::try_from(self.metadata.signature.as_bytes()).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed Signature::try_from '{}'", e),
+                format!("failed Signature::try_from '{e}'"),
             )
         })?;
 
         let tx = self.recover_tx(type_name, type_suffix_data)?;
         let fwd_req_hash = tx
             .encode_eip712()
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode_eip712 '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed encode_eip712 '{e}'")))?;
         let fwd_req_hash = H256::from_slice(fwd_req_hash.as_ref());
 
         let signer_addr = sig.recover(RecoveryMessage::Hash(fwd_req_hash)).map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
                     format!(
-                        "failed to recover signer address from signature and forward request hash '{}'",
-                        e
+                        "failed to recover signer address from signature and forward request hash '{e}'",
                     ),
                 )
             })?;
@@ -516,7 +541,7 @@ impl Request {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::eip712::gsn::relay::test_build_relay_transaction_request --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm" -- evm::eip712::gsn::relay::test_build_relay_transaction_request --exact --show-output
 #[test]
 fn test_build_relay_transaction_request() {
     use ethers_core::{
@@ -543,7 +568,7 @@ fn test_build_relay_transaction_request() {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::String(random_manager::secure_string(10))];
-    let calldata = crate::evm::abi::encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = crate::evm::abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata.clone()));
 
     macro_rules! ab {
@@ -580,7 +605,7 @@ fn test_build_relay_transaction_request() {
     log::info!("request: {}", serde_json::to_string_pretty(&rr).unwrap());
 
     let signed_bytes: EthBytes = serde_json::to_vec(&rr).unwrap().into();
-    log::info!("signed bytes of relay request: {}", signed_bytes);
+    log::info!("signed bytes of relay request: {signed_bytes}");
 
     // ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
     let raw_tx_req = serde_json::json!({
@@ -589,7 +614,7 @@ fn test_build_relay_transaction_request() {
         "jsonrpc": "2.0",
         "params": [signed_bytes],
     });
-    let decoded_from_raw_tx = Request::from_send_raw_transaction(raw_tx_req).unwrap();
+    let decoded_from_raw_tx = Request::from_send_raw_transaction(&raw_tx_req).unwrap();
     log::info!(
         "decoded_from_raw_tx: {}",
         serde_json::to_string_pretty(&decoded_from_raw_tx).unwrap()

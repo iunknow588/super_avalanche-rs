@@ -52,7 +52,7 @@ where
 }
 
 impl Clone for Box<dyn AppSender + Send + Sync> {
-    fn clone(&self) -> Box<dyn AppSender + Send + Sync> {
+    fn clone(&self) -> Self {
         self.clone_box()
     }
 }

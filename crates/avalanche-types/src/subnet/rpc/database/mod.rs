@@ -42,6 +42,7 @@ pub trait KeyValueReaderWriterDeleter {
 // committed.
 #[tonic::async_trait]
 #[allow(dead_code)]
+/// A trait for databases that support committing changes.
 trait Commitable {
     /// Writes all the operations of this database to the underlying database.
     async fn commit(&mut self) -> Result<()>;
@@ -69,7 +70,7 @@ where
 }
 
 impl Clone for BoxedDatabase {
-    fn clone(&self) -> BoxedDatabase {
+    fn clone(&self) -> Self {
         self.clone_box()
     }
 }

@@ -2,7 +2,7 @@ pub mod inbound;
 pub mod outbound;
 
 /// Represents a remote peer from the local node.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/network/peer#Start>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/network/peer#Start>
 pub struct Peer {
     pub stream: outbound::Stream,
 
@@ -18,11 +18,15 @@ impl Peer {
     }
 }
 
-/// RUST_LOG=debug cargo test --package network --lib -- peer::test::test_listener --exact --show-output
+/// Example:
 ///
-/// TODO: make this test work. The client and server are both initialized correctly,
+/// ```sh
+/// RUST_LOG=debug cargo test --package network --lib -- peer::test::test_listener --exact --show-output
+/// ```
+///
+/// TODO: Make this test work. The client and server are both initialized correctly,
 /// but making a connection fails.
-/// Error is Os { code: 61, kind: ConnectionRefused, message: "Connection refused" } when connecting client to server.
+/// Error is `Os { code: 61, kind: ConnectionRefused, message: "Connection refused" }` when connecting client to server.
 #[cfg(test)]
 mod test {
     use crate::peer::outbound;
@@ -81,7 +85,7 @@ mod test {
                             println!("TLS connection accepted");
                             // handle(tls_stream).await
                         }
-                        Err(e) => eprintln!("Error accepting TLS connection: {:?}", e),
+                        Err(e) => eprintln!("Error accepting TLS connection: {e:?}"),
                     }
                 })
                 .await;

@@ -1,11 +1,10 @@
-//! AvalancheGo network configuration.
+//! `AvalancheGo` network configuration.
 use std::{
     collections::BTreeMap,
     fs::{self, File},
     io::{self, Error, ErrorKind, Write},
     path::Path,
     time::SystemTime,
-    u64,
 };
 
 use crate::{constants, coreth::genesis as coreth_genesis, key};
@@ -36,13 +35,13 @@ pub struct Genesis {
         skip_serializing_if = "Option::is_none"
     )]
     pub initial_stake_duration_offset: Option<u64>,
-    /// MUST BE come from "initial_stakers".
+    /// MUST BE come from "`initial_stakers`".
     /// MUST BE the list of X-chain addresses.
     /// Initial staked funds cannot be empty.
     #[serde(rename = "initialStakedFunds", skip_serializing_if = "Option::is_none")]
     pub initial_staked_funds: Option<Vec<String>>,
     /// MUST BE non-empty for an existing network.
-    /// Non-anchor nodes request "GetAcceptedFrontier" from initial stakers
+    /// Non-anchor nodes request "`GetAcceptedFrontier`" from initial stakers
     /// (not from specified anchor nodes).
     #[serde(rename = "initialStakers", skip_serializing_if = "Option::is_none")]
     pub initial_stakers: Option<Vec<Staker>>,
@@ -59,31 +58,39 @@ pub struct Genesis {
 /// The P-chain assets are determined by the "unlockSchedule".
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 struct GenesisFile {
+    /// Network ID.
     #[serde(rename = "networkID")]
     network_id: u32,
+    /// Allocations.
     #[serde(rename = "allocations", skip_serializing_if = "Option::is_none")]
     allocations: Option<Vec<Allocation>>,
+    /// Start time.
     #[serde(rename = "startTime", skip_serializing_if = "Option::is_none")]
     start_time: Option<u64>,
+    /// Initial stake duration.
     #[serde(
         rename = "initialStakeDuration",
         skip_serializing_if = "Option::is_none"
     )]
     initial_stake_duration: Option<u64>,
+    /// Initial stake duration offset.
     #[serde(
         rename = "initialStakeDurationOffset",
         skip_serializing_if = "Option::is_none"
     )]
     initial_stake_duration_offset: Option<u64>,
-    /// Initially staked funds are immediately locked for "initial_stake_duration".
+    /// Initially staked funds are immediately locked for "`initial_stake_duration`".
     #[serde(rename = "initialStakedFunds", skip_serializing_if = "Option::is_none")]
     initial_staked_funds: Option<Vec<String>>,
+    /// Initial stakers.
     #[serde(rename = "initialStakers", skip_serializing_if = "Option::is_none")]
     initial_stakers: Option<Vec<Staker>>,
 
+    /// C-chain genesis.
     #[serde(rename = "cChainGenesis")]
     c_chain_genesis: String,
 
+    /// Message.
     #[serde(rename = "message", skip_serializing_if = "Option::is_none")]
     message: Option<String>,
 }
@@ -117,6 +124,14 @@ impl Default for Genesis {
 
 impl Genesis {
     /// Creates a new Genesis object with "keys" number of generated pre-funded keys.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `seed_keys` is empty or if `hrp_address` fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the operation fails.
     pub fn new<T: key::secp256k1::ReadOnly>(network_id: u32, seed_keys: &[T]) -> io::Result<Self> {
         // maximize total supply
         let max_total_alloc = u64::MAX;
@@ -128,7 +143,7 @@ impl Genesis {
         };
         // keep 40%, allow more room for transfers
         let xp_alloc_per_key = (alloc_per_key / 10) * 4;
-        log::info!("allocate {} for each key in X/P-chain", xp_alloc_per_key);
+        log::info!("allocate {xp_alloc_per_key} for each key in X/P-chain");
 
         // maximize total supply
         let max_total_alloc = i128::MAX;
@@ -139,7 +154,7 @@ impl Genesis {
         };
         // divide by 2, allow more room for transfers
         let c_alloc_per_key = alloc_per_key / 2;
-        log::info!("allocate {} for each key in C-chain", c_alloc_per_key);
+        log::info!("allocate {c_alloc_per_key} for each key in C-chain");
 
         // allocation for C-chain
         let default_c_alloc = coreth_genesis::AllocAccount {
@@ -149,18 +164,24 @@ impl Genesis {
 
         // "initial_staked_funds" addresses use all P-chain balance
         // so keep the remaining balance for other keys than "last" key
-        let initial_staked_funds = vec![seed_keys[seed_keys.len() - 1]
+        let last_key = &seed_keys[seed_keys.len() - 1];
+        let last_key_addr = last_key
             .hrp_address(network_id, "X")
-            .unwrap()];
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to get hrp address: {e}")))?;
+        let initial_staked_funds = vec![last_key_addr];
 
         let mut xp_allocs: Vec<Allocation> = Vec::new();
         let mut c_allocs = BTreeMap::new();
 
-        for k in seed_keys.iter() {
+        for k in seed_keys {
             // allocation for X/P-chain
+            let avax_addr = k.hrp_address(network_id, "X").map_err(|e| {
+                Error::new(ErrorKind::Other, format!("failed to get hrp address: {e}"))
+            })?;
+
             let xp_alloc = Allocation {
                 eth_addr: Some(k.eth_address()),
-                avax_addr: Some(k.hrp_address(network_id, "X").unwrap()),
+                avax_addr: Some(avax_addr),
                 initial_amount: Some(xp_alloc_per_key),
                 unlock_schedule: Some(vec![LockedAmount {
                     amount: Some(xp_alloc_per_key),
@@ -193,8 +214,12 @@ impl Genesis {
 
     /// Saves the current configuration to disk
     /// and overwrites the file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be written.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing genesis to '{}'", file_path);
+        log::info!("syncing genesis to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -218,7 +243,7 @@ impl Genesis {
         };
 
         let d = serde_json::to_vec(&genesis_file)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -226,33 +251,38 @@ impl Genesis {
         Ok(())
     }
 
+    /// Loads the genesis configuration from a file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be read or parsed.
     pub fn load(file_path: &str) -> io::Result<Self> {
-        log::info!("loading genesis from {}", file_path);
+        log::info!("loading genesis from {file_path}");
 
         if !Path::new(file_path).exists() {
             return Err(Error::new(
                 ErrorKind::NotFound,
-                format!("file {} does not exists", file_path),
+                format!("file {file_path} does not exists"),
             ));
         }
 
         let f = File::open(file_path).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to open {} ({})", file_path, e),
+                format!("failed to open {file_path} ({e})"),
             )
         })?;
 
         // load as it is
         let genesis_file: GenesisFile = serde_json::from_reader(f)
-            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {e}")))?;
 
         // make genesis strictly typed
         let c_chain_genesis: coreth_genesis::Genesis =
             serde_json::from_str(&genesis_file.c_chain_genesis)
-                .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {}", e)))?;
+                .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("invalid JSON: {e}")))?;
 
-        let genesis = Genesis {
+        let genesis = Self {
             network_id: genesis_file.network_id,
             allocations: genesis_file.allocations.clone(),
             start_time: genesis_file.start_time,
@@ -275,7 +305,7 @@ impl Genesis {
 pub struct Allocation {
     #[serde(rename = "avaxAddr", skip_serializing_if = "Option::is_none")]
     pub avax_addr: Option<String>,
-    /// "eth_addr" can be any value, not used in "avalanchego".
+    /// "`eth_addr`" can be any value, not used in "avalanchego".
     /// This field is only used for memos.
     #[serde(rename = "ethAddr", skip_serializing_if = "Option::is_none")]
     pub eth_addr: Option<String>,
@@ -378,12 +408,12 @@ fn test_genesis() {
         .is_test(true)
         .try_init();
 
-    use rust_embed::RustEmbed;
-    #[derive(RustEmbed)]
+    #[allow(clippy::items_after_statements)]
+    #[derive(rust_embed::RustEmbed)]
     #[folder = "artifacts/"]
     #[prefix = "artifacts/"]
-    struct Asset;
-    let genesis_json = Asset::get("artifacts/sample.genesis.json").unwrap();
+    struct AssetEmbed;
+    let genesis_json = AssetEmbed::get("artifacts/sample.genesis.json").unwrap();
     let genesis_json_contents = std::str::from_utf8(genesis_json.data.as_ref()).unwrap();
     let mut f = tempfile::NamedTempFile::new().unwrap();
     f.write_all(genesis_json_contents.as_bytes()).unwrap();
@@ -554,5 +584,5 @@ fn test_genesis() {
     assert_eq!(genesis_loaded, original_genesis);
 
     let d = fs::read_to_string(&p).unwrap();
-    log::info!("{}", d);
+    log::info!("{d}");
 }

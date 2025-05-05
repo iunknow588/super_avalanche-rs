@@ -18,7 +18,7 @@ async fn main() -> io::Result<()> {
     let chain_id = evm::chain_id(format!("{http_rpc}/ext/bc/C/rpc").as_str())
         .await
         .unwrap();
-    log::info!("chain_id: {:?}", chain_id);
+    log::info!("chain_id: {chain_id:?}");
 
     let balance = evm::get_balance(
         format!("{http_rpc}/ext/bc/C/rpc").as_str(),
@@ -26,7 +26,7 @@ async fn main() -> io::Result<()> {
     )
     .await
     .unwrap();
-    log::info!("balance: {:?}", balance);
+    log::info!("balance: {balance:?}");
 
     Ok(())
 }

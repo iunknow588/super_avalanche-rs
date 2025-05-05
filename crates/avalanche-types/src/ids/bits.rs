@@ -2,11 +2,14 @@
 use crate::ids::Id;
 
 pub const NUM_BITS: usize = 256;
+/// 每个字节的位数
 const BITS_PER_BYTES: usize = 8;
 
 /// Returns "true" if two Ids are equal for the range [start, stop).
-/// This does bit-per-bit comparison for the Id type of [u8; ID_LEN].
+///
+/// This does bit-per-bit comparison for the Id type of [`u8; ID_LEN`].
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/ids#EqualSubset>
+#[must_use]
 pub fn equal_subset(start: usize, stop: usize, id1: &Id, id2: &Id) -> bool {
     if stop == 0 {
         return true;
@@ -39,23 +42,23 @@ pub fn equal_subset(start: usize, stop: usize, id1: &Id, id2: &Id) -> bool {
         // if looking at same byte, both masks need to be applied
         let mask = start_mask & stop_mask;
 
-        let b1 = mask & id1.0[start_index] as i32;
-        let b2 = mask & id2.0[start_index] as i32;
+        let b1 = mask & i32::from(id1.0[start_index]);
+        let b2 = mask & i32::from(id2.0[start_index]);
 
         return b1 == b2;
     }
 
-    let start1 = start_mask & id1.0[start_index] as i32;
-    let start2 = start_mask & id2.0[start_index] as i32;
+    let start1 = start_mask & i32::from(id1.0[start_index]);
+    let start2 = start_mask & i32::from(id2.0[start_index]);
 
-    let stop1 = stop_mask & id1.0[stop_index] as i32;
-    let stop2 = stop_mask & id2.0[stop_index] as i32;
+    let stop1 = stop_mask & i32::from(id1.0[stop_index]);
+    let stop2 = stop_mask & i32::from(id2.0[stop_index]);
 
     start1 == start2 && stop1 == stop2
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_equal_subset --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_equal_subset` --exact --show-output
 #[test]
 fn test_equal_subset() {
     // ref. TestEqualSubsetEarlyStop
@@ -99,9 +102,9 @@ fn test_equal_subset() {
     assert!(!equal_subset(4, 13, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_equal_subset_same_byte --exact --show-output
-/// ref. "TestEqualSubsetSameByte"
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_equal_subset_same_byte` --exact --show-output
+/// ref. "`TestEqualSubsetSameByte`"
 #[test]
 fn test_equal_subset_same_byte() {
     let id1 = Id::from_slice(&[0x18]);
@@ -125,9 +128,9 @@ fn test_equal_subset_same_byte() {
     assert!(!equal_subset(3, 6, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_equal_subset_bad_middle --exact --show-output
-/// ref. "TestEqualSubsetBadMiddle"
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_equal_subset_bad_middle` --exact --show-output
+/// ref. "`TestEqualSubsetBadMiddle`"
 #[test]
 fn test_equal_subset_bad_middle() {
     let id1 = Id::from_slice(&[0x18, 0xe8, 0x55]);
@@ -149,9 +152,9 @@ fn test_equal_subset_bad_middle() {
     assert!(!equal_subset(0, 8 * 3, &id1, &id2));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_equal_subset_out_of_bounds --exact --show-output
-/// ref. "TestEqualSubsetOutOfBounds"
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_equal_subset_out_of_bounds` --exact --show-output
+/// ref. "`TestEqualSubsetOutOfBounds`"
 #[test]
 fn test_equal_subset_out_of_bounds() {
     let id1 = Id::from_slice(&[0x18, 0xe8, 0x55]);
@@ -159,9 +162,11 @@ fn test_equal_subset_out_of_bounds() {
     assert!(!equal_subset(0, 500, &id1, &id2));
 }
 
-/// Returns the "id1" index of the first different bit in the range [start,
-/// stop). This does bit-per-bit comparison for the Id type of [u8; ID_LEN].
+/// Returns the "id1" index of the first different bit in the range [start, stop).
+///
+/// This does bit-per-bit comparison for the Id type of [`u8; ID_LEN`].
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/ids#FirstDifferenceSubset>
+#[must_use]
 pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) -> (usize, bool) {
     if stop == 0 {
         return (0, false);
@@ -188,8 +193,8 @@ pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) ->
         // if looking at same byte, both masks need to be applied
         let mask = start_mask & stop_mask;
 
-        let b1 = mask & id1.0[start_index] as i32;
-        let b2 = mask & id2.0[start_index] as i32;
+        let b1 = mask & i32::from(id1.0[start_index]);
+        let b2 = mask & i32::from(id2.0[start_index]);
         if b1 == b2 {
             return (0, false);
         }
@@ -201,8 +206,8 @@ pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) ->
         );
     }
 
-    let start1 = start_mask & id1.0[start_index] as i32;
-    let start2 = start_mask & id2.0[start_index] as i32;
+    let start1 = start_mask & i32::from(id1.0[start_index]);
+    let start2 = start_mask & i32::from(id2.0[start_index]);
     if start1 != start2 {
         let bd = start1 ^ start2;
         return (
@@ -221,8 +226,8 @@ pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) ->
         }
     }
 
-    let stop1 = stop_mask & id1.0[stop_index] as i32;
-    let stop2 = stop_mask & id2.0[stop_index] as i32;
+    let stop1 = stop_mask & i32::from(id1.0[stop_index]);
+    let stop2 = stop_mask & i32::from(id2.0[stop_index]);
     if stop1 != stop2 {
         let bd = stop1 ^ stop2;
         return (
@@ -234,8 +239,8 @@ pub fn first_difference_subset(start: usize, stop: usize, id1: &Id, id2: &Id) ->
     (0, false) // no difference found
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_first_difference_subset --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_first_difference_subset` --exact --show-output
 #[test]
 fn test_first_difference_subset() {
     // ref. TestFirstDifferenceSubsetEarlyStop
@@ -279,9 +284,9 @@ fn test_first_difference_subset() {
     assert_eq!(first_difference_subset(0, 5, &id1, &id2), (4, true));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_first_difference_equal_byte_5 --exact --show-output
-/// ref. TestFirstDifferenceEqualByte5
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_first_difference_equal_byte_5` --exact --show-output
+/// ref. `TestFirstDifferenceEqualByte5`
 #[test]
 fn test_first_difference_equal_byte_5() {
     let id1 = Id::from_slice(&[0x20]);
@@ -304,9 +309,9 @@ fn test_first_difference_equal_byte_5() {
     assert_eq!(first_difference_subset(0, 6, &id1, &id2), (5, true));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_first_difference_subset_middle --exact --show-output
-/// ref. TestFirstDifferenceSubsetMiddle
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_first_difference_subset_middle` --exact --show-output
+/// ref. `TestFirstDifferenceSubsetMiddle`
 #[test]
 fn test_first_difference_subset_middle() {
     let id1 = Id::from_slice(&[0xf0, 0x0f, 0x11]);
@@ -329,9 +334,9 @@ fn test_first_difference_subset_middle() {
     assert_eq!(first_difference_subset(0, 12, &id1, &id2), (0, false));
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_first_difference_vacuous --exact --show-output
-/// ref. TestFirstDifferenceVacuous
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::bits::test_first_difference_vacuous` --exact --show-output
+/// ref. `TestFirstDifferenceVacuous`
 #[test]
 fn test_first_difference_vacuous() {
     let id1 = Id::from_slice(&[0xf0, 0x0f, 0x11]);
@@ -367,23 +372,25 @@ pub enum Bit {
     One,
 }
 
-impl std::convert::From<usize> for Bit {
-    fn from(v: usize) -> Self {
-        assert!(v <= 1);
+impl std::convert::TryFrom<usize> for Bit {
+    type Error = String;
+
+    fn try_from(v: usize) -> Result<Self, Self::Error> {
         match v {
-            0 => Bit::Zero,
-            1 => Bit::One,
-            _ => panic!("unexpected bit value {}", v),
+            0 => Ok(Self::Zero),
+            1 => Ok(Self::One),
+            _ => Err(format!("unexpected bit value {v}")),
         }
     }
 }
 
 impl Bit {
     /// Returns the `usize` value of the enum member.
-    pub fn as_usize(&self) -> usize {
+    #[must_use]
+    pub const fn as_usize(&self) -> usize {
         match self {
-            Bit::Zero => 0,
-            Bit::One => 1,
+            Self::Zero => 0,
+            Self::One => 1,
         }
     }
 }
@@ -395,32 +402,33 @@ impl Bit {
 pub struct Set64(u64);
 
 impl Set64 {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self(0_u64)
     }
 
-    /// Add \[i\] to the set of ints.
+    /// Add [`i`] to the set of ints.
     pub fn add(&mut self, i: u64) {
         self.0 |= 1 << i;
     }
 
-    /// Adds all the elements in \[s\] to this set.
-    pub fn union(&mut self, s: Set64) {
+    /// Adds all the elements in [`s`] to this set.
+    pub fn union(&mut self, s: Self) {
         self.0 |= s.0;
     }
 
-    /// Takes the intersection of \[s\] with this set.
-    pub fn intersection(&mut self, s: Set64) {
+    /// Takes the intersection of [`s`] with this set.
+    pub fn intersection(&mut self, s: Self) {
         self.0 &= s.0;
     }
 
-    /// Removes all the elements in \[s\] from this set.
-    pub fn difference(&mut self, s: Set64) {
+    /// Removes all the elements in [`s`] from this set.
+    pub fn difference(&mut self, s: Self) {
         // ref. *bs &^= s
         self.0 &= !(s.0);
     }
 
-    /// Removes \[i\] from the set of ints with bitclear (AND NOT) operation.
+    /// Removes [`i`] from the set of ints with bitclear (AND NOT) operation.
     pub fn remove(&mut self, i: u64) {
         // ref. *bs &^= 1 << i
         self.0 &= !(1 << i);
@@ -431,19 +439,22 @@ impl Set64 {
         self.0 = 0;
     }
 
-    /// Returns true if \[i\] was previously added to this set.
-    pub fn contains(&self, i: u64) -> bool {
+    /// Returns true if [`i`] was previously added to this set.
+    #[must_use]
+    pub const fn contains(&self, i: u64) -> bool {
         (self.0 & (1 << i)) != 0
     }
 
     /// Returns the number of elements in the set.
-    pub fn len(&self) -> u32 {
+    #[must_use]
+    pub const fn len(&self) -> u32 {
         // ref. bits.OnesCount64
         u64::count_ones(self.0)
     }
 
     /// Returns true if the set is empty.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.len() == 0
     }
 }
@@ -456,102 +467,149 @@ impl Default for Set64 {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Set64 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#16x}", self.0)
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::bits::test_bit_set --exact --show-output
-#[test]
-fn test_bit_set() {
-    let mut bs1 = Set64::new();
-    assert!(bs1.is_empty());
+/// Tests for the `Set64` implementation.
+#[cfg(test)]
+mod bit_set_tests {
+    use super::Set64;
 
-    bs1.add(5);
-    assert!(bs1.len() == 1);
-    assert!(bs1.contains(5));
+    /// Tests basic operations: add, contains, and len.
+    #[test]
+    fn test_basic_operations() {
+        let mut bs = Set64::new();
+        assert!(bs.is_empty());
 
-    bs1.add(10);
-    assert!(bs1.len() == 2);
-    assert!(bs1.contains(5));
-    assert!(bs1.contains(10));
+        bs.add(5);
+        assert_eq!(bs.len(), 1);
+        assert!(bs.contains(5));
 
-    bs1.add(10);
-    assert!(bs1.len() == 2);
-    assert!(bs1.contains(5));
-    assert!(bs1.contains(10));
+        bs.add(10);
+        assert_eq!(bs.len(), 2);
+        assert!(bs.contains(5));
+        assert!(bs.contains(10));
 
-    let mut bs2 = Set64::new();
-    assert!(bs2.is_empty());
+        // Adding the same element again should not change the set
+        bs.add(10);
+        assert_eq!(bs.len(), 2);
+        assert!(bs.contains(5));
+        assert!(bs.contains(10));
+    }
 
-    bs2.add(0);
-    assert!(bs2.len() == 1);
-    assert!(bs2.contains(0));
+    /// Tests the union operation.
+    #[test]
+    fn test_union() {
+        let mut bs1 = Set64::new();
+        bs1.add(5);
+        bs1.add(10);
 
-    bs2.union(bs1);
-    assert!(bs1.len() == 2);
-    assert!(bs1.contains(5));
-    assert!(bs1.contains(10));
-    assert!(bs2.len() == 3);
-    assert!(bs2.contains(0));
-    assert!(bs2.contains(5));
-    assert!(bs2.contains(10));
+        let mut bs2 = Set64::new();
+        bs2.add(0);
 
-    bs1.clear();
-    assert!(bs1.is_empty());
-    assert!(bs2.len() == 3);
-    assert!(bs2.contains(0));
-    assert!(bs2.contains(5));
-    assert!(bs2.contains(10));
+        bs2.union(bs1);
 
-    bs1.add(63);
-    assert!(bs1.len() == 1);
-    assert!(bs1.contains(63));
+        // Original set should remain unchanged
+        assert_eq!(bs1.len(), 2);
+        assert!(bs1.contains(5));
+        assert!(bs1.contains(10));
 
-    bs1.add(1);
-    assert!(bs1.len() == 2);
-    assert!(bs1.contains(1));
-    assert!(bs1.contains(63));
+        // Target set should contain all elements
+        assert_eq!(bs2.len(), 3);
+        assert!(bs2.contains(0));
+        assert!(bs2.contains(5));
+        assert!(bs2.contains(10));
+    }
 
-    bs1.remove(63);
-    assert!(bs1.len() == 1);
-    assert!(bs1.contains(1));
+    /// Tests the clear operation.
+    #[test]
+    fn test_clear() {
+        let mut bs1 = Set64::new();
+        bs1.add(5);
+        bs1.add(10);
 
-    let mut bs3 = Set64::new();
-    bs3.add(0);
-    bs3.add(2);
-    bs3.add(5);
+        let mut bs2 = Set64::new();
+        bs2.add(0);
+        bs2.union(bs1);
 
-    let mut bs4 = Set64::new();
-    bs4.add(2);
-    bs4.add(5);
+        bs1.clear();
+        assert!(bs1.is_empty());
 
-    bs3.intersection(bs4);
+        // bs2 should remain unchanged
+        assert_eq!(bs2.len(), 3);
+        assert!(bs2.contains(0));
+        assert!(bs2.contains(5));
+        assert!(bs2.contains(10));
+    }
 
-    assert!(bs3.len() == 2);
-    assert!(bs3.contains(2));
-    assert!(bs3.contains(5));
-    assert!(bs4.len() == 2);
-    assert!(bs4.contains(2));
-    assert!(bs4.contains(5));
+    /// Tests the remove operation.
+    #[test]
+    fn test_remove() {
+        let mut bs = Set64::new();
+        bs.add(63);
+        bs.add(1);
 
-    let mut bs5 = Set64::new();
-    bs5.add(7);
-    bs5.add(11);
-    bs5.add(9);
+        assert_eq!(bs.len(), 2);
+        assert!(bs.contains(1));
+        assert!(bs.contains(63));
 
-    let mut bs6 = Set64::new();
-    bs6.add(9);
-    bs6.add(11);
+        bs.remove(63);
+        assert_eq!(bs.len(), 1);
+        assert!(bs.contains(1));
+        assert!(!bs.contains(63));
+    }
 
-    bs5.difference(bs6);
+    /// Tests the intersection operation.
+    #[test]
+    fn test_intersection() {
+        let mut bs1 = Set64::new();
+        bs1.add(0);
+        bs1.add(2);
+        bs1.add(5);
 
-    assert!(bs5.len() == 1);
-    assert!(bs5.contains(7));
-    assert!(bs6.len() == 2);
-    assert!(bs6.contains(9));
-    assert!(bs6.contains(11));
+        let mut bs2 = Set64::new();
+        bs2.add(2);
+        bs2.add(5);
+
+        bs1.intersection(bs2);
+
+        assert_eq!(bs1.len(), 2);
+        assert!(!bs1.contains(0));
+        assert!(bs1.contains(2));
+        assert!(bs1.contains(5));
+
+        // bs2 should remain unchanged
+        assert_eq!(bs2.len(), 2);
+        assert!(bs2.contains(2));
+        assert!(bs2.contains(5));
+    }
+
+    /// Tests the difference operation.
+    #[test]
+    fn test_difference() {
+        let mut bs1 = Set64::new();
+        bs1.add(7);
+        bs1.add(11);
+        bs1.add(9);
+
+        let mut bs2 = Set64::new();
+        bs2.add(9);
+        bs2.add(11);
+
+        bs1.difference(bs2);
+
+        assert_eq!(bs1.len(), 1);
+        assert!(bs1.contains(7));
+        assert!(!bs1.contains(9));
+        assert!(!bs1.contains(11));
+
+        // bs2 should remain unchanged
+        assert_eq!(bs2.len(), 2);
+        assert!(bs2.contains(9));
+        assert!(bs2.contains(11));
+    }
 }

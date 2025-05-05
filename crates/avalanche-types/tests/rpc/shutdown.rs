@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use avalanche_types::subnet::rpc::database::KeyValueReaderWriterDeleter;
 use avalanche_types::{
     proto::pb::rpcdb::database_server::DatabaseServer,
     subnet::rpc::{
@@ -31,14 +32,15 @@ async fn test_shutdown() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // setup gRPC client
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
-    let mut client = DatabaseClient::new_boxed(client_conn);
+    let mut client = DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    );
 
     // client request ok
-    let resp = client.put("foo".as_bytes(), "bar".as_bytes()).await;
+    let resp = client.put(b"foo", b"bar").await;
     assert!(resp.is_ok());
 
     // broadcast shutdown to server
@@ -46,6 +48,7 @@ async fn test_shutdown() {
     tokio::time::sleep(Duration::from_millis(100)).await;
 
     // client request fail
-    let resp = client.put("foo".as_bytes(), "bar".as_bytes()).await;
+    let resp = client.put(b"foo", b"bar").await;
     assert!(resp.is_err());
+    drop(client);
 }

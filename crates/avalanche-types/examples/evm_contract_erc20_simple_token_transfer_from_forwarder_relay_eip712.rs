@@ -20,6 +20,7 @@ use tokio::time::Duration;
 /// cargo run --example evm_contract_erc20_simple_token_transfer_from_forwarder_relay_eip712 --features="jsonrpc_client evm" -- [RELAY SERVER HTTP RPC ENDPOINT] [EVM HTTP RPC ENDPOINT] [FORWARDER CONTRACT ADDRESS] [DOMAIN NAME] [DOMAIN VERSION] [TYPE NAME] [TYPE SUFFIX DATA] [RECIPIENT CONTRACT ADDRESS] [ORIGINAL SIGNER PRIVATE KEY] [FROM ADDRESS] [TO ADDRESS] [TRANSFER AMOUNT]
 /// cargo run --example evm_contract_erc20_simple_token_transfer_from_forwarder_relay_eip712 --features="jsonrpc_client evm" -- http://127.0.0.1:9876/rpc http://127.0.0.1:9650/ext/bc/C/rpc 0x52C84043CD9c865236f11d9Fc9F56aa003c1f922 "my domain name" "1" "my type name" "my suffix data" 0x5DB9A7629912EBF95876228C24A848de0bfB43A9 1af42b797a6bfbd3cf7554bed261e876db69190f5eb1b806acbd72046ee957c3 0xb513578fAb80487a7Af50e0b2feC381D0BD8fa9D 0xAa32FeF56d76a600CBF6dA252c67eFe56703ac1b 500000
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     // ref. <https://github.com/env-logger-rs/env_logger/issues/47>
     env_logger::init_from_env(
@@ -78,7 +79,7 @@ async fn main() -> io::Result<()> {
     );
 
     let no_gas_key_info = no_gas_key.to_info(1).unwrap();
-    log::info!("loaded hot key:\n\n{}\n", no_gas_key_info);
+    log::info!("loaded hot key:\n\n{no_gas_key_info}\n");
     let no_gas_key_signer: ethers_signers::LocalWallet =
         no_gas_key.to_ethers_core_signing_key().into();
 
@@ -131,7 +132,7 @@ async fn main() -> io::Result<()> {
         Token::Address(to_addr),
         Token::Uint(transfer_amount),
     ];
-    let no_gas_recipient_contract_calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let no_gas_recipient_contract_calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!(
         "no gas recipient contract calldata: 0x{}",
         hex::encode(no_gas_recipient_contract_calldata.clone())
@@ -155,7 +156,7 @@ async fn main() -> io::Result<()> {
         .to(recipient_contract_addr)
         //
         // just some random value, otherwise, estimate gas fails
-        .gas(U256::from(300000))
+        .gas(U256::from(300_000))
         //
         // contract call needs no value
         .value(U256::zero())
@@ -176,7 +177,7 @@ async fn main() -> io::Result<()> {
         .sign_to_request_with_estimated_gas(no_gas_key_signer, Arc::clone(&chain_rpc_provider_arc))
         .await
         .unwrap();
-    log::info!("relay_tx_request: {:?}", relay_tx_request);
+    log::info!("relay_tx_request: {relay_tx_request:?}");
 
     let signed_bytes: ethers_core::types::Bytes =
         serde_json::to_vec(&relay_tx_request).unwrap().into();
@@ -212,5 +213,5 @@ fn get_nonce_calldata(addr: H160) -> Vec<u8> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::Address(addr)];
-    abi::encode_calldata(func, &arg_tokens).unwrap()
+    abi::encode_calldata(&func, &arg_tokens).unwrap()
 }

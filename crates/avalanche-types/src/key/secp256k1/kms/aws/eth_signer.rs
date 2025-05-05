@@ -13,6 +13,11 @@ pub struct Signer {
 }
 
 impl Signer {
+    /// Creates a new AWS KMS Ethereum signer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signer cannot be created.
     pub fn new(inner: super::Key, chain_id: primitive_types::U256) -> Result<Self> {
         let address: Address = inner.to_public_key().to_h160();
         Ok(Self {
@@ -22,6 +27,11 @@ impl Signer {
         })
     }
 
+    /// Signs a digest with EIP-155 signature scheme.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signing operation fails.
     async fn sign_digest_with_eip155(
         &self,
         digest: ethers_core::types::H256,
@@ -50,7 +60,7 @@ impl ethers_signers::Signer for Signer {
         self.sign_digest_with_eip155(message_hash, self.chain_id.as_u64())
             .await
             .map_err(|e| Self::Error::API {
-                message: format!("failed sign_digest_with_eip155 {}", e),
+                message: format!("failed sign_digest_with_eip155 {e}"),
                 retryable: e.retryable(),
             })
     }
@@ -62,15 +72,14 @@ impl ethers_signers::Signer for Signer {
         let mut tx_with_chain = tx.clone();
         let chain_id = tx_with_chain
             .chain_id()
-            .map(|id| id.as_u64())
-            .unwrap_or(self.chain_id.as_u64());
+            .map_or(self.chain_id.as_u64(), |id| id.as_u64());
         tx_with_chain.set_chain_id(chain_id);
 
         let sighash = tx_with_chain.sighash();
         self.sign_digest_with_eip155(sighash, chain_id)
             .await
             .map_err(|e| Self::Error::API {
-                message: format!("failed sign_digest_with_eip155 {}", e),
+                message: format!("failed sign_digest_with_eip155 {e}"),
                 retryable: e.retryable(),
             })
     }
@@ -82,14 +91,14 @@ impl ethers_signers::Signer for Signer {
         payload: &T,
     ) -> std::result::Result<Signature, Self::Error> {
         let digest = payload.encode_eip712().map_err(|e| Self::Error::Other {
-            message: format!("failed encode_eip712 {}", e),
+            message: format!("failed encode_eip712 {e}"),
             retryable: false,
         })?;
         self.inner
             .sign_digest(digest.as_ref())
             .await
             .map_err(|e| Self::Error::API {
-                message: format!("failed sign_digest {}", e),
+                message: format!("failed sign_digest {e}"),
                 retryable: e.retryable(),
             })
     }

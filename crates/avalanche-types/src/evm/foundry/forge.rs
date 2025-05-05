@@ -10,6 +10,9 @@ use serde_with::serde_as;
 use tokio::process::Command;
 
 /// Runs "forge create" with a hotkey.
+///
+/// # Errors
+/// Returns an error if the forge command fails or if the output cannot be parsed.
 pub async fn create_with_hotkey(
     private_key: &str,
     rpc_url: &str,
@@ -31,7 +34,7 @@ pub async fn create_with_hotkey(
     ];
     if let Some(cargs) = constructor_args {
         args.push("--constructor-args".to_string());
-        args.extend(cargs.to_vec());
+        args.extend(cargs);
     }
 
     let output = Command::new("forge").args(args).output().await?;
@@ -43,7 +46,7 @@ pub async fn create_with_hotkey(
     serde_json::from_slice(&output.stdout).map_err(|e| {
         Error::new(
             ErrorKind::Other,
-            format!("failed serde_json::from_slice '{}'", e),
+            format!("failed serde_json::from_slice '{e}'"),
         )
     })
 }
@@ -61,7 +64,7 @@ pub struct TxOutput {
     pub transaction_hash: H256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- evm::foundry::forge::test_tx_output --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- evm::foundry::forge::test_tx_output --exact --show-output
 #[test]
 fn test_tx_output() {
     use crate::key::secp256k1::address::h160_to_eth_address;
@@ -94,5 +97,5 @@ fn test_tx_output() {
         "0x50c415005599eb1f53256d6f2f5edc275b4dc3b046c2320ffa7cd436585e2da2"
     );
 
-    log::info!("tx output decoded: {:?}", json_decoded);
+    log::info!("tx output decoded: {json_decoded:?}");
 }

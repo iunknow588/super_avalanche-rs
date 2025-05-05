@@ -1,4 +1,4 @@
-//! Node short ID used in AvalancheGo.
+//! Node short ID used in `AvalancheGo`.
 use std::{
     cmp::Ordering,
     fmt,
@@ -31,14 +31,22 @@ impl Default for Id {
 }
 
 impl Id {
-    pub fn empty() -> Self {
-        Id([0; LEN])
+    #[must_use]
+    pub const fn empty() -> Self {
+        Self([0; LEN])
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         (*self) == Self::empty()
     }
 
+    /// 从字节切片创建一个短ID。
+    ///
+    /// # Panics
+    ///
+    /// 如果切片长度大于 `LEN`，则会 panic。
+    #[must_use]
     pub fn from_slice(d: &[u8]) -> Self {
         assert!(d.len() <= LEN);
         let mut d: Vec<u8> = Vec::from(d);
@@ -46,11 +54,15 @@ impl Id {
             d.resize(LEN, 0);
         }
         let d: [u8; LEN] = d.try_into().unwrap();
-        Id(d)
+        Self(d)
     }
 
     /// "hashing.PubkeyBytesToAddress"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+    ///
+    /// # Errors
+    ///
+    /// 如果哈希计算失败，则返回错误。
     pub fn from_public_key_bytes<S>(pub_key_bytes: S) -> io::Result<Self>
     where
         S: AsRef<[u8]>,
@@ -72,11 +84,11 @@ impl AsRef<[u8]> for Id {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl fmt::Display for Id {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = formatting::encode_cb58_with_checksum_string(&self.0);
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -88,7 +100,7 @@ impl FromStr for Id {
         let decoded = formatting::decode_cb58_with_checksum(s.trim()).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed decode_cb58_with_checksum '{}'", e),
+                format!("failed decode_cb58_with_checksum '{e}'"),
             )
         })?;
         Ok(Self::from_slice(&decoded))
@@ -109,23 +121,28 @@ impl Serialize for Id {
 /// Custom deserializer.
 /// ref. <https://serde.rs/impl-deserialize.html>
 impl<'de> Deserialize<'de> for Id {
-    fn deserialize<D>(deserializer: D) -> Result<Id, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let s: String = Deserialize::deserialize(deserializer)?;
         let ss: Vec<&str> = s.split('-').collect();
         if ss.len() == 1 {
-            return Id::from_str(&s).map_err(serde::de::Error::custom);
+            return Self::from_str(&s).map_err(serde::de::Error::custom);
         }
 
         let addr = ss[1];
         let (_, short_bytes) = secp256k1::address::avax_address_to_short_bytes("", addr)
             .map_err(serde::de::Error::custom)?;
-        Ok(Id::from_slice(&short_bytes))
+        Ok(Self::from_slice(&short_bytes))
     }
 }
 
+/// 从字符串反序列化为 `Id`。
+///
+/// # Errors
+///
+/// 如果反序列化失败，则返回错误。
 fn fmt_id<'de, D>(deserializer: D) -> Result<Id, D::Error>
 where
     D: Deserializer<'de>,
@@ -136,6 +153,10 @@ where
 
 /// Custom deserializer.
 /// ref. <https://serde.rs/impl-deserialize.html>
+///
+/// # Errors
+///
+/// 如果反序列化失败，则返回错误。
 pub fn deserialize_id<'de, D>(deserializer: D) -> Result<Option<Id>, D::Error>
 where
     D: Deserializer<'de>,
@@ -147,8 +168,12 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "ids::must_deserialize_id")] to serde without
+/// Use [`serde(deserialize_with = "ids::must_deserialize_id")`] to serde without
 /// derive. ref. <https://serde.rs/impl-deserialize.html>
+///
+/// # Errors
+///
+/// 如果反序列化失败或结果为空，则返回错误。
 pub fn must_deserialize_id<'de, D>(deserializer: D) -> Result<Id, D::Error>
 where
     D: Deserializer<'de>,
@@ -156,16 +181,22 @@ where
     #[derive(Deserialize)]
     struct Wrapper(#[serde(deserialize_with = "fmt_id")] Id);
     let v = Option::deserialize(deserializer)?;
-    match v.map(|Wrapper(a)| a) {
-        Some(unwrapped) => Ok(unwrapped),
-        None => Err(serde::de::Error::custom(
-            "empty short::Id from deserialization",
-        )),
-    }
+    v.map(|Wrapper(a)| a).map_or_else(
+        || {
+            Err(serde::de::Error::custom(
+                "empty short::Id from deserialization",
+            ))
+        },
+        Ok,
+    )
 }
 
 /// Custom deserializer.
 /// ref. <https://serde.rs/impl-deserialize.html>
+///
+/// # Errors
+///
+/// 如果反序列化失败，则返回错误。
 pub fn deserialize_ids<'de, D>(deserializer: D) -> Result<Option<Vec<Id>>, D::Error>
 where
     D: Deserializer<'de>,
@@ -177,8 +208,12 @@ where
 }
 
 /// Custom deserializer.
-/// Use #[serde(deserialize_with = "short::must_deserialize_ids")] to serde with
+/// Use [`serde(deserialize_with = "short::must_deserialize_ids")`] to serde with
 /// derive. ref. <https://serde.rs/impl-deserialize.html>
+///
+/// # Errors
+///
+/// 如果反序列化失败或结果为空，则返回错误。
 pub fn must_deserialize_ids<'de, D>(deserializer: D) -> Result<Vec<Id>, D::Error>
 where
     D: Deserializer<'de>,
@@ -186,12 +221,17 @@ where
     #[derive(Deserialize)]
     struct Wrapper(#[serde(deserialize_with = "fmt_ids")] Vec<Id>);
     let v = Option::deserialize(deserializer)?;
-    match v.map(|Wrapper(a)| a) {
-        Some(unwrapped) => Ok(unwrapped),
-        None => Err(serde::de::Error::custom("empty Ids from deserialization")),
-    }
+    v.map(|Wrapper(a)| a).map_or_else(
+        || Err(serde::de::Error::custom("empty Ids from deserialization")),
+        Ok,
+    )
 }
 
+/// 从字符串数组反序列化为 `Vec<Id>`。
+///
+/// # Errors
+///
+/// 如果反序列化失败，则返回错误。
 fn fmt_ids<'de, D>(deserializer: D) -> Result<Vec<Id>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -205,32 +245,35 @@ where
     {
         Ok(x) => Ok(x),
         Err(e) => Err(serde::de::Error::custom(format!(
-            "failed to deserialize Ids {}",
-            e
+            "failed to deserialize Ids {e}"
         ))),
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::short::test_serialize --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::short::test_serialize` --exact --show-output
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+struct Data {
+    /// The short ID.
+    id: Id,
+    /// Optional short ID.
+    id2: Option<Id>,
+    /// List of short IDs.
+    ids: Vec<Id>,
+}
+
 #[test]
 fn test_serialize() {
-    let id = Id::from_slice(&<Vec<u8>>::from([
-        0x3d, 0x0a, 0xd1, 0x2b, 0x8e, 0xe8, 0x92, 0x8e, 0xdf, 0x24, //
-        0x8c, 0xa9, 0x1c, 0xa5, 0x56, 0x00, 0xfb, 0x38, 0x3f, 0x07, //
-    ]));
+    let id = Id::from_slice(&[
+        0x3d, 0x0a, 0xd1, 0x2b, 0x8e, 0xe8, 0x92, 0x8e, 0xdf, 0x24, 0x8c, 0xa9, 0x1c, 0xa5, 0x56,
+        0x00, 0xfb, 0x38, 0x3f, 0x07,
+    ]);
     assert_eq!(id.to_string(), "6ZmBHXTqjknJoZtXbnJ6x7af863rXDTwx");
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-    struct Data {
-        id: Id,
-        id2: Option<Id>,
-        ids: Vec<Id>,
-    }
     let d = Data {
         id: id.clone(),
         id2: Some(id.clone()),
-        ids: vec![id.clone(), id.clone(), id.clone(), id.clone(), id.clone()],
+        ids: vec![id.clone(), id.clone(), id.clone(), id.clone(), id],
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
@@ -248,59 +291,55 @@ fn test_serialize() {
     let short_addr = pubkey.to_short_id().unwrap();
     let p_addr = pubkey.to_hrp_address(1, "P").unwrap();
 
-    let d1: Data = serde_json::from_str(
-        format!(
-            "{{\"id\": \"{}\", \"ids\": [\"{}\", \"{}\"]}}",
-            short_addr, p_addr, p_addr
-        )
-        .as_str(),
-    )
+    let d1: Data = serde_json::from_str(&format!(
+        "{{\"id\": \"{short_addr}\", \"ids\": [\"{p_addr}\", \"{p_addr}\"]}}"
+    ))
     .unwrap();
     let d2 = Data {
         id: short_addr.clone(),
         id2: None,
-        ids: vec![short_addr.clone(), short_addr.clone()],
+        ids: vec![short_addr.clone(), short_addr],
     };
     assert_eq!(d1, d2);
 
     let id = Id::from_str("6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV").unwrap();
-    println!("{}", id);
+    println!("{id}");
 
     let d: Data = serde_json::from_str(
         "{\"id\": \"6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV\", \"ids\": \
          [\"6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV\", \"6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV\"]}",
     )
     .unwrap();
-    println!("{:?}", d);
+    println!("{d:?}");
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::short::test_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --
+/// `ids::short::test_id` --exact --show-output
 #[test]
 fn test_id() {
-    let id = Id::from_slice(&<Vec<u8>>::from([
-        0x3d, 0x0a, 0xd1, 0x2b, 0x8e, 0xe8, 0x92, 0x8e, 0xdf, 0x24, //
-        0x8c, 0xa9, 0x1c, 0xa5, 0x56, 0x00, 0xfb, 0x38, 0x3f, 0x07, //
-    ]));
+    let id = Id::from_slice(&[
+        0x3d, 0x0a, 0xd1, 0x2b, 0x8e, 0xe8, 0x92, 0x8e, 0xdf, 0x24, 0x8c, 0xa9, 0x1c, 0xa5, 0x56,
+        0x00, 0xfb, 0x38, 0x3f, 0x07,
+    ]);
     assert_eq!(id.to_string(), "6ZmBHXTqjknJoZtXbnJ6x7af863rXDTwx");
     let id_from_str = Id::from_str("6ZmBHXTqjknJoZtXbnJ6x7af863rXDTwx").unwrap();
     assert_eq!(id, id_from_str);
 }
 
 impl Ord for Id {
-    fn cmp(&self, other: &Id) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&(other.0))
     }
 }
 
 impl PartialOrd for Id {
-    fn partial_cmp(&self, other: &Id) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Id {
-    fn eq(&self, other: &Id) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
@@ -316,8 +355,9 @@ impl Hash for Id {
 pub struct Ids(Vec<Id>);
 
 impl Ids {
+    #[must_use]
     pub fn new(ids: &[Id]) -> Self {
-        Ids(Vec::from(ids))
+        Self(Vec::from(ids))
     }
 }
 
@@ -328,7 +368,7 @@ impl From<Vec<Id>> for Ids {
 }
 
 impl Ord for Ids {
-    fn cmp(&self, other: &Ids) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         // packer encodes the array length first
         // so if the lengths differ, the ordering is decided
         let l1 = self.0.len();
@@ -341,100 +381,104 @@ impl Ord for Ids {
 }
 
 impl PartialOrd for Ids {
-    fn partial_cmp(&self, other: &Ids) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Ids {
-    fn eq(&self, other: &Ids) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --
-/// ids::short::test_sort --exact --show-output
-#[test]
-fn test_sort() {
-    // lengths of individual ids do not matter since all are fixed-sized
-    let id1 = Id::from_slice(&<Vec<u8>>::from([0x01, 0x00, 0x00, 0x00]));
-    let id2 = Id::from_slice(&<Vec<u8>>::from([0x01, 0x00, 0x00, 0x00, 0x00]));
-    assert!(id1 == id2);
+/// Tests for sorting and comparing short IDs.
+#[cfg(test)]
+mod sort_tests {
+    use super::*;
 
-    // lengths of individual ids do not matter since all are fixed-sized
-    let id1 = Id::from_slice(&<Vec<u8>>::from([0x01, 0x00, 0x00, 0x00, 0x00]));
-    let id2 = Id::from_slice(&<Vec<u8>>::from([0x02]));
-    assert!(id1 < id2);
+    /// Helper function to create a short ID from a byte value.
+    fn create_id(first_byte: u8) -> Id {
+        Id::from_slice(&[first_byte])
+    }
 
-    // lengths of individual ids do not matter since all are fixed-sized
-    let id1 = Id::from_slice(&<Vec<u8>>::from([0x02, 0x00, 0x00, 0x00, 0x00]));
-    let id2 = Id::from_slice(&<Vec<u8>>::from([0x01, 0x00, 0x00, 0x00, 0x00]));
-    assert!(id1 > id2);
+    /// Helper function to create a set of short IDs.
+    fn create_id_set(first_bytes: &[u8]) -> Ids {
+        let ids = first_bytes
+            .iter()
+            .map(|&b| create_id(b))
+            .collect::<Vec<_>>();
+        Ids(ids)
+    }
 
-    // lengths of Id matter
-    let id_set_first = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-    ]);
-    let id_set_second = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-    ]);
-    assert!(id_set_first == id_set_second);
+    /// Test equality of short IDs with different byte lengths but same value.
+    #[test]
+    fn test_id_equality_different_lengths() {
+        let id1 = Id::from_slice(&[0x01, 0x00, 0x00, 0x00]);
+        let id2 = Id::from_slice(&[0x01, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(id1, id2);
+    }
 
-    // lengths of Id matter
-    let id_set_first = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x05])),
-        Id::from_slice(&<Vec<u8>>::from([0x06])),
-        Id::from_slice(&<Vec<u8>>::from([0x07])),
-    ]);
-    let id_set_second = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-        Id::from_slice(&<Vec<u8>>::from([0x04])),
-    ]);
-    assert!(id_set_first < id_set_second);
+    /// Test comparison of short IDs with different values.
+    #[test]
+    fn test_id_comparison() {
+        let id1 = Id::from_slice(&[0x01, 0x00, 0x00, 0x00, 0x00]);
+        let id2 = Id::from_slice(&[0x02]);
 
-    // lengths of Id matter
-    let id_set_first = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-        Id::from_slice(&<Vec<u8>>::from([0x04])),
-    ]);
-    let id_set_second = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x09])),
-        Id::from_slice(&<Vec<u8>>::from([0x09])),
-        Id::from_slice(&<Vec<u8>>::from([0x09])),
-    ]);
-    assert!(id_set_first > id_set_second);
+        assert!(id1 < id2);
 
-    // lengths of Id matter
-    let id_set_first = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-    ]);
-    let id_set_second = Ids(vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x05])),
-    ]);
-    assert!(id_set_first < id_set_second);
+        let id1 = Id::from_slice(&[0x02, 0x00, 0x00, 0x00, 0x00]);
+        let id2 = Id::from_slice(&[0x01, 0x00, 0x00, 0x00, 0x00]);
 
-    let mut id_collection_a = vec![
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-    ];
-    id_collection_a.sort();
-    let id_collection_b = vec![
-        Id::from_slice(&<Vec<u8>>::from([0x01])),
-        Id::from_slice(&<Vec<u8>>::from([0x02])),
-        Id::from_slice(&<Vec<u8>>::from([0x03])),
-    ];
-    assert!(id_collection_a == id_collection_b);
+        assert!(id1 > id2);
+    }
+
+    /// Test equality of ID sets with same elements.
+    #[test]
+    fn test_id_set_equality() {
+        let id_set1 = create_id_set(&[1, 2, 3]);
+        let id_set2 = create_id_set(&[1, 2, 3]);
+
+        assert_eq!(id_set1, id_set2);
+    }
+
+    /// Test comparison of ID sets with different lengths.
+    #[test]
+    fn test_id_set_length_comparison() {
+        // Set with 3 elements vs set with 4 elements
+        let id_set1 = create_id_set(&[5, 6, 7]);
+        let id_set2 = create_id_set(&[1, 2, 3, 4]);
+
+        assert!(id_set1 < id_set2);
+    }
+
+    /// Test comparison of ID sets where longer set has larger elements.
+    #[test]
+    fn test_id_set_mixed_comparison() {
+        // Set with 4 elements vs set with 3 elements with larger values
+        let id_set1 = create_id_set(&[1, 2, 3, 4]);
+        let id_set2 = create_id_set(&[9, 9, 9]);
+
+        assert!(id_set1 > id_set2);
+    }
+
+    /// Test comparison of ID sets with same length but different elements.
+    #[test]
+    fn test_id_set_element_comparison() {
+        // Same length (3), but different elements
+        let id_set1 = create_id_set(&[1, 2, 3]);
+        let id_set2 = create_id_set(&[1, 2, 5]);
+
+        assert!(id_set1 < id_set2);
+    }
+
+    /// Test sorting of short IDs.
+    #[test]
+    fn test_id_sorting() {
+        let mut ids = vec![create_id(3), create_id(2), create_id(1)];
+        ids.sort();
+
+        let expected = vec![create_id(1), create_id(2), create_id(3)];
+        assert_eq!(ids, expected);
+    }
 }

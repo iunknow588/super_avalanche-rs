@@ -11,7 +11,7 @@ pub struct Message {
 
 impl Default for Message {
     fn default() -> Self {
-        Message {
+        Self {
             msg: p2p::Pong {
                 uptime: 0,
                 subnet_uptimes: vec![],
@@ -23,17 +23,22 @@ impl Default for Message {
 
 impl Message {
     #[must_use]
-    pub fn uptime_pct(mut self, uptime: u32) -> Self {
+    pub const fn uptime_pct(mut self, uptime: u32) -> Self {
         self.msg.uptime = uptime;
         self
     }
 
     #[must_use]
-    pub fn gzip_compress(mut self, gzip_compress: bool) -> Self {
+    pub const fn gzip_compress(mut self, gzip_compress: bool) -> Self {
         self.gzip_compress = gzip_compress;
         self
     }
 
+    /// Serializes the message into bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the serialization fails.
     pub fn serialize(&self) -> io::Result<Vec<u8>> {
         let msg = p2p::Message {
             message: Some(p2p::message::Message::Pong(self.msg.clone())),
@@ -67,18 +72,30 @@ impl Message {
         Ok(ProstMessage::encode_to_vec(&msg))
     }
 
+    /// Deserializes the message from bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the deserialization fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the message field is None.
     pub fn deserialize(d: impl AsRef<[u8]>) -> io::Result<Self> {
         let buf = bytes::Bytes::from(d.as_ref().to_vec());
         let p2p_msg: p2p::Message = ProstMessage::decode(buf).map_err(|e| {
             Error::new(
                 ErrorKind::InvalidData,
-                format!("failed prost::Message::decode '{}'", e),
+                format!("failed prost::Message::decode '{e}'"),
             )
         })?;
 
-        match p2p_msg.message.unwrap() {
+        match p2p_msg
+            .message
+            .ok_or_else(|| Error::new(ErrorKind::InvalidData, "message field is None"))?
+        {
             // was not compressed
-            p2p::message::Message::Pong(msg) => Ok(Message {
+            p2p::message::Message::Pong(msg) => Ok(Self {
                 msg,
                 gzip_compress: false,
             }),
@@ -90,11 +107,16 @@ impl Message {
                     ProstMessage::decode(prost::bytes::Bytes::from(decompressed)).map_err(|e| {
                         Error::new(
                             ErrorKind::InvalidData,
-                            format!("failed prost::Message::decode '{}'", e),
+                            format!("failed prost::Message::decode '{e}'"),
                         )
                     })?;
-                match decompressed_msg.message.unwrap() {
-                    p2p::message::Message::Pong(msg) => Ok(Message {
+                match decompressed_msg.message.ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidData,
+                        "message field is None after decompression",
+                    )
+                })? {
+                    p2p::message::Message::Pong(msg) => Ok(Self {
                         msg,
                         gzip_compress: false,
                     }),
@@ -111,7 +133,7 @@ impl Message {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- message::pong::test_message --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- message::pong::test_message --exact --show-output
 #[test]
 fn test_message() {
     let _ = env_logger::builder()

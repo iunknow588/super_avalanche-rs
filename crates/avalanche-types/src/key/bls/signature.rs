@@ -15,22 +15,27 @@ pub const LEN: usize = 96;
 impl Sig {
     /// Converts the public key to compressed bytes.
     /// ref. "avalanchego/utils/crypto/bls.SignatureToBytes"
+    #[must_use]
     pub fn to_compressed_bytes(&self) -> [u8; LEN] {
         self.0.compress()
     }
 
     /// Loads the signature from the compressed raw scalar bytes (in big endian).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes cannot be uncompressed or if the signature is invalid.
     pub fn from_bytes(compressed: &[u8]) -> io::Result<Self> {
         let sig = Signature::uncompress(compressed).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed blst::min_pk::Signature::uncompress {:?}", e),
+                format!("failed blst::min_pk::Signature::uncompress {e:?}"),
             )
         })?;
         sig.validate(false).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed blst::min_pk::Signature::validate {:?}", e),
+                format!("failed blst::min_pk::Signature::validate {e:?}"),
             )
         })?;
 
@@ -38,8 +43,9 @@ impl Sig {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: \[pubkey\] and [self.0] have both been validated.
+    /// Invariant: [`pubkey`] 和 [`self.0`] have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.Verify"
+    #[must_use]
     pub fn verify(&self, msg: &[u8], pubkey: &PublicKey) -> bool {
         self.0.verify(
             false,
@@ -52,8 +58,9 @@ impl Sig {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: \[pubkey\] and [self.0] have both been validated.
+    /// Invariant: [`pubkey`] 和 [`self.0`] have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.VerifyProofOfPossession"
+    #[must_use]
     pub fn verify_proof_of_possession(&self, msg: &[u8], pubkey: &PublicKey) -> bool {
         self.0.verify(
             false,
@@ -78,22 +85,27 @@ impl From<Sig> for Signature {
     }
 }
 
+/// Aggregates multiple signatures into a single signature.
+///
+/// # Errors
+///
+/// Returns an error if the aggregation fails.
 pub fn aggregate(sigs: &[Sig]) -> io::Result<Sig> {
     let mut ss = Vec::with_capacity(sigs.len());
-    for s in sigs.iter() {
+    for s in sigs {
         ss.push(&s.0);
     }
 
     let agg_sig = AggregateSignature::aggregate(&ss, false).map_err(|e| {
         Error::new(
             ErrorKind::Other,
-            format!("failed AggregateSignature::aggregate {:?}", e),
+            format!("failed AggregateSignature::aggregate {e:?}"),
         )
     })?;
     Ok(Sig(agg_sig.to_signature()))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::bls::signature::test_signature --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::bls::signature::test_signature` --exact --show-output
 #[test]
 fn test_signature() {
     let _ = env_logger::builder()

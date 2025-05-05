@@ -8,6 +8,8 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+/// Genesis configuration for Coreth.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/coreth/core#Genesis>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/coreth/params#ChainConfig>
 /// ref. <https://github.com/ava-labs/avalanchego/tree/dev/genesis>
@@ -53,10 +55,15 @@ pub struct Genesis {
 }
 
 /// On the X-Chain, one AVAX is 10^9  units.
+///
 /// On the P-Chain, one AVAX is 10^9  units.
+///
 /// On the C-Chain, one AVAX is 10^18 units.
+///
 /// "0x204FCE5E3E25026110000000" is "10000000000000000000000000000"
-/// (10,000,000,000 AVAX). ref. <https://www.rapidtables.com/convert/number/decimal-to-hex.html>
+/// (10,000,000,000 AVAX).
+///
+/// ref. <https://www.rapidtables.com/convert/number/decimal-to-hex.html>
 /// ref. <https://www.rapidtables.com/convert/number/hex-to-decimal.html>
 /// ref. <https://snowtrace.io/unitconverter>
 pub const DEFAULT_INITIAL_AMOUNT: &str = "0x204FCE5E3E25026110000000";
@@ -76,7 +83,8 @@ impl Default for Genesis {
             timestamp: primitive_types::U256::zero(),
             extra_data: Some(String::from("0x00")),
 
-            gas_limit: primitive_types::U256::from_str_radix("0x5f5e100", 16).unwrap(),
+            gas_limit: primitive_types::U256::from_str_radix("0x5f5e100", 16)
+                .expect("valid hex value"),
 
             difficulty: primitive_types::U256::zero(),
             mix_hash: Some(String::from(
@@ -95,15 +103,24 @@ impl Default for Genesis {
 }
 
 impl Genesis {
+    /// Encodes the genesis to JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the encoding fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 
     /// Saves the current coreth genesis to disk
     /// and overwrites the file.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be written.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing Genesis to '{}'", file_path);
+        log::info!("syncing Genesis to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -111,7 +128,7 @@ impl Genesis {
         }
 
         let d = serde_json::to_vec(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(&d)?;
@@ -245,7 +262,8 @@ impl Default for AllocAccount {
         Self {
             code: None,
             storage: None,
-            balance: primitive_types::U256::from_str_radix(DEFAULT_INITIAL_AMOUNT, 16).unwrap(),
+            balance: primitive_types::U256::from_str_radix(DEFAULT_INITIAL_AMOUNT, 16)
+                .expect("valid hex value"),
             mcbalance: None,
             nonce: None,
         }
@@ -303,9 +321,9 @@ fn test_parse() {
     )
     .unwrap();
     let d = d.encode_json().unwrap();
-    log::info!("{}", d);
+    log::info!("{d}");
 
     let d = Genesis::default();
     let d = d.encode_json().unwrap();
-    log::info!("{}", d);
+    log::info!("{d}");
 }

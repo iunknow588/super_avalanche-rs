@@ -222,14 +222,11 @@ pub async fn execute(opts: flags::Options) -> io::Result<()> {
         log::info!("blocking on handles via JoinHandle");
         for handle in handles {
             let r = handle.await.map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("failed await on JoinHandle {}", e),
-                )
+                Error::new(ErrorKind::Other, format!("failed await on JoinHandle {e}"))
             })?;
             match r {
                 Ok(_) => {}
-                Err(e) => return Err(Error::new(ErrorKind::Other, format!("case failed {}", e))),
+                Err(e) => return Err(Error::new(ErrorKind::Other, format!("case failed {e}"))),
             }
         }
     }
@@ -319,7 +316,7 @@ async fn check_anr_network(ep: &str) -> io::Result<Vec<String>> {
                     true
                 }
                 Err(e) => {
-                    log::warn!("not healthy yet {}", e);
+                    log::warn!("not healthy yet {e}");
                     false
                 }
             }

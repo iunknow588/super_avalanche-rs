@@ -63,7 +63,7 @@ impl Default for GetNetworkIdResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_network_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_network_id` --exact --show-output
 #[test]
 fn test_get_network_id() {
     // ref. https://docs.avax.network/build/avalanchego-apis/info/#infogetnetworkid
@@ -113,7 +113,7 @@ pub struct GetBlockchainIdResult {
     pub blockchain_id: ids::Id,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_blockchain_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_blockchain_id` --exact --show-output
 #[test]
 fn test_get_blockchain_id() {
     use std::str::FromStr;
@@ -168,7 +168,7 @@ pub struct GetNodeIdResult {
     pub node_pop: Option<bls::ProofOfPossession>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_node_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_node_id` --exact --show-output
 #[test]
 fn test_get_node_id() {
     use std::str::FromStr;
@@ -261,7 +261,7 @@ impl Default for GetNodeIpResult {
         }
     }
 }
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_node_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_node_id` --exact --show-output
 #[test]
 fn test_get_node_ip() {
     // ref. <https://docs.avax.network/build/avalanchego-apis/info/#infogetnodeid>
@@ -325,7 +325,7 @@ pub struct VmVersions {
     pub subnets: HashMap<String, String>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_node_version --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_node_version` --exact --show-output
 #[test]
 fn test_get_node_version() {
     let resp: GetNodeVersionResponse = serde_json::from_str(
@@ -451,7 +451,7 @@ pub struct GetTxFeeResult {
     pub add_subnet_delegator_fee: u64,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_get_tx_fee --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_get_tx_fee` --exact --show-output
 #[test]
 fn test_get_tx_fee() {
     // ref. <https://docs.avax.network/build/avalanchego-apis/info/#infogettxfee>
@@ -531,7 +531,7 @@ impl Default for UptimeResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_uptime --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_uptime` --exact --show-output
 #[test]
 fn test_uptime() {
     // ref. https://docs.avax.network/apis/avalanchego/apis/info#infouptime
@@ -587,9 +587,14 @@ impl Default for PeersRequest {
 }
 
 impl PeersRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -600,7 +605,7 @@ pub struct PeersParams {
 }
 
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/info#infopeers>
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct PeersResponse {
     pub jsonrpc: String,
     pub id: u32,
@@ -614,7 +619,7 @@ pub struct PeersResponse {
 
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/info#infopeers>
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 #[derive(Default)]
 pub struct PeersResult {
@@ -666,7 +671,8 @@ impl Default for Peer {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::info::test_peers --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::info::test_peers` --exact --show-output
+#[allow(clippy::too_many_lines)]
 #[test]
 fn test_peers() {
     use std::str::FromStr;
@@ -721,12 +727,10 @@ fn test_peers() {
     )
     .unwrap();
 
-    let uptimes: HashMap<ids::Id, u32> = [(
+    let uptimes: HashMap<ids::Id, u32> = std::iter::once((
         ids::Id::from_str("29uVeLPJB1eQJkzRemU8g8wZDw5uJRqpab5U2mX9euieVwiEbL").unwrap(),
         100,
-    )]
-    .iter()
-    .cloned()
+    ))
     .collect();
     let expected = PeersResponse {
         jsonrpc: "2.0".to_string(),

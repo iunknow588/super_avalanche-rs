@@ -201,7 +201,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
             let tx_id = avalanche_sdk_x::issue_tx(&rpc_ep, &hex_tx).await.unwrap();
             match ch.send(tx_id).await {
                 Ok(_) => log::info!("issued a tx"),
-                Err(e) => log::warn!("failed to send tx {}", e),
+                Err(e) => log::warn!("failed to send tx {e}"),
             }
         });
 
@@ -218,7 +218,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
             Err(e) => {
                 return Err(Error::new(
                     ErrorKind::Other,
-                    format!("handler await failed {}", e),
+                    format!("handler await failed {e}"),
                 ))
             }
         }

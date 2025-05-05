@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// Request represents a request for information during syncing.
 #[allow(clippy::derive_partial_eq_without_eq)]

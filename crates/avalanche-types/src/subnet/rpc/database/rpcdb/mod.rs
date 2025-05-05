@@ -17,11 +17,10 @@ lazy_static! {
     };
 }
 
+/// Converts an error message to an error code
+#[must_use]
 pub fn error_to_error_code(msg: &str) -> i32 {
-    match ERROR_TO_ERROR_CODE.get(msg) {
-        None => 0_i32,
-        Some(code) => *code,
-    }
+    ERROR_TO_ERROR_CODE.get(msg).map_or(0_i32, |code| *code)
 }
 
 #[test]

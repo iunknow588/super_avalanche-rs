@@ -21,16 +21,16 @@ async fn main() -> io::Result<()> {
     let signer_nonce = primitive_types::U256::from(random_manager::u64() % 10);
     let gas_limit = primitive_types::U256::from(random_manager::u64() % 10000);
     let max_fee_per_gas = primitive_types::U256::from(random_manager::u64() % 10000);
-    let value = primitive_types::U256::from(random_manager::u64() % 100000);
+    let value = primitive_types::U256::from(random_manager::u64() % 100_000);
 
     let k1 = key::secp256k1::TEST_KEYS[0].clone();
     let key_info1 = k1.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info1);
+    log::info!("created hot key:\n\n{key_info1}\n");
     let k1_signer: ethers_signers::LocalWallet = k1.to_ethers_core_signing_key().into();
 
     let k2 = key::secp256k1::private_key::Key::generate().unwrap();
     let key_info2 = k2.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info2);
+    log::info!("created hot key:\n\n{key_info2}\n");
 
     let tx = eip1559::Transaction::new()
         .chain_id(chain_id)
@@ -42,7 +42,7 @@ async fn main() -> io::Result<()> {
         .value(value);
 
     let signed_bytes = tx.sign_as_typed_transaction(k1_signer).await.unwrap();
-    log::info!("signed_bytes: {}", signed_bytes);
+    log::info!("signed_bytes: {signed_bytes}");
 
     let pending = chain_rpc_provider
         .send_raw_transaction(signed_bytes)

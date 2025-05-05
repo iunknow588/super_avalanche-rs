@@ -11,11 +11,11 @@ use crate::{
 use tokio::time::{sleep, Duration, Instant};
 
 /// Represents X-chain "Import" transaction.
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/x/builder.go> "NewImportTx".
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/x/builder.go> "`NewImportTx`".
 #[derive(Clone, Debug)]
 pub struct Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::x::X<T>,
 
@@ -38,8 +38,9 @@ where
 
 impl<T> Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
+    #[must_use]
     pub fn new(x: &crate::wallet::x::X<T>) -> Self {
         Self {
             inner: x.clone(),
@@ -54,47 +55,55 @@ where
 
     /// Sets the source blockchain Id.
     #[must_use]
-    pub fn source_blockchain_id(mut self, blockchain_id: ids::Id) -> Self {
+    pub const fn source_blockchain_id(mut self, blockchain_id: ids::Id) -> Self {
         self.source_blockchain_id = blockchain_id;
         self
     }
 
     /// Sets the check acceptance boolean flag.
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         self.check_acceptance = check_acceptance;
         self
     }
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the import transaction and returns the transaction Id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if checking acceptance times out.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the UTXOs result or transaction result is None.
     pub async fn issue(&self) -> Result<ids::Id> {
         let picked_http_rpc = self.inner.inner.pick_base_http_url();
         log::info!(
@@ -124,7 +133,7 @@ where
         let mut import_inputs: Vec<txs::transferable::Input> = Vec::new();
         let mut signers: Vec<Vec<T>> = Vec::new();
 
-        for utxo in utxos.iter() {
+        for utxo in &utxos {
             if utxo.asset_id != self.inner.inner.avax_asset_id {
                 continue;
             }
@@ -221,7 +230,7 @@ where
         }
 
         let tx_id = resp.result.unwrap().tx_id;
-        log::info!("{} successfully issued", tx_id);
+        log::info!("{tx_id} successfully issued");
 
         if !self.check_acceptance {
             log::debug!("skipping checking acceptance...");
@@ -244,7 +253,7 @@ where
 
             let status = resp.result.unwrap().status;
             if status == Status::Accepted {
-                log::info!("{} successfully accepted", tx_id);
+                log::info!("{tx_id} successfully accepted");
                 success = true;
                 break;
             }

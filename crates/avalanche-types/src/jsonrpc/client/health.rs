@@ -8,19 +8,25 @@ use crate::{
 };
 use reqwest::ClientBuilder;
 
+/// Checks the health of an Avalanche node.
+///
 /// "If a single piece of data must be accessible from more than one task
 /// concurrently, then it must be shared using synchronization primitives such
 /// as Arc." ref. <https://tokio.rs/tokio/tutorial/spawning>
+///
+/// # Errors
+///
+/// Returns an error if the health check fails.
 pub async fn check(http_rpc: Arc<String>, liveness: bool) -> Result<health::Response> {
     let (scheme, host, port, ..) =
         extract_scheme_host_port_path_chain_alias(&http_rpc).map_err(|e| Error::Other {
-            message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+            message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
             retryable: false,
         })?;
 
-    let mut url = url::try_create_url(url::Path::Health, scheme.as_deref(), host.as_str(), port)?;
+    let mut url = url::try_create_url(&url::Path::Health, scheme.as_deref(), host.as_str(), port)?;
     if liveness {
-        url = url::try_create_url(url::Path::Liveness, scheme.as_deref(), host.as_str(), port)?;
+        url = url::try_create_url(&url::Path::Liveness, scheme.as_deref(), host.as_str(), port)?;
     }
     log::info!("getting network name for {url}");
 
@@ -33,7 +39,7 @@ pub async fn check(http_rpc: Arc<String>, liveness: bool) -> Result<health::Resp
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -50,18 +56,27 @@ pub async fn check(http_rpc: Arc<String>, liveness: bool) -> Result<health::Resp
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
+/// Spawns a health check in a separate task.
+///
+/// # Errors
+///
+/// Returns an error if the health check fails.
+///
+/// # Panics
+///
+/// Panics if the spawned task fails.
 pub async fn spawn_check(http_rpc: &str, liveness: bool) -> Result<health::Response> {
     let ep_arc = Arc::new(http_rpc.to_string());
     tokio::spawn(async move { check(ep_arc, liveness).await })

@@ -9,6 +9,7 @@ use avalanche_types::{ids, jsonrpc::client::info as jsonrpc_client_info};
 /// cargo run --example jsonrpc_client_info --features="jsonrpc_client" -- http://localhost:9650
 /// cargo run --example jsonrpc_client_info --features="jsonrpc_client" -- http://52.42.183.125:9650
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> io::Result<()> {
     // ref. <https://github.com/env-logger-rs/env_logger/issues/47>
     env_logger::init_from_env(
@@ -48,7 +49,7 @@ async fn main() -> io::Result<()> {
     let resp = jsonrpc_client_info::get_blockchain_id(&url, "P")
         .await
         .unwrap();
-    log::info!("get_blockchain_id for P response: {:?}", resp);
+    log::info!("get_blockchain_id for P response: {resp:?}");
     log::info!(
         "blockchain_id for P: {}",
         resp.result.unwrap().blockchain_id

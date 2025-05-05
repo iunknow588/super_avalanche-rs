@@ -38,13 +38,13 @@ async fn main() -> io::Result<()> {
     };
 
     let key_info = key.to_info(1).unwrap();
-    println!("key_info:\n{}", key_info);
+    println!("key_info:\n{key_info}");
 
     let key2 = key::secp256k1::kms::aws::Key::from_arn(kms_manager.clone(), &key.arn)
         .await
         .unwrap();
     let key_info2 = key2.to_info(1).unwrap();
-    println!("key_info2:\n{}", key_info2);
+    println!("key_info2:\n{key_info2}");
 
     let digest = [0u8; ring::digest::SHA256_OUTPUT_LEN];
     match key.sign_digest(&digest).await {
@@ -55,7 +55,7 @@ async fn main() -> io::Result<()> {
             );
         }
         Err(e) => {
-            log::warn!("failed to sign, error: {:?}", e);
+            log::warn!("failed to sign, error: {e:?}");
         }
     }
 

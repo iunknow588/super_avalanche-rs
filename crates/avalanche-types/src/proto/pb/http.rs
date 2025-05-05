@@ -1,5 +1,6 @@
+#[allow(clippy::all)]
 // @generated
-/// URL is a net.URL see: <https://pkg.go.dev/net/url#URL>
+/// `URL` is a `net.URL` see: <https://pkg.go.dev/net/url#URL>
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Url {

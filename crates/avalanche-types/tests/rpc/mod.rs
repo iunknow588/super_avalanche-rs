@@ -22,7 +22,7 @@ where
         .map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to serve test database service: {}", e),
+                format!("failed to serve test database service: {e}"),
             )
         })
 }

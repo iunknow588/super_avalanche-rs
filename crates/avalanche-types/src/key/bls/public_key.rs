@@ -4,7 +4,7 @@ use std::io::{self, Error, ErrorKind};
 use crate::key::bls::signature::Sig;
 use blst::min_pk::{AggregatePublicKey, PublicKey};
 
-/// Represents "blst::min_pk::PublicKey".
+/// Represents `blst::min_pk::PublicKey`.
 /// By default, serializes as hex string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Key(pub PublicKey);
@@ -14,22 +14,27 @@ pub const LEN: usize = 48;
 impl Key {
     /// Converts the public key to compressed bytes.
     /// ref. "avalanchego/utils/crypto/bls.PublicKeyToBytes"
+    #[must_use]
     pub fn to_compressed_bytes(&self) -> [u8; LEN] {
         self.0.compress()
     }
 
     /// Loads the public key from the compressed raw scalar bytes (in big endian).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes cannot be uncompressed or if the public key is invalid.
     pub fn from_bytes(compressed: &[u8]) -> io::Result<Self> {
         let pubkey = PublicKey::uncompress(compressed).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed blst::min_pk::PublicKey::uncompress {:?}", e),
+                format!("failed blst::min_pk::PublicKey::uncompress {e:?}"),
             )
         })?;
         pubkey.validate().map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed blst::min_pk::PublicKey::validate {:?}", e),
+                format!("failed blst::min_pk::PublicKey::validate {e:?}"),
             )
         })?;
 
@@ -37,15 +42,17 @@ impl Key {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [self.0] and \[sig\] have both been validated.
+    /// Invariant: [`self.0`] 和 [`sig`] have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.Verify"
+    #[must_use]
     pub fn verify(&self, msg: &[u8], sig: &Sig) -> bool {
         sig.verify(msg, self)
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [self.0] and \[sig\] have both been validated.
+    /// Invariant: [`self.0`] 和 [`sig`] have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.VerifyProofOfPossession"
+    #[must_use]
     pub fn verify_proof_of_possession(&self, msg: &[u8], sig: &Sig) -> bool {
         sig.verify_proof_of_possession(msg, self)
     }
@@ -63,19 +70,24 @@ impl From<Key> for PublicKey {
     }
 }
 
+/// Aggregates multiple public keys into a single public key.
+///
+/// # Errors
+///
+/// Returns an error if the aggregation fails.
 pub fn aggregate(pubkeys: &[Key]) -> io::Result<Key> {
     let ss = pubkeys.iter().map(|s| &s.0).collect::<Vec<_>>();
 
     let agg_pubkey = AggregatePublicKey::aggregate(&ss, false).map_err(|e| {
         Error::new(
             ErrorKind::Other,
-            format!("failed AggregatePublicKey::aggregate {:?}", e),
+            format!("failed AggregatePublicKey::aggregate {e:?}"),
         )
     })?;
     Ok(Key(agg_pubkey.to_public_key()))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::bls::public_key::test_key --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::bls::public_key::test_key` --exact --show-output
 #[test]
 fn test_key() {
     let _ = env_logger::builder()

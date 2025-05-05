@@ -20,11 +20,13 @@ pub trait Manager {
 
 #[derive(Clone)]
 pub struct DatabaseManager {
+    /// The list of versioned databases
     inner: Arc<RwLock<Vec<VersionedDatabase>>>,
 }
 
 impl DatabaseManager {
     /// Returns a database manager from a Vec of versioned database.
+    #[must_use]
     pub fn from_databases(dbs: Vec<VersionedDatabase>) -> Self {
         Self {
             inner: Arc::new(RwLock::new(dbs)),
@@ -59,17 +61,19 @@ impl Manager for DatabaseManager {
         for db in dbs.iter() {
             let db = &db.db;
             match db.close().await {
-                Ok(_) => {}
+                Ok(()) => {}
                 Err(e) => errors.push(e.to_string()),
             }
         }
 
         if !errors.is_empty() {
+            drop(dbs);
             return Err(Error::new(
                 ErrorKind::Other,
                 errors.first().unwrap().to_string(),
             ));
         }
+        drop(dbs);
         Ok(())
     }
 }

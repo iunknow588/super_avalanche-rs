@@ -16,14 +16,23 @@ use crate::subnet::rpc::{
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/database#Iterator>
 pub struct Iterator {
+    /// The underlying database iterator
     iterator: BoxedIterator,
+    /// Keys from the in-memory database
     keys: Vec<Vec<u8>>,
+    /// Values from the in-memory database
     values: Vec<ValueDelete>,
+    /// Error that occurred during iteration
     error: Option<io::Error>,
+    /// Whether the database is closed
     closed: Arc<AtomicBool>,
+    /// Current key
     key: Vec<u8>,
+    /// Current value
     value: Vec<u8>,
+    /// Whether the iterator has been initialized
     initialized: Arc<AtomicBool>,
+    /// Whether the iterator has been exhausted
     exhausted: Arc<AtomicBool>,
 }
 
@@ -119,14 +128,14 @@ impl database::iterator::Iterator for Iterator {
 
                 if !mem_value.delete {
                     self.key = mem_key;
-                    self.value = mem_value.value.clone();
+                    self.value.clone_from(&mem_value.value);
 
                     return Ok(true);
                 }
             }
 
             if db_key.lt(&mem_key) {
-                self.key = db_key.to_vec();
+                self.key.clone_from(&db_key);
                 self.value = self.iterator.value().await?.to_vec();
                 let exhausted = !self.iterator.next().await?;
                 self.exhausted.store(exhausted, Ordering::Relaxed);
@@ -143,8 +152,8 @@ impl database::iterator::Iterator for Iterator {
             self.exhausted.store(exhausted, Ordering::Relaxed);
 
             if !mem_value.delete {
-                self.key = mem_key.to_owned();
-                self.value = mem_value.value.clone();
+                mem_key.clone_into(&mut self.key);
+                self.value.clone_from(&mem_value.value);
                 return Ok(true);
             }
         }
@@ -175,6 +184,6 @@ impl database::iterator::Iterator for Iterator {
         self.value.clear();
         self.keys.clear();
         self.values.clear();
-        self.iterator.release().await
+        self.iterator.release().await;
     }
 }

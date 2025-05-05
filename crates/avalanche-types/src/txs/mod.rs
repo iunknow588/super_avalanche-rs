@@ -47,12 +47,20 @@ impl Default for Tx {
 }
 
 impl Tx {
+    #[must_use]
     pub fn type_name() -> String {
         "avm.BaseTx".to_string()
     }
 
+    /// 返回类型ID。
+    ///
+    /// # Panics
+    ///
+    /// 如果类型名称未在 `codec::X_TYPES` 中注册，则会 panic。
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::X_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::X_TYPES.get(&Self::type_name()).unwrap()))
+            .expect("type ID should fit in u32")
     }
 
     /// "Tx.Unsigned" is implemented by "avax.BaseTx"
@@ -68,12 +76,26 @@ impl Tx {
     ///
     /// Returns the packer itself so that the following marshals can reuse.
     ///
-    /// "BaseTx" is an interface in Go (reflect.Interface)
+    /// "`BaseTx`" is an interface in Go (reflect.Interface)
     /// thus the underlying type must be specified by the caller
     /// TODO: can we do better in Rust? Go does so with reflect...
     /// e.g., pack prefix with the type ID for "avm.BaseTx" (linearCodec.PackPrefix)
     /// ref. "avalanchego/codec/linearcodec.linearCodec.MarshalInto"
     /// ref. "avalanchego/codec/reflectcodec.genericCodec.MarshalInto"
+    ///
+    /// # Panics
+    ///
+    /// 如果 `transferable_outputs` 或 `transferable_inputs` 或 `memo` 为 `Some` 但内部值为 `None`，则会 panic。
+    ///
+    /// # Errors
+    ///
+    /// 如果打包过程中出现错误，则返回错误。
+    /// Packs the transaction into a byte array.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the packing fails.
+    #[allow(clippy::too_many_lines)]
     pub fn pack(&self, codec_version: u16, type_id: u32) -> Result<packer::Packer> {
         // ref. "avalanchego/codec.manager.Marshal", "vms/avm.newCustomCodecs"
         // ref. "math.MaxInt32" and "constants.DefaultByteSliceCap" in Go
@@ -92,11 +114,10 @@ impl Tx {
         packer.pack_bytes(self.blockchain_id.as_ref())?;
 
         // "transferable_outputs" field; pack the number of slice elements
-        if self.transferable_outputs.is_some() {
-            let transferable_outputs = self.transferable_outputs.as_ref().unwrap();
-            packer.pack_u32(transferable_outputs.len() as u32)?;
+        if let Some(transferable_outputs) = self.transferable_outputs.as_ref() {
+            packer.pack_u32(u32::try_from(transferable_outputs.len())?)?;
 
-            for transferable_output in transferable_outputs.iter() {
+            for transferable_output in transferable_outputs {
                 // "TransferableOutput.Asset" is struct and serialize:"true"
                 // but embedded inline in the struct "TransferableOutput"
                 // so no need to encode type ID
@@ -130,7 +151,13 @@ impl Tx {
                     7 => {
                         // "key::secp256k1::txs::transfer::Output"
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferOutput
-                        let transfer_output = transferable_output.transfer_output.clone().unwrap();
+                        let transfer_output = transferable_output
+                            .transfer_output
+                            .clone()
+                            .ok_or_else(|| Error::Other {
+                                message: "transfer_output is None".to_string(),
+                                retryable: false,
+                            })?;
 
                         // marshal "secp256k1fx.TransferOutput.Amt" field
                         packer.pack_u64(transfer_output.amount)?;
@@ -142,16 +169,23 @@ impl Tx {
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#OutputOwners
                         packer.pack_u64(transfer_output.output_owners.locktime)?;
                         packer.pack_u32(transfer_output.output_owners.threshold)?;
-                        packer.pack_u32(transfer_output.output_owners.addresses.len() as u32)?;
-                        for addr in transfer_output.output_owners.addresses.iter() {
+                        packer.pack_u32(u32::try_from(
+                            transfer_output.output_owners.addresses.len(),
+                        )?)?;
+                        for addr in &transfer_output.output_owners.addresses {
                             packer.pack_bytes(addr.as_ref())?;
                         }
                     }
                     22 => {
                         // "platformvm::txs::StakeableLockOut"
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockOut
-                        let stakeable_lock_out =
-                            transferable_output.stakeable_lock_out.clone().unwrap();
+                        let stakeable_lock_out = transferable_output
+                            .stakeable_lock_out
+                            .clone()
+                            .ok_or_else(|| Error::Other {
+                                message: "stakeable_lock_out is None".to_string(),
+                                retryable: false,
+                            })?;
 
                         // marshal "platformvm::txs::StakeableLockOut.locktime" field
                         packer.pack_u64(stakeable_lock_out.locktime)?;
@@ -172,28 +206,22 @@ impl Tx {
                             .pack_u64(stakeable_lock_out.transfer_output.output_owners.locktime)?;
                         packer
                             .pack_u32(stakeable_lock_out.transfer_output.output_owners.threshold)?;
-                        packer.pack_u32(
+                        packer.pack_u32(u32::try_from(
                             stakeable_lock_out
                                 .transfer_output
                                 .output_owners
                                 .addresses
-                                .len() as u32,
-                        )?;
-                        for addr in stakeable_lock_out
-                            .transfer_output
-                            .output_owners
-                            .addresses
-                            .iter()
-                        {
+                                .len(),
+                        )?)?;
+                        for addr in &stakeable_lock_out.transfer_output.output_owners.addresses {
                             packer.pack_bytes(addr.as_ref())?;
                         }
                     }
                     _ => {
                         return Err(Error::Other {
                             message: format!(
-                                "unexpected type ID {} for TransferableOutput",
-                                type_id_transferable_out
-                            ),
+                            "unexpected type ID {type_id_transferable_out} for TransferableOutput"
+                        ),
                             retryable: false,
                         })
                     }
@@ -204,11 +232,10 @@ impl Tx {
         }
 
         // "transferable_inputs" field; pack the number of slice elements
-        if self.transferable_inputs.is_some() {
-            let transferable_inputs = self.transferable_inputs.as_ref().unwrap();
-            packer.pack_u32(transferable_inputs.len() as u32)?;
+        if let Some(transferable_inputs) = self.transferable_inputs.as_ref() {
+            packer.pack_u32(u32::try_from(transferable_inputs.len())?)?;
 
-            for transferable_input in transferable_inputs.iter() {
+            for transferable_input in transferable_inputs {
                 // "TransferableInput.UTXOID" is struct and serialize:"true"
                 // but embedded inline in the struct "TransferableInput"
                 // so no need to encode type ID
@@ -250,7 +277,13 @@ impl Tx {
                     5 => {
                         // "key::secp256k1::txs::transfer::Input"
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
-                        let transfer_input = transferable_input.transfer_input.clone().unwrap();
+                        let transfer_input =
+                            transferable_input.transfer_input.clone().ok_or_else(|| {
+                                Error::Other {
+                                    message: "transfer_input is None".to_string(),
+                                    retryable: false,
+                                }
+                            })?;
 
                         // marshal "secp256k1fx.TransferInput.Amt" field
                         packer.pack_u64(transfer_input.amount)?;
@@ -260,16 +293,21 @@ impl Tx {
                         // so no need to encode type ID
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#Input
-                        packer.pack_u32(transfer_input.sig_indices.len() as u32)?;
-                        for idx in transfer_input.sig_indices.iter() {
+                        packer.pack_u32(u32::try_from(transfer_input.sig_indices.len())?)?;
+                        for idx in &transfer_input.sig_indices {
                             packer.pack_u32(*idx)?;
                         }
                     }
                     21 => {
                         // "platformvm::txs::StakeableLockIn"
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#StakeableLockIn
-                        let stakeable_lock_in =
-                            transferable_input.stakeable_lock_in.clone().unwrap();
+                        let stakeable_lock_in = transferable_input
+                            .stakeable_lock_in
+                            .clone()
+                            .ok_or_else(|| Error::Other {
+                                message: "stakeable_lock_in is None".to_string(),
+                                retryable: false,
+                            })?;
 
                         // marshal "platformvm::txs::StakeableLockIn.locktime" field
                         packer.pack_u64(stakeable_lock_in.locktime)?;
@@ -289,17 +327,17 @@ impl Tx {
                         // so no need to encode type ID
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput
                         // ref. https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#Input
-                        packer
-                            .pack_u32(stakeable_lock_in.transfer_input.sig_indices.len() as u32)?;
-                        for idx in stakeable_lock_in.transfer_input.sig_indices.iter() {
+                        packer.pack_u32(u32::try_from(
+                            stakeable_lock_in.transfer_input.sig_indices.len(),
+                        )?)?;
+                        for idx in &stakeable_lock_in.transfer_input.sig_indices {
                             packer.pack_u32(*idx)?;
                         }
                     }
                     _ => {
                         return Err(Error::Other {
                             message: format!(
-                                "unexpected type ID {} for TransferableInput",
-                                type_id_transferable_in
+                                "unexpected type ID {type_id_transferable_in} for TransferableInput"
                             ),
                             retryable: false,
                         })
@@ -311,9 +349,8 @@ impl Tx {
         }
 
         // marshal "BaseTx.memo"
-        if self.memo.is_some() {
-            let memo = self.memo.as_ref().unwrap();
-            packer.pack_u32(memo.len() as u32)?;
+        if let Some(memo) = self.memo.as_ref() {
+            packer.pack_u32(u32::try_from(memo.len())?)?;
             packer.pack_bytes(memo)?;
         } else {
             packer.pack_u32(0_u32)?;
@@ -323,7 +360,7 @@ impl Tx {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::test_base_tx_serialization --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- txs::test_base_tx_serialization --exact --show-output
 /// ref. "avalanchego/vms/avm.TestBaseTxSerialization"
 #[test]
 fn test_base_tx_serialization() {
@@ -492,6 +529,7 @@ impl Default for Metadata {
 }
 
 impl Metadata {
+    #[must_use]
     pub fn new(tx_bytes_with_no_signature: &[u8], tx_bytes_with_signatures: &[u8]) -> Self {
         let id = hash::sha256(tx_bytes_with_signatures);
         let id = ids::Id::from_slice(&id);
@@ -502,6 +540,11 @@ impl Metadata {
         }
     }
 
+    /// 验证元数据是否有效。
+    ///
+    /// # Errors
+    ///
+    /// 如果元数据未初始化，则返回错误。
     pub fn verify(&self) -> Result<()> {
         if self.id.is_empty() {
             return Err(Error::Other {

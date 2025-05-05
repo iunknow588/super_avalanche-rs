@@ -82,7 +82,7 @@ pub async fn run(spec: Arc<RwLock<Spec>>) -> io::Result<()> {
                 if !spec_rlocked.ignore_errors {
                     return Err(e);
                 } else {
-                    log::warn!("ignoring error {}", e);
+                    log::warn!("ignoring error {e}");
                 }
             }
         }
@@ -292,31 +292,22 @@ async fn make_single_transfer(
             .timeout(Duration::from_secs(15))
             .connection_verbose(true)
             .build()
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("failed ClientBuilder build {}", e),
-                )
-            })?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ClientBuilder build {e}")))?;
         let resp = req_cli_builder
             .get(format!("{ep}/ext/metrics").as_str())
             .send()
             .await
-            .map_err(|e| {
-                Error::new(ErrorKind::Other, format!("failed ClientBuilder send {}", e))
-            })?;
-        let out = resp.bytes().await.map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("failed ClientBuilder bytes {}", e),
-            )
-        })?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ClientBuilder send {e}")))?;
+        let out = resp
+            .bytes()
+            .await
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ClientBuilder bytes {e}")))?;
         let out: Vec<u8> = out.into();
 
         let s = match prometheus_manager::Scrape::from_bytes(&out) {
             Ok(v) => v,
             Err(e) => {
-                return Err(Error::new(ErrorKind::Other, format!("failed scrape {}", e)));
+                return Err(Error::new(ErrorKind::Other, format!("failed scrape {e}")));
             }
         };
         let matched = prometheus_manager::find_all(&s.metrics, |s| {
@@ -345,6 +336,6 @@ async fn make_single_transfer(
         }
     }
 
-    log::info!("SUCCESS with transaction id {}", tx_id);
+    log::info!("SUCCESS with transaction id {tx_id})");
     Ok(())
 }

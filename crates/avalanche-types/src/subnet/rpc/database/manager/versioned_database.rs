@@ -12,6 +12,7 @@ pub struct VersionedDatabase {
 }
 
 impl VersionedDatabase {
+    #[must_use]
     pub fn new(db: BoxedDatabase, version: Version) -> Self {
         Self { db, version }
     }
@@ -22,7 +23,7 @@ impl database::VersionedDatabase for VersionedDatabase {
     async fn close(&mut self) -> Result<()> {
         let db = &self.db;
         match db.close().await {
-            Ok(_) => Ok(()),
+            Ok(()) => Ok(()),
             Err(e) => Err(e),
         }
     }

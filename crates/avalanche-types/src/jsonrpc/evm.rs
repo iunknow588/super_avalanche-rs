@@ -3,7 +3,7 @@ use crate::codec::serde::{hex_0x_bytes::Hex0xBytes, hex_0x_primitive_types_h256:
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
-/// Response for "eth_blockNumber".
+/// Response for "`eth_blockNumber`".
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct BlockNumberResponse {
@@ -14,7 +14,7 @@ pub struct BlockNumberResponse {
     pub result: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_block_number --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_block_number` --exact --show-output
 #[test]
 fn test_block_number() {
     let resp: BlockNumberResponse = serde_json::from_str(
@@ -37,7 +37,7 @@ fn test_block_number() {
     assert_eq!(resp, expected);
 }
 
-/// Response for "eth_chainId".
+/// Response for "`eth_chainId`".
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_blocknumber>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct ChainIdResponse {
@@ -48,7 +48,7 @@ pub struct ChainIdResponse {
     pub result: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_chain_id --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_chain_id` --exact --show-output
 #[test]
 fn test_chain_id() {
     let resp: ChainIdResponse = serde_json::from_str(
@@ -71,7 +71,7 @@ fn test_chain_id() {
     assert_eq!(resp, expected);
 }
 
-/// Response for "eth_gasPrice".
+/// Response for "`eth_gasPrice`".
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gasprice>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct GasPriceResponse {
@@ -82,7 +82,7 @@ pub struct GasPriceResponse {
     pub result: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_gas_price --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_gas_price` --exact --show-output
 #[test]
 fn test_gas_price() {
     let resp: GasPriceResponse = serde_json::from_str(
@@ -105,7 +105,7 @@ fn test_gas_price() {
     assert_eq!(resp, expected);
 }
 
-/// Response for "eth_getBalance".
+/// Response for "`eth_getBalance`".
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_getbalance>
 /// ref. <https://docs.avax.network/build/avalanchego-apis/c-chain#eth_getassetbalance>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -117,7 +117,7 @@ pub struct GetBalanceResponse {
     pub result: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_get_balance --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_get_balance` --exact --show-output
 #[test]
 fn test_get_balance() {
     // ref. https://docs.avax.network/build/avalanchego-apis/c-chain#eth_getassetbalance
@@ -160,7 +160,7 @@ fn test_get_balance() {
     assert_eq!(resp, expected);
 }
 
-/// Response for "eth_getTransactionCount".
+/// Response for "`eth_getTransactionCount`".
 /// Returns the number of transactions send from this address.
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactioncount>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -173,7 +173,7 @@ pub struct GetTransactionCountResponse {
     pub result: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_get_transaction_count --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_get_transaction_count` --exact --show-output
 #[test]
 fn test_get_transaction_count() {
     let resp: GetTransactionCountResponse = serde_json::from_str(
@@ -196,7 +196,7 @@ fn test_get_transaction_count() {
     assert_eq!(resp, expected);
 }
 
-/// Response for "eth_getTransactionReceipt".
+/// Response for "`eth_getTransactionReceipt`".
 /// Returns the receipt of a transaction by transaction hash.
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_gettransactionreceipt>
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -240,7 +240,7 @@ pub struct GetTransactionReceiptResult {
     pub status: primitive_types::U256,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_get_transaction_receipt --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_get_transaction_receipt` --exact --show-output
 #[test]
 fn test_get_transaction_receipt() {
     let resp: GetTransactionReceiptResponse = serde_json::from_str(
@@ -298,6 +298,7 @@ fn test_get_transaction_receipt() {
 }
 
 /// Response for "eth_sendRawTransaction".
+///
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_signtransaction>
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendtransaction>
 /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
@@ -312,7 +313,7 @@ pub struct SendRawTransactionResponse {
     pub result: Option<primitive_types::H256>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::evm::test_send_raw_transaction --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::evm::test_send_raw_transaction` --exact --show-output
 #[test]
 fn test_send_raw_transaction() {
     use std::str::FromStr;

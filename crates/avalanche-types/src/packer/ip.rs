@@ -22,6 +22,10 @@ impl Packer {
     /// ref. <https://doc.rust-lang.org/std/net/enum.IpAddr.html>
     /// ref. <https://doc.rust-lang.org/std/net/struct.Ipv4Addr.html>
     /// ref. <https://doc.rust-lang.org/std/net/struct.Ipv6Addr.html>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if packing fails due to insufficient buffer space.
     pub fn pack_ip(&self, ip_addr: IpAddr, port: u16) -> Result<()> {
         let ip_bytes = match ip_addr {
             IpAddr::V4(v) => {
@@ -42,6 +46,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackIP"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackIP>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if unpacking fails due to insufficient data or invalid format.
     pub fn unpack_ip(&self) -> Result<(IpAddr, u16)> {
         let ip = self.unpack_bytes(IP_ADDR_LEN)?;
         let ip_array: [u8; IP_ADDR_LEN] = fix_vector_size(ip);
@@ -70,10 +78,14 @@ impl Packer {
     /// and increments the offset afterwards.
     /// ref. "avalanchego/utils/wrappers.Packer.PackIPs"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackIPs>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if packing fails due to insufficient buffer space or if the number of IPs exceeds `u32::MAX`.
     pub fn pack_ips(&self, ips: &[(IpAddr, u16)]) -> Result<()> {
         let n = ips.len();
-        self.pack_u32(n as u32)?;
-        for ip in ips.iter() {
+        self.pack_u32(u32::try_from(n)?)?;
+        for ip in ips {
             self.pack_ip(ip.0, ip.1)?;
         }
         Ok(())
@@ -83,6 +95,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackIPs"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackIPs>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if unpacking fails due to insufficient data or invalid format.
     pub fn unpack_ips(&self) -> Result<Vec<(IpAddr, u16)>> {
         let n = self.unpack_u32()?;
         let mut rs: Vec<(IpAddr, u16)> = Vec::new();
@@ -94,9 +110,14 @@ impl Packer {
     }
 }
 
+/// Converts a vector to a fixed-size array.
+///
+/// # Panics
+///
+/// Panics if the vector length doesn't match the expected array size.
 fn fix_vector_size<T, const N: usize>(v: Vec<T>) -> [T; N] {
     v.try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("expected vec length {} but {}", N, v.len()))
+        .unwrap_or_else(|v: Vec<T>| panic!("expected vec length {N} but {}", v.len()))
 }
 
 /// ref. <https://doc.rust-lang.org/std/primitive.slice.html#method.align_to>
@@ -107,7 +128,7 @@ fn all_zeroes(d: &[u8]) -> bool {
         && aligned.iter().all(|&x| x == 0)
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::ip::test_pack_and_unpack --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::ip::test_pack_and_unpack` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackIPCert"
 #[test]
 fn test_pack_and_unpack() {
@@ -161,7 +182,7 @@ fn test_pack_and_unpack() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::ip::test_packs_and_unpacks --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::ip::test_packs_and_unpacks` --exact --show-output
 #[test]
 fn test_packs_and_unpacks() {
     use bytes::BytesMut;

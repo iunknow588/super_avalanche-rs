@@ -29,12 +29,12 @@ async fn main() -> io::Result<()> {
 
     let k = key::secp256k1::private_key::Key::from_hex(private_key).unwrap();
     let key_info = k.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", key_info);
+    log::info!("created hot key:\n\n{key_info}\n");
 
     let signer: ethers_signers::LocalWallet = k.to_ethers_core_signing_key().into();
 
     let w = wallet::Builder::new(&k)
-        .base_http_url(chain_rpc_url.clone())
+        .base_http_url(&chain_rpc_url)
         .build()
         .await
         .unwrap();
@@ -53,7 +53,7 @@ async fn main() -> io::Result<()> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::String(random_manager::secure_string(10))];
-    let calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata.clone()));
 
     let tx_id = evm_wallet
@@ -66,7 +66,7 @@ async fn main() -> io::Result<()> {
         .submit()
         .await
         .unwrap();
-    log::info!("evm ethers wallet SUCCESS with transaction id {}", tx_id);
+    log::info!("evm ethers wallet SUCCESS with transaction id {tx_id})");
 
     Ok(())
 }

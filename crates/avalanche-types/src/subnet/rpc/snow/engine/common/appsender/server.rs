@@ -23,10 +23,11 @@ pub struct Server {
     pub inner: Arc<RwLock<Box<dyn super::AppSender + Send + Sync>>>,
 }
 
-/// A gRPC server which wraps a subnet::rpc::database::Database impl allowing client control over over RPC.
+/// A gRPC server which wraps a `subnet::rpc::database::Database` impl allowing client control over over RPC.
 impl Server {
+    #[must_use]
     pub fn new(appsender: Box<dyn super::AppSender + Send + Sync>) -> Self {
-        Server {
+        Self {
             inner: Arc::new(RwLock::new(appsender)),
         }
     }
@@ -39,23 +40,18 @@ impl pb::appsender::app_sender_server::AppSender for Server {
         request: Request<SendAppRequestMsg>,
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
-        let appsender = self.inner.read().await;
-
         let mut node_ids = ids::node::new_set(req.node_ids.len());
-        for node_id_bytes in req.node_ids.iter() {
+        for node_id_bytes in &req.node_ids {
             let node_id = ids::node::Id::from_slice(node_id_bytes);
             node_ids.insert(node_id);
         }
 
-        appsender
+        self.inner
+            .read()
+            .await
             .send_app_request(node_ids, req.request_id, req.request.to_vec())
             .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_app_request failed: {:?}", e),
-                )
-            })?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("send_app_request failed: {e:?}")))?;
 
         Ok(Response::new(Empty {}))
     }
@@ -66,17 +62,15 @@ impl pb::appsender::app_sender_server::AppSender for Server {
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
 
-        let appsender = self.inner.read().await;
         let node_id = ids::node::Id::from_slice(&req.node_id);
 
-        appsender
+        self.inner
+            .read()
+            .await
             .send_app_response(node_id, req.request_id, req.response.to_vec())
             .await
             .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_app_response failed: {:?}", e),
-                )
+                Error::new(ErrorKind::Other, format!("send_app_response failed: {e:?}"))
             })?;
 
         Ok(Response::new(Empty {}))
@@ -95,13 +89,12 @@ impl pb::appsender::app_sender_server::AppSender for Server {
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
 
-        let appsender = self.inner.read().await;
-        appsender
+        self.inner
+            .read()
+            .await
             .send_app_gossip(req.msg.to_vec())
             .await
-            .map_err(|e| {
-                Error::new(ErrorKind::Other, format!("send_app_gossip failed: {:?}", e))
-            })?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("send_app_gossip failed: {e:?}")))?;
 
         Ok(Response::new(Empty {}))
     }
@@ -112,21 +105,21 @@ impl pb::appsender::app_sender_server::AppSender for Server {
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
 
-        let appsender = self.inner.read().await;
-
         let mut node_ids = ids::node::new_set(req.node_ids.len());
-        for node_id_bytes in req.node_ids.iter() {
+        for node_id_bytes in &req.node_ids {
             let node_id = ids::node::Id::from_slice(node_id_bytes);
             node_ids.insert(node_id);
         }
 
-        appsender
+        self.inner
+            .read()
+            .await
             .send_app_gossip_specific(node_ids, req.msg.to_vec())
             .await
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("send_app_gossip_specific failed: {:?}", e),
+                    format!("send_app_gossip_specific failed: {e:?}"),
                 )
             })?;
 
@@ -139,8 +132,9 @@ impl pb::appsender::app_sender_server::AppSender for Server {
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
 
-        let appsender = self.inner.read().await;
-        appsender
+        self.inner
+            .read()
+            .await
             .send_cross_chain_app_request(
                 ids::Id::from_slice(&req.chain_id),
                 req.request_id,
@@ -150,7 +144,7 @@ impl pb::appsender::app_sender_server::AppSender for Server {
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("send_cross_chain_app_request failed: {:?}", e),
+                    format!("send_cross_chain_app_request failed: {e:?}"),
                 )
             })?;
 
@@ -163,8 +157,9 @@ impl pb::appsender::app_sender_server::AppSender for Server {
     ) -> Result<Response<Empty>, Status> {
         let req = request.into_inner();
 
-        let appsender = self.inner.read().await;
-        appsender
+        self.inner
+            .read()
+            .await
             .send_cross_chain_app_response(
                 ids::Id::from_slice(&req.chain_id),
                 req.request_id,
@@ -174,7 +169,7 @@ impl pb::appsender::app_sender_server::AppSender for Server {
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("send_cross_chain_app_response failed: {:?}", e),
+                    format!("send_cross_chain_app_response failed: {e:?}"),
                 )
             })?;
 

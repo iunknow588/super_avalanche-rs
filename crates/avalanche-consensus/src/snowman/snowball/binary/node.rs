@@ -4,8 +4,8 @@ use crate::snowman::snowball::{self, binary};
 use avalanche_types::ids::{bag::Bag, bits, Id};
 
 /// Represents a binary node with either no child, or a single child.
-/// It handles the voting on a range of identical, virtuous, snowball instances.
-/// ref. "avalanchego/snow/consensus/snowball/tree.go#binaryNode"
+/// It handles the voting on a range of identical, virtuous, `snowball` instances.
+/// See: `avalanchego/snow/consensus/snowball/tree.go#binaryNode`.
 #[derive(Clone, Debug)]
 pub struct Node {
     /// Parameters inherited from the tree.
@@ -33,7 +33,8 @@ pub struct Node {
 
 impl Node {
     pub fn preference(&self) -> Id {
-        let pref = self.snowball.preference() as usize;
+        let pref =
+            usize::try_from(self.snowball.preference()).expect("preference should be non-negative");
         let preferences = self.preferences.take();
         let preference = preferences[pref];
         self.preferences.set(preferences);
@@ -49,7 +50,8 @@ impl Node {
     }
 
     pub fn add(&mut self, id: &Id) -> snowball::Node {
-        let bit = id.bit(self.bit.get() as usize);
+        let bit_index = usize::try_from(self.bit.get()).expect("bit index should be non-negative");
+        let bit = id.bit(bit_index);
         let child = match bit {
             bits::Bit::Zero => self.child0.clone(),
             bits::Bit::One => self.child1.clone(),
@@ -60,9 +62,13 @@ impl Node {
         // Regardless, the case is handled
         if let Some(boxed_child) = child.clone() {
             // +1 is used because we already explicitly check the p.bit bit
+            let bit_index_plus_one =
+                usize::try_from(self.bit.get()).expect("bit index should be non-negative") + 1;
+            let child_decided_prefix = usize::try_from(boxed_child.decided_prefix())
+                .expect("decided prefix should be non-negative");
             if bits::equal_subset(
-                self.bit.get() as usize + 1,
-                boxed_child.decided_prefix() as usize,
+                bit_index_plus_one,
+                child_decided_prefix,
                 &self.preferences.get()[bit.as_usize()],
                 id,
             ) {
@@ -87,16 +93,15 @@ impl Node {
 
     /// Returns the new node and whether the vote was successful.
     /// ref. "avalanchego/snow/consensus/tree.go" "binaryNode.RecordPoll"
-    pub fn record_poll(&mut self, votes: Bag, reset: bool) -> (snowball::Node, bool) {
+    #[allow(clippy::too_many_lines)]
+    pub fn record_poll(&mut self, votes: &Bag, reset: bool) -> (snowball::Node, bool) {
         // The list of votes we are passed is split into votes for bit 0
         // and votes for bit 1
-        let split_votes = votes.split(self.bit.get() as usize);
+        let bit_index = usize::try_from(self.bit.get()).expect("bit index should be non-negative");
+        let split_votes = votes.split(bit_index);
 
-        let mut bit = 0;
-        // We only care about which bit is set if a successful poll can happen
-        if split_votes[1].len() >= self.parameters.alpha as u32 {
-            bit = 1;
-        }
+        // 使用更惯用的方式初始化 bit
+        let bit = usize::from(split_votes[1].len() >= u32::from(self.parameters.alpha));
 
         let mut updated_should_reset = self.should_reset.take();
         if reset {
@@ -108,7 +113,7 @@ impl Node {
         updated_should_reset[1 - bit] = true;
         self.should_reset.set(updated_should_reset);
 
-        if split_votes[bit].len() < self.parameters.alpha as u32 {
+        if split_votes[bit].len() < u32::from(self.parameters.alpha) {
             // pruned votes < alpha; didn't get enough votes
             self.snowball.record_unsuccessful_poll();
 
@@ -119,8 +124,9 @@ impl Node {
             return (snowball::Node::Binary(self.clone()), false);
         }
 
-        // this bit got alpha votes, it was a successful poll
-        self.snowball.record_successful_poll(bit as i64);
+        // 使用 i64::try_from 替代 as i64 转换
+        self.snowball
+            .record_successful_poll(i64::try_from(bit).expect("bit should be 0 or 1"));
 
         match bit {
             0 => {
@@ -129,14 +135,19 @@ impl Node {
                     // that should count for the child
                     match *child {
                         snowball::Node::Unary(mut unary_node) => {
+                            let bit_index_plus_one = usize::try_from(self.bit.get())
+                                .expect("bit index should be non-negative")
+                                + 1;
+                            let child_decided_prefix = usize::try_from(unary_node.decided_prefix())
+                                .expect("decided prefix should be non-negative");
                             let filtered_votes = split_votes[bit].filter(
-                                self.bit.get() as usize + 1,
-                                unary_node.decided_prefix() as usize,
+                                bit_index_plus_one,
+                                child_decided_prefix,
                                 &self.preferences.get()[bit],
                             );
 
                             let (new_child, _) = unary_node
-                                .record_poll(filtered_votes, self.should_reset.get()[bit]);
+                                .record_poll(&filtered_votes, self.should_reset.get()[bit]);
                             if self.snowball.finalized() {
                                 // If we are decided here, that means we must have decided
                                 // due to this poll. Therefore, we must have decided on bit.
@@ -154,14 +165,20 @@ impl Node {
                             self.child0 = Some(Box::new(new_child));
                         }
                         snowball::Node::Binary(mut binary_node) => {
+                            let bit_index_plus_one = usize::try_from(self.bit.get())
+                                .expect("bit index should be non-negative")
+                                + 1;
+                            let child_decided_prefix =
+                                usize::try_from(binary_node.decided_prefix())
+                                    .expect("decided prefix should be non-negative");
                             let filtered_votes = split_votes[bit].filter(
-                                self.bit.get() as usize + 1,
-                                binary_node.decided_prefix() as usize,
+                                bit_index_plus_one,
+                                child_decided_prefix,
                                 &self.preferences.get()[bit],
                             );
 
                             let (new_child, _) = binary_node
-                                .record_poll(filtered_votes, self.should_reset.get()[bit]);
+                                .record_poll(&filtered_votes, self.should_reset.get()[bit]);
                             if self.snowball.finalized() {
                                 // If we are decided here, that means we must have decided
                                 // due to this poll. Therefore, we must have decided on bit.
@@ -178,7 +195,7 @@ impl Node {
 
                             self.child0 = Some(Box::new(new_child));
                         }
-                    };
+                    }
                 }
             }
             1 => {
@@ -187,14 +204,19 @@ impl Node {
                     // that should count for the child
                     match *child {
                         snowball::Node::Unary(mut unary_node) => {
+                            let bit_index_plus_one = usize::try_from(self.bit.get())
+                                .expect("bit index should be non-negative")
+                                + 1;
+                            let child_decided_prefix = usize::try_from(unary_node.decided_prefix())
+                                .expect("decided prefix should be non-negative");
                             let filtered_votes = split_votes[bit].filter(
-                                self.bit.get() as usize + 1,
-                                unary_node.decided_prefix() as usize,
+                                bit_index_plus_one,
+                                child_decided_prefix,
                                 &self.preferences.get()[bit],
                             );
 
                             let (new_child, _) = unary_node
-                                .record_poll(filtered_votes, self.should_reset.get()[bit]);
+                                .record_poll(&filtered_votes, self.should_reset.get()[bit]);
                             if self.snowball.finalized() {
                                 // If we are decided here, that means we must have decided
                                 // due to this poll. Therefore, we must have decided on bit.
@@ -212,14 +234,20 @@ impl Node {
                             self.child1 = Some(Box::new(new_child));
                         }
                         snowball::Node::Binary(mut binary_node) => {
+                            let bit_index_plus_one = usize::try_from(self.bit.get())
+                                .expect("bit index should be non-negative")
+                                + 1;
+                            let child_decided_prefix =
+                                usize::try_from(binary_node.decided_prefix())
+                                    .expect("decided prefix should be non-negative");
                             let filtered_votes = split_votes[bit].filter(
-                                self.bit.get() as usize + 1,
-                                binary_node.decided_prefix() as usize,
+                                bit_index_plus_one,
+                                child_decided_prefix,
                                 &self.preferences.get()[bit],
                             );
 
                             let (new_child, _) = binary_node
-                                .record_poll(filtered_votes, self.should_reset.get()[bit]);
+                                .record_poll(&filtered_votes, self.should_reset.get()[bit]);
                             if self.snowball.finalized() {
                                 // If we are decided here, that means we must have decided
                                 // due to this poll. Therefore, we must have decided on bit.
@@ -236,10 +264,10 @@ impl Node {
 
                             self.child1 = Some(Box::new(new_child));
                         }
-                    };
+                    }
                 }
             }
-            _ => panic!("unexpected preference bit {}", bit),
+            _ => panic!("unexpected preference bit {bit}"),
         }
 
         // We passed the reset down
@@ -252,7 +280,7 @@ impl Node {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} Bit = {}", self.snowball, self.decided_prefix())

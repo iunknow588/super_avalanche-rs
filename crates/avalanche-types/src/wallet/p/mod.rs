@@ -12,34 +12,30 @@ use crate::{
     errors::{Error, Result},
     ids::{self, node},
     jsonrpc::client::p as client_p,
-    key, platformvm, txs, wallet,
+    key, platformvm, txs,
 };
-
-impl<T> wallet::Wallet<T>
-where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
-{
-    #[must_use]
-    pub fn p(&self) -> P<T> {
-        P {
-            inner: self.clone(),
-        }
-    }
-}
 
 #[derive(Clone, Debug)]
 pub struct P<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::Wallet<T>,
 }
 
 impl<T> P<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
-    /// Fetches the current balance of the wallet owner from the specified HTTP endpoint.
+    /// Returns the balance of the P-chain address using the specified endpoint.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the result is missing.
     pub async fn balance_with_endpoint(&self, http_rpc: &str) -> Result<u64> {
         let resp = client_p::get_balance(http_rpc, &self.inner.p_address).await?;
         let cur_balance = resp
@@ -50,10 +46,14 @@ where
     }
 
     /// Fetches the current balance of the wallet owner from all endpoints
-    /// in the same order of "self.http_rpcs".
+    /// in the same order of "`self.http_rpcs`".
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the balance fetch fails for any endpoint.
     pub async fn balances(&self) -> Result<Vec<u64>> {
         let mut balances = Vec::new();
-        for http_rpc in self.inner.base_http_urls.iter() {
+        for http_rpc in &self.inner.base_http_urls {
             let balance = self.balance_with_endpoint(http_rpc).await?;
             balances.push(balance);
         }
@@ -61,6 +61,10 @@ where
     }
 
     /// Fetches the current balance of the wallet owner.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the balance fetch fails.
     pub async fn balance(&self) -> Result<u64> {
         self.balance_with_endpoint(&self.inner.pick_base_http_url().1)
             .await
@@ -68,6 +72,10 @@ where
 
     /// Fetches UTXOs for "P" chain.
     /// TODO: cache this like avalanchego
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the UTXOs fetch fails or if the response is invalid.
     pub async fn utxos(&self) -> Result<Vec<txs::utxo::Utxo>> {
         let resp =
             client_p::get_utxos(&self.inner.pick_base_http_url().1, &self.inner.p_address).await?;
@@ -79,7 +87,15 @@ where
         Ok(utxos)
     }
 
-    /// Returns "true" if the node_id is a current primary network validator.
+    /// Returns "true" if the `node_id` is a current primary network validator.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the validator information cannot be fetched.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the response result or validators field is None.
     pub async fn is_primary_network_validator(&self, node_id: &node::Id) -> Result<bool> {
         let resp =
             client_p::get_primary_network_validators(&self.inner.pick_base_http_url().1).await?;
@@ -87,8 +103,8 @@ where
             .result
             .expect("unexpected None GetCurrentValidatorResult");
         let validators = resp.validators.expect("unexpected None vaidators");
-        for validator in validators.iter() {
-            log::info!("listing primary network validator {}", node_id);
+        for validator in &validators {
+            log::info!("listing primary network validator {node_id}");
             if validator.node_id.eq(node_id) {
                 return Ok(true);
             }
@@ -96,7 +112,15 @@ where
         Ok(false)
     }
 
-    /// Returns "true" if the node_id is a current subnet validator.
+    /// Returns "true" if the `node_id` is a current subnet validator.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the validator information cannot be fetched.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the response result or validators field is None.
     pub async fn is_subnet_validator(
         &self,
         node_id: &node::Id,
@@ -111,12 +135,8 @@ where
             .result
             .expect("unexpected None GetCurrentValidatorResult");
         let validators = resp.validators.expect("unexpected None vaidators");
-        for validator in validators.iter() {
-            log::info!(
-                "listing subnet validator {} for subnet {}",
-                node_id,
-                subnet_id
-            );
+        for validator in &validators {
+            log::info!("listing subnet validator {node_id} for subnet {subnet_id}");
             if validator.node_id.eq(node_id) {
                 return Ok(true);
             }
@@ -125,8 +145,8 @@ where
     }
 
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/utxo/handler.go#L169> "Spend"
-    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L325-L358> "NewAddValidatorTx"
-    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L428> "NewAddValidatorTx"
+    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L325-L358> "`NewAddValidatorTx`"
+    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L428> "`NewAddValidatorTx`"
     async fn spend(
         &self,
         amount: u64,
@@ -153,7 +173,7 @@ where
         let mut amount_staked: u64 = 0_u64;
 
         // consume locked UTXOs
-        for utxo in utxos.iter() {
+        for utxo in &utxos {
             // no need to consume more locked AVAX
             // because it already has consumed more than the target stake amount
             if amount_staked >= amount {
@@ -241,7 +261,7 @@ where
         // amount of AVAX that has been burned
         let mut amount_burned = 0_u64;
 
-        for utxo in utxos.iter() {
+        for utxo in &utxos {
             // have staked/burned more AVAX than we need
             // thus no need to consume more AVAX
             if amount_burned >= fee && amount_staked >= amount {
@@ -335,20 +355,12 @@ where
         }
 
         log::info!(
-            "provided keys have balance (unlocked/burned amount so far, locked/staked amount so far) ({}, {}) and need ({}, {})",
-            amount_burned,
-            amount_staked,
-            fee,
-            amount
+            "provided keys have balance (unlocked/burned amount so far, locked/staked amount so far) ({amount_burned}, {amount_staked}) and need ({fee}, {amount})"
         );
         if amount_burned < fee || amount_staked < amount {
             return Err(Error::Other {
                 message: format!(
-                    "provided keys have balance (unlocked/burned amount so far, locked/staked amount so far) ({}, {}) but need ({}, {})",
-                    amount_burned,
-                    amount_staked,
-                    fee,
-                    amount
+                    "provided keys have balance (unlocked/burned amount so far, locked/staked amount so far) ({amount_burned}, {amount_staked}) but need ({fee}, {amount})"
                 ),
                 retryable: false,
             });
@@ -364,13 +376,13 @@ where
     }
 
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/utxo/handler.go#L411> "Authorize"
-    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L360-L390> "NewAddSubnetValidatorTx"
-    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L512> "NewAddSubnetValidatorTx"
+    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L360-L390> "`NewAddSubnetValidatorTx`"
+    /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L512> "`NewAddSubnetValidatorTx`"
     async fn authorize(
         &self,
         subnet_id: ids::Id,
     ) -> Result<(key::secp256k1::txs::Input, Vec<Vec<T>>)> {
-        log::info!("authorizing subnet {}", subnet_id);
+        log::info!("authorizing subnet {subnet_id}");
 
         let tx =
             client_p::get_tx(&self.inner.pick_base_http_url().1, &subnet_id.to_string()).await?;

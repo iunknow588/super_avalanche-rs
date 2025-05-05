@@ -13,10 +13,15 @@ use crate::subnet::rpc::database::{self, iterator::BoxedIterator};
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/database#Iterator>
 pub struct Iterator {
+    /// Collection of keys in the iterator.
     keys: Vec<Vec<u8>>,
+    /// Collection of values in the iterator.
     values: Vec<Vec<u8>>,
+    /// Flag indicating if the iterator has been initialized.
     initialized: AtomicBool,
+    /// Optional error that occurred during iteration.
     error: Option<Error>,
+    /// Flag indicating if the database is closed.
     closed: Arc<AtomicBool>,
 }
 

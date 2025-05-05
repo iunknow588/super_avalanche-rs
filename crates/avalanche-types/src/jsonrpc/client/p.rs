@@ -10,17 +10,21 @@ use crate::{
 };
 use reqwest::{header::CONTENT_TYPE, ClientBuilder};
 
-/// "platform.issueTx" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.issueTx" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn issue_tx(http_rpc: &str, tx: &str) -> Result<platformvm::IssueTxResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("issuing a transaction via {url}");
 
     let method = String::from("platform.issueTx");
@@ -37,7 +41,7 @@ pub async fn issue_tx(http_rpc: &str, tx: &str) -> Result<platformvm::IssueTxRes
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -50,7 +54,7 @@ pub async fn issue_tx(http_rpc: &str, tx: &str) -> Result<platformvm::IssueTxRes
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -63,35 +67,39 @@ pub async fn issue_tx(http_rpc: &str, tx: &str) -> Result<platformvm::IssueTxRes
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getTx" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getTx" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain/#platformgettx>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_tx(http_rpc: &str, tx_id: &str) -> Result<platformvm::GetTxResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting tx via {url}");
 
     let method = String::from("platform.getTx");
@@ -108,7 +116,7 @@ pub async fn get_tx(http_rpc: &str, tx_id: &str) -> Result<platformvm::GetTxResp
         ..Default::default()
     };
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -121,7 +129,7 @@ pub async fn get_tx(http_rpc: &str, tx_id: &str) -> Result<platformvm::GetTxResp
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -134,35 +142,39 @@ pub async fn get_tx(http_rpc: &str, tx_id: &str) -> Result<platformvm::GetTxResp
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getTxStatus" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getTxStatus" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain/#platformgettxstatus>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_tx_status(http_rpc: &str, tx_id: &str) -> Result<platformvm::GetTxStatusResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting tx status via {url}");
 
     let method = String::from("platform.getTxStatus");
@@ -175,7 +187,7 @@ pub async fn get_tx_status(http_rpc: &str, tx_id: &str) -> Result<platformvm::Ge
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -188,7 +200,7 @@ pub async fn get_tx_status(http_rpc: &str, tx_id: &str) -> Result<platformvm::Ge
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -201,35 +213,39 @@ pub async fn get_tx_status(http_rpc: &str, tx_id: &str) -> Result<platformvm::Ge
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getHeight" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getHeight" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetheight>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_height(http_rpc: &str) -> Result<platformvm::GetHeightResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting height via {url}");
 
     let method = String::from("platform.getHeight");
@@ -242,7 +258,7 @@ pub async fn get_height(http_rpc: &str) -> Result<platformvm::GetHeightResponse>
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -255,7 +271,7 @@ pub async fn get_height(http_rpc: &str) -> Result<platformvm::GetHeightResponse>
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -268,37 +284,42 @@ pub async fn get_height(http_rpc: &str) -> Result<platformvm::GetHeightResponse>
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getBalance" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getBalance" on "http://`['ADDR']`:9650" and "/ext/P" path.
+///
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetbalance>
 /// ref. <https://github.com/ava-labs/avalanchego/blob/45ec88151f8a0e3bca1d43fe902fd632c41cd956/vms/platformvm/service.go#L192-L194>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_balance(http_rpc: &str, paddr: &str) -> Result<platformvm::GetBalanceResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
-    log::info!("getting balance via {url} for {}", paddr);
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    log::info!("getting balance via {url} for {paddr}");
 
     let method = String::from("platform.getBalance");
     let params = HashMap::from([(String::from("addresses"), vec![paddr.to_string()])]).into();
@@ -310,7 +331,7 @@ pub async fn get_balance(http_rpc: &str, paddr: &str) -> Result<platformvm::GetB
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -323,7 +344,7 @@ pub async fn get_balance(http_rpc: &str, paddr: &str) -> Result<platformvm::GetB
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -336,36 +357,40 @@ pub async fn get_balance(http_rpc: &str, paddr: &str) -> Result<platformvm::GetB
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getUTXOs" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getUTXOs" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetutxos>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_utxos(http_rpc: &str, paddr: &str) -> Result<platformvm::GetUtxosResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
-    log::info!("getting UTXOs via {url} for {}", paddr);
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    log::info!("getting UTXOs via {url} for {paddr}");
 
     let method = String::from("platform.getUTXOs");
     let params = platformvm::GetUtxosParams {
@@ -381,7 +406,7 @@ pub async fn get_utxos(http_rpc: &str, paddr: &str) -> Result<platformvm::GetUtx
         ..Default::default()
     };
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -394,7 +419,7 @@ pub async fn get_utxos(http_rpc: &str, paddr: &str) -> Result<platformvm::GetUtx
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -407,38 +432,43 @@ pub async fn get_utxos(http_rpc: &str, paddr: &str) -> Result<platformvm::GetUtx
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
 /// "platform.getCurrentValidators" on "http://\[ADDR\]:9650" and "/ext/P" path.
+///
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientPermissionlessValidator>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_primary_network_validators(
     http_rpc: &str,
 ) -> Result<platformvm::GetCurrentValidatorsResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting primary network validators via {url}");
 
     let method = String::from("platform.getCurrentValidators");
@@ -450,7 +480,7 @@ pub async fn get_primary_network_validators(
         ..Default::default()
     };
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -463,7 +493,7 @@ pub async fn get_primary_network_validators(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -476,27 +506,32 @@ pub async fn get_primary_network_validators(
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
 /// "platform.getCurrentValidators" on "http://\[ADDR\]:9650" and "/ext/P" path.
+///
 /// ref. <https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetcurrentvalidators>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientPermissionlessValidator>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_subnet_validators(
     http_rpc: &str,
     subnet_id: &str,
@@ -504,11 +539,11 @@ pub async fn get_subnet_validators(
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting subnet validators via {url} for {subnet_id}");
 
     let method = String::from("platform.getCurrentValidators");
@@ -521,7 +556,7 @@ pub async fn get_subnet_validators(
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -534,7 +569,7 @@ pub async fn get_subnet_validators(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -547,26 +582,30 @@ pub async fn get_subnet_validators(
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getSubnets" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getSubnets" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetsubnets>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_subnets(
     http_rpc: &str,
     subnet_ids: Option<Vec<ids::Id>>,
@@ -574,18 +613,18 @@ pub async fn get_subnets(
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting subnets via {url}");
 
     let method = String::from("platform.getSubnets");
 
     let ids = subnet_ids
         .iter()
-        .flat_map(|ids| ids.iter().map(|id| id.to_string()))
+        .flat_map(|ids| ids.iter().map(std::string::ToString::to_string))
         .collect();
     let params = HashMap::from([(String::from("ids"), ids)]).into();
 
@@ -596,7 +635,7 @@ pub async fn get_subnets(
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -609,7 +648,7 @@ pub async fn get_subnets(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -622,35 +661,39 @@ pub async fn get_subnets(
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getBlockchains" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getBlockchains" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetblockchains>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_blockchains(http_rpc: &str) -> Result<platformvm::GetBlockchainsResponse> {
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting blockchain via {url}");
 
     let method = String::from("platform.getBlockchains");
@@ -662,7 +705,7 @@ pub async fn get_blockchains(http_rpc: &str) -> Result<platformvm::GetBlockchain
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -675,7 +718,7 @@ pub async fn get_blockchains(http_rpc: &str) -> Result<platformvm::GetBlockchain
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -688,26 +731,30 @@ pub async fn get_blockchains(http_rpc: &str) -> Result<platformvm::GetBlockchain
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }
 
-/// "platform.getBlockchainStatus" on "http://\[ADDR\]:9650" and "/ext/P" path.
+/// "platform.getBlockchainStatus" on "http://`['ADDR']`:9650" and "/ext/P" path.
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetblockchainstatus>
+///
+/// # Errors
+///
+/// Returns an error if the request fails, if the response cannot be parsed, or if the API returns an error.
 pub async fn get_blockchain_status(
     http_rpc: &str,
     blockchain_id: ids::Id,
@@ -715,11 +762,11 @@ pub async fn get_blockchain_status(
     let (scheme, host, port, _, _) =
         utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).map_err(|e| {
             Error::Other {
-                message: format!("failed extract_scheme_host_port_path_chain_alias '{}'", e),
+                message: format!("failed extract_scheme_host_port_path_chain_alias '{e}'"),
                 retryable: false,
             }
         })?;
-    let url = url::try_create_url(url::Path::P, scheme.as_deref(), host.as_str(), port)?;
+    let url = url::try_create_url(&url::Path::P, scheme.as_deref(), host.as_str(), port)?;
     log::info!("getting blockchain status via {url} for {blockchain_id}");
 
     let method = String::from("platform.getBlockchainStatus");
@@ -732,7 +779,7 @@ pub async fn get_blockchain_status(
     };
 
     let d = data.encode_json().map_err(|e| Error::Other {
-        message: format!("failed encode_json '{}'", e),
+        message: format!("failed encode_json '{e}'"),
         retryable: false,
     })?;
 
@@ -745,7 +792,7 @@ pub async fn get_blockchain_status(
         .map_err(|e| {
             // TODO: check retryable
             Error::Other {
-                message: format!("failed reqwest::ClientBuilder.build '{}'", e),
+                message: format!("failed reqwest::ClientBuilder.build '{e}'"),
                 retryable: false,
             }
         })?;
@@ -758,20 +805,20 @@ pub async fn get_blockchain_status(
         .map_err(|e|
             // TODO: check retryable
             Error::API {
-                message: format!("failed reqwest::Client.send '{}'", e),
+                message: format!("failed reqwest::Client.send '{e}'"),
                 retryable: false,
             })?;
     let out = resp.bytes().await.map_err(|e| {
         // TODO: check retryable
         Error::Other {
-            message: format!("failed reqwest response bytes '{}'", e),
+            message: format!("failed reqwest response bytes '{e}'"),
             retryable: false,
         }
     })?;
     let out: Vec<u8> = out.into();
 
     serde_json::from_slice(&out).map_err(|e| Error::Other {
-        message: format!("failed serde_json::from_slice '{}'", e),
+        message: format!("failed serde_json::from_slice '{e}'"),
         retryable: false,
     })
 }

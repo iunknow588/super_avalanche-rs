@@ -4,13 +4,15 @@ use tokio::sync::Mutex;
 
 use super::BoxedDatabase;
 
-/// If, when a batch is reset, the cap(batch)/len(batch) > MAX_EXCESS_CAPACITY_FACTOR,
-/// Higher value for MAX_EXCESS_CAPACITY_FACTOR --> less aggressive array downsizing --> less memory allocations
+/// If, when a batch is reset, the cap(batch)/len(batch) > `MAX_EXCESS_CAPACITY_FACTOR`,
+///
+/// Higher value for `MAX_EXCESS_CAPACITY_FACTOR` --> less aggressive array downsizing --> less memory allocations
 /// but more unnecessary data in the underlying array that can't be garbage collected.
 pub const MAX_EXCESS_CAPACITY_FACTOR: usize = 4;
 
-/// The underlying array's capacity will be reduced by a factor of CAPACITY_REDUCTION_FACTOR.
-/// Higher value for CapacityReductionFactor --> more aggressive array downsizing --> more memory allocations
+/// The underlying array's capacity will be reduced by a factor of `CAPACITY_REDUCTION_FACTOR`.
+///
+/// Higher value for `CapacityReductionFactor` --> more aggressive array downsizing --> more memory allocations
 /// but less unnecessary data in the underlying array that can't be garbage collected.
 pub const CAPACITY_REDUCTION_FACTOR: usize = 2;
 
@@ -53,7 +55,7 @@ where
 }
 
 impl Clone for BoxedBatch {
-    fn clone(&self) -> BoxedBatch {
+    fn clone(&self) -> Self {
         self.clone_box()
     }
 }

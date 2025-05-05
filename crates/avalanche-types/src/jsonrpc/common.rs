@@ -29,25 +29,33 @@ impl fmt::Display for JsonRpcError {
     }
 }
 
-fn is_zst<T>(_t: &T) -> bool {
+/// 检查类型是否为零大小类型（Zero-Sized Type）。
+const fn is_zst<T>(_t: &T) -> bool {
     std::mem::size_of::<T>() == 0
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 /// A JSON-RPC request
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Request<'a, T> {
+    /// 请求ID
     pub id: u64,
+    /// JSON-RPC 版本
     pub jsonrpc: &'a str,
+    /// 方法名称
     pub method: &'a str,
+    /// 参数
     #[serde(skip_serializing_if = "is_zst")]
     pub params: T,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 /// A JSON-RPC Notifcation
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Notification<R> {
+    /// JSON-RPC 版本
     jsonrpc: String,
+    /// 方法名称
     method: String,
+    /// 订阅参数
     pub params: Subscription<R>,
 }
 
@@ -59,7 +67,8 @@ pub struct Subscription<R> {
 
 impl<'a, T> Request<'a, T> {
     /// Creates a new JSON RPC request
-    pub fn new(id: u64, method: &'a str, params: T) -> Self {
+    #[must_use]
+    pub const fn new(id: u64, method: &'a str, params: T) -> Self {
         Self {
             id,
             jsonrpc: "2.0",
@@ -69,10 +78,14 @@ impl<'a, T> Request<'a, T> {
     }
 }
 
+/// JSON-RPC 响应
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Response<T> {
+    /// 请求ID
     pub(crate) id: u64,
+    /// JSON-RPC 版本
     jsonrpc: String,
+    /// 响应数据
     #[serde(flatten)]
     pub data: ResponseData<T>,
 }
@@ -86,10 +99,14 @@ pub enum ResponseData<R> {
 
 impl<R> ResponseData<R> {
     /// Consume response and return value
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the response contains an error.
     pub fn into_result(self) -> Result<R, JsonRpcError> {
         match self {
-            ResponseData::Success { result } => Ok(result),
-            ResponseData::Error { error } => Err(error),
+            Self::Success { result } => Ok(result),
+            Self::Error { error } => Err(error),
         }
     }
 }

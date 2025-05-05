@@ -47,7 +47,7 @@ async fn main() -> io::Result<()> {
 
     let no_gas_key = key::secp256k1::private_key::Key::generate().unwrap();
     let no_gas_key_info = no_gas_key.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", no_gas_key_info);
+    log::info!("created hot key:\n\n{no_gas_key_info}\n");
     let no_gas_signer: ethers_signers::LocalWallet = no_gas_key.to_ethers_core_signing_key().into();
 
     // parsed function of "register(string name)"
@@ -65,10 +65,10 @@ async fn main() -> io::Result<()> {
     let name_to_register = random_manager::secure_string(10);
     log::info!("registering {name_to_register}");
     let arg_tokens = vec![Token::String(name_to_register.clone())];
-    let no_gas_recipient_contract_calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let no_gas_recipient_contract_calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!(
         "no gas recipient contract calldata: 0x{}",
-        hex::encode(no_gas_recipient_contract_calldata.clone())
+        hex::encode(&no_gas_recipient_contract_calldata)
     );
 
     let rr_tx = Tx::new()
@@ -109,21 +109,18 @@ async fn main() -> io::Result<()> {
         .type_suffix_data("my suffix");
 
     let no_gas_sig = rr_tx.sign(no_gas_signer.clone()).await.unwrap();
-    log::info!("gas payer sig: 0x{}", hex::encode(no_gas_sig.clone()));
+    log::info!("gas payer sig: 0x{}", hex::encode(&no_gas_sig));
 
     let gas_payer_calldata = rr_tx.encode_execute_call(no_gas_sig).unwrap();
-    log::info!(
-        "gas payer calldata: 0x{}",
-        hex::encode(gas_payer_calldata.clone())
-    );
+    log::info!("gas payer calldata: 0x{}", hex::encode(&gas_payer_calldata));
 
     let gas_payer_key = key::secp256k1::private_key::Key::from_hex(private_key).unwrap();
     let gas_payer_key_info = gas_payer_key.to_info(1).unwrap();
-    log::info!("created hot key:\n\n{}\n", gas_payer_key_info);
+    log::info!("created hot key:\n\n{gas_payer_key_info}\n");
     let gas_payer_signer: ethers_signers::LocalWallet =
         gas_payer_key.to_ethers_core_signing_key().into();
     let w = wallet::Builder::new(&gas_payer_key)
-        .base_http_url(chain_rpc_url.clone())
+        .base_http_url(&chain_rpc_url)
         .build()
         .await
         .unwrap();
@@ -141,7 +138,7 @@ async fn main() -> io::Result<()> {
         .submit()
         .await
         .unwrap();
-    log::info!("evm ethers wallet SUCCESS with transaction id {}", tx_id);
+    log::info!("evm ethers wallet SUCCESS with transaction id {tx_id}");
     log::info!("registered {name_to_register}");
 
     Ok(())

@@ -74,7 +74,7 @@ where
         .map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to create gRPC reflection service: {:?}", e),
+                format!("failed to create gRPC reflection service: {e:?}"),
             )
         })?;
 
@@ -95,8 +95,8 @@ where
         .max_decoding_message_size(usize::MAX)
         .max_encoding_message_size(usize::MAX)
         .await
-        .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {:?}", e)))?;
-    log::info!("grpc server shutdown complete: {}", addr);
+        .map_err(|e| Error::new(ErrorKind::Other, format!("grpc server failed: {e:?}")))?;
+    log::info!("grpc server shutdown complete: {addr}");
 
     Ok(())
 }

@@ -23,7 +23,7 @@ pub struct Validator {
 }
 
 /// Contains the publicly relevant values of a validator of the Avalanche
-/// Network for the output of GetValidator.
+/// Network for the output of `GetValidator`.
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/validators#GetValidatorOutput>
 #[derive(Clone, Debug, Eq, PartialEq)]

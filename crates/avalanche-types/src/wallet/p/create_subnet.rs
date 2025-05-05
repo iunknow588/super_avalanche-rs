@@ -6,13 +6,14 @@ use crate::{
 };
 use tokio::time::{sleep, Duration, Instant};
 
-/// Represents P-chain "CreateSubnet" transaction.
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L500-L525> "NewCreateSubnetTx"
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L392> "NewCreateSubnetTx"
+/// Represents P-chain `CreateSubnet` transaction.
+///
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L500-L525> `NewCreateSubnetTx`
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L392> `NewCreateSubnetTx`
 #[derive(Clone, Debug)]
 pub struct Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::p::P<T>,
 
@@ -36,8 +37,14 @@ where
 
 impl<T> Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
+    /// Creates a new transaction with default values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the system time cannot be determined.
+    #[must_use]
     pub fn new(p: &crate::wallet::p::P<T>) -> Self {
         Self {
             inner: p.clone(),
@@ -60,47 +67,55 @@ where
 
     /// Sets the threshold.
     #[must_use]
-    pub fn threshold(mut self, threshold: u32) -> Self {
+    pub const fn threshold(mut self, threshold: u32) -> Self {
         self.threshold = threshold;
         self
     }
 
     /// Sets the check acceptance boolean flag.
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         self.check_acceptance = check_acceptance;
         self
     }
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the create subnet transaction and returns the transaction Id.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if the acceptance check fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the transaction metadata is missing.
     pub async fn issue(&self) -> Result<ids::Id> {
         let picked_http_rpc = self.inner.inner.pick_base_http_url();
         log::info!("creating a new subnet via {}", picked_http_rpc.1);
@@ -137,13 +152,13 @@ where
 
         if let Some(e) = resp.error {
             return Err(Error::API {
-                message: format!("failed to issue create subnet transaction {:?}", e),
+                message: format!("failed to issue create subnet transaction {e:?}"),
                 retryable: false,
             });
         }
 
         let tx_id = resp.result.unwrap().tx_id;
-        log::info!("{} successfully issued", tx_id);
+        log::info!("{tx_id} successfully issued");
 
         if !self.check_acceptance {
             log::debug!("skipping checking acceptance...");
@@ -166,7 +181,7 @@ where
 
             let status = resp.result.unwrap().status;
             if status == platformvm::txs::status::Status::Committed {
-                log::info!("{} successfully committed", tx_id);
+                log::info!("{tx_id} successfully committed");
                 success = true;
                 break;
             }

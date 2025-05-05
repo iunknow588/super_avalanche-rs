@@ -26,6 +26,11 @@ pub struct ProofOfPossession {
 }
 
 impl ProofOfPossession {
+    /// Creates a new proof of possession from the public key and proof of possession bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the public key or proof of possession is invalid, or if the verification fails.
     pub fn new(public_key: &[u8], proof_of_possession: &[u8]) -> io::Result<Self> {
         let pubkey = public_key::Key::from_bytes(public_key)?;
         let sig = signature::Sig::from_bytes(proof_of_possession)?;
@@ -45,6 +50,11 @@ impl ProofOfPossession {
     }
 
     /// ref. "avalanchego"/vms/platformvm/signer.ProofOfPossession.Verify"
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the public key or proof of possession is invalid.
+    #[must_use = "this returns the verification result and should be used"]
     pub fn verify(&self) -> io::Result<bool> {
         let pubkey = public_key::Key::from_bytes(&self.public_key)?;
         let pubkey_bytes = pubkey.to_compressed_bytes();
@@ -54,14 +64,19 @@ impl ProofOfPossession {
         Ok(pubkey.verify_proof_of_possession(&pubkey_bytes, &sig))
     }
 
+    /// Loads the public key from the proof of possession.
+    /// ref. "avalanchego/vms/platformvm/signer.ProofOfPossession.UnmarshalJSON"
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the public key is invalid.
     pub fn load_pubkey(&self) -> io::Result<public_key::Key> {
-        // ref. "avalanchego/vms/platformvm/signer.ProofOfPossession.UnmarshalJSON"
         let pubkey = public_key::Key::from_bytes(&self.public_key)?;
         Ok(pubkey)
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --all-features --lib -- key::bls::test_proof_of_possession --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --all-features --lib -- `key::bls::test_proof_of_possession` --exact --show-output
 #[test]
 fn test_proof_of_possession() {
     let _ = env_logger::builder()

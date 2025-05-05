@@ -11,9 +11,13 @@ use tokio::sync::{Mutex, RwLock};
 
 use crate::subnet::rpc::{database::BoxedDatabase, errors::Error};
 
+/// Represents a key-value pair with a delete flag.
 struct KeyValue {
+    /// The key to be stored or deleted.
     key: Vec<u8>,
+    /// The value to be stored.
     value: Vec<u8>,
+    /// Whether this is a delete operation.
     delete: bool,
 }
 
@@ -22,10 +26,14 @@ struct KeyValue {
 /// should not be used concurrently.
 #[derive(Clone)]
 pub struct Batch {
+    /// Collection of pending write operations.
     writes: Arc<Mutex<Vec<KeyValue>>>,
+    /// Total size of all keys and values in the batch.
     size: usize,
 
+    /// Reference to the database state.
     db_state: Arc<RwLock<HashMap<Vec<u8>, Vec<u8>>>>,
+    /// Flag indicating if the database is closed.
     db_closed: Arc<AtomicBool>,
 }
 
@@ -47,8 +55,7 @@ impl Batch {
 impl crate::subnet::rpc::database::batch::Batch for Batch {
     /// Implements the [`crate::subnet::rpc::database::batch::Batch`] trait.
     async fn put(&mut self, key: &[u8], value: &[u8]) -> io::Result<()> {
-        let mut writes = self.writes.lock().await;
-        writes.push(KeyValue {
+        self.writes.lock().await.push(KeyValue {
             key: key.to_owned(),
             value: value.to_owned(),
             delete: false,
@@ -59,8 +66,7 @@ impl crate::subnet::rpc::database::batch::Batch for Batch {
 
     /// Implements the [`crate::subnet::rpc::database::batch::Batch`] trait.
     async fn delete(&mut self, key: &[u8]) -> io::Result<()> {
-        let mut writes = self.writes.lock().await;
-        writes.push(KeyValue {
+        self.writes.lock().await.push(KeyValue {
             key: key.to_owned(),
             value: vec![],
             delete: true,
@@ -80,15 +86,16 @@ impl crate::subnet::rpc::database::batch::Batch for Batch {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let writes = self.writes.lock().await;
+        let writes_guard = self.writes.lock().await;
         let mut db = self.db_state.write().await;
-        for write in writes.iter() {
+        for write in writes_guard.iter() {
             if write.delete {
                 db.remove(&write.key);
             } else {
                 db.insert(write.key.clone(), write.value.clone());
             }
         }
+        drop(db);
         Ok(())
     }
 
@@ -104,28 +111,26 @@ impl crate::subnet::rpc::database::batch::Batch for Batch {
             writes.clear();
             *writes = kv;
         } else {
-            writes.clear()
+            writes.clear();
         }
     }
 
     /// Implements the [`crate::subnet::rpc::database::batch::Batch`] trait.
     async fn replay(&self, k: Arc<Mutex<BoxedDatabase>>) -> io::Result<()> {
-        let writes = self.writes.lock().await;
+        let writes_guard = self.writes.lock().await;
         let mut db = k.lock().await;
-        for kv in writes.iter() {
+        for kv in writes_guard.iter() {
             if kv.delete {
                 db.delete(&kv.key).await.map_err(|e| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("replay delete failed: {:?}", e),
-                    )
+                    io::Error::new(io::ErrorKind::Other, format!("replay delete failed: {e:?}"))
                 })?;
             } else {
                 db.put(&kv.key, &kv.value).await.map_err(|e| {
-                    io::Error::new(io::ErrorKind::Other, format!("replay put failed: {:?}", e))
+                    io::Error::new(io::ErrorKind::Other, format!("replay put failed: {e:?}"))
                 })?;
             }
         }
+        drop(db);
 
         Ok(())
     }

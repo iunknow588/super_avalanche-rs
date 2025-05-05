@@ -1,4 +1,4 @@
-use std::{env::args, io, str::FromStr};
+use std::{env::args, str::FromStr};
 
 use avalanche_types::evm::eip712::gsn::Tx;
 use ethers_core::types::{H160, U256};
@@ -6,7 +6,7 @@ use ethers_core::types::{H160, U256};
 /// "registerDomainSeparator(string name, string version)" "my name" "1"
 /// cargo run --example evm_eip712_gsn_domain_separator --features="evm" -- "my domain name" "1" 1234567 0x17aB05351fC94a1a67Bf3f56DdbB941aE6c63E25
 /// ref. <https://github.com/opengsn/gsn/blob/master/packages/contracts/src/forwarder/Forwarder.sol> "registerDomainSeparator"
-fn main() -> io::Result<()> {
+fn main() {
     // ref. <https://github.com/env-logger-rs/env_logger/issues/47>
     env_logger::init_from_env(
         env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
@@ -33,7 +33,5 @@ fn main() -> io::Result<()> {
         .domain_chain_id(domain_chain_id)
         .domain_verifying_contract(domain_verifying_contract)
         .compute_domain_separator();
-    log::info!("domain separator: 0x{:x}", domain_separator);
-
-    Ok(())
+    log::info!("domain separator: 0x{domain_separator:x}");
 }

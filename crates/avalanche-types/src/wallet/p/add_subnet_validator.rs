@@ -10,13 +10,14 @@ use crate::{
 use chrono::{DateTime, Utc};
 use tokio::time::{sleep, Duration, Instant};
 
-/// Represents P-chain "AddSubnetValidator" transaction.
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L360-L390> "NewAddSubnetValidatorTx"
-/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L512> "NewAddSubnetValidatorTx"
+/// Represents P-chain `AddSubnetValidator` transaction.
+///
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/wallet/chain/p/builder.go#L360-L390> `NewAddSubnetValidatorTx`
+/// ref. <https://github.com/ava-labs/avalanchego/blob/v1.9.4/vms/platformvm/txs/builder/builder.go#L512> `NewAddSubnetValidatorTx`
 #[derive(Clone, Debug)]
 pub struct Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub inner: crate::wallet::p::P<T>,
 
@@ -43,8 +44,14 @@ where
 
 impl<T> Tx<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
+    /// Creates a new transaction with default values.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the system time cannot be determined.
+    #[must_use]
     pub fn new(p: &crate::wallet::p::P<T>) -> Self {
         let now_unix = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
@@ -78,40 +85,44 @@ where
 
     /// Sets the subnet validator node Id.
     #[must_use]
-    pub fn node_id(mut self, node_id: node::Id) -> Self {
+    pub const fn node_id(mut self, node_id: node::Id) -> Self {
         self.node_id = node_id;
         self
     }
 
     /// Sets the subnet Id.
     #[must_use]
-    pub fn subnet_id(mut self, subnet_id: ids::Id) -> Self {
+    pub const fn subnet_id(mut self, subnet_id: ids::Id) -> Self {
         self.subnet_id = subnet_id;
         self
     }
 
     /// Sets the stake amount.
     #[must_use]
-    pub fn weight(mut self, weight: u64) -> Self {
+    pub const fn weight(mut self, weight: u64) -> Self {
         self.weight = weight;
         self
     }
 
     /// Sets the validate start time.
     #[must_use]
-    pub fn start_time(mut self, start_time: DateTime<Utc>) -> Self {
+    pub const fn start_time(mut self, start_time: DateTime<Utc>) -> Self {
         self.start_time = start_time;
         self
     }
 
     /// Sets the validate start time.
     #[must_use]
-    pub fn end_time(mut self, end_time: DateTime<Utc>) -> Self {
+    pub const fn end_time(mut self, end_time: DateTime<Utc>) -> Self {
         self.end_time = end_time;
         self
     }
 
-    /// Sets the validate start/end time in days from 'offset_seconds' later.
+    /// Sets the validate start/end time in days from `offset_seconds` later.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the timestamp conversion fails.
     #[must_use]
     pub fn validate_period_in_days(mut self, days: u64, offset_seconds: u64) -> Self {
         let now_unix = SystemTime::now()
@@ -134,43 +145,51 @@ where
 
     /// Sets the check acceptance boolean flag.
     #[must_use]
-    pub fn check_acceptance(mut self, check_acceptance: bool) -> Self {
+    pub const fn check_acceptance(mut self, check_acceptance: bool) -> Self {
         self.check_acceptance = check_acceptance;
         self
     }
 
     /// Sets the initial poll wait time.
     #[must_use]
-    pub fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
+    pub const fn poll_initial_wait(mut self, poll_initial_wait: Duration) -> Self {
         self.poll_initial_wait = poll_initial_wait;
         self
     }
 
     /// Sets the poll wait time between intervals.
     #[must_use]
-    pub fn poll_interval(mut self, poll_interval: Duration) -> Self {
+    pub const fn poll_interval(mut self, poll_interval: Duration) -> Self {
         self.poll_interval = poll_interval;
         self
     }
 
     /// Sets the poll timeout.
     #[must_use]
-    pub fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
+    pub const fn poll_timeout(mut self, poll_timeout: Duration) -> Self {
         self.poll_timeout = poll_timeout;
         self
     }
 
     /// Sets the dry mode boolean flag.
     #[must_use]
-    pub fn dry_mode(mut self, dry_mode: bool) -> Self {
+    pub const fn dry_mode(mut self, dry_mode: bool) -> Self {
         self.dry_mode = dry_mode;
         self
     }
 
     /// Issues the add subnet validator transaction and returns the transaction Id.
-    /// The boolean return represents whether the "add_subnet_validator" request was
+    /// The boolean return represents whether the `add_subnet_validator` request was
     /// successfully issued or not (regardless of its acceptance).
     /// If the validator is already a validator, it returns an empty Id and false.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the transaction fails to be issued or if the acceptance check fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the transaction metadata is missing.
     pub async fn issue(&self) -> Result<(ids::Id, bool)> {
         let picked_http_rpc = self.inner.inner.pick_base_http_url();
         log::info!(
@@ -199,7 +218,7 @@ where
                 message: format!("key address {} (balance {} nano-AVAX, network {}) does not have enough to cover stake amount + fee {}", self.inner.inner.p_address, cur_balance_p, self.inner.inner.network_name, self.inner.inner.tx_fee),
                 retryable: false,
             });
-        };
+        }
         log::info!(
             "{} current P-chain balance {}",
             self.inner.inner.p_address,
@@ -230,7 +249,8 @@ where
             subnet_auth,
             ..Default::default()
         };
-        tx.sign([signers, subnet_signers].concat()).await?;
+        let all_signers = [signers, subnet_signers].concat();
+        tx.sign(all_signers).await?;
 
         if self.dry_mode {
             return Ok((tx.base_tx.metadata.unwrap().id, false));
@@ -254,13 +274,13 @@ where
             }
 
             return Err(Error::API {
-                message: format!("failed to issue add subnet validator transaction {:?}", e),
+                message: format!("failed to issue add subnet validator transaction {e:?}"),
                 retryable: false,
             });
         }
 
         let tx_id = resp.result.unwrap().tx_id;
-        log::info!("{} successfully issued", tx_id);
+        log::info!("{tx_id} successfully issued");
 
         if !self.check_acceptance {
             log::debug!("skipping checking acceptance...");
@@ -283,7 +303,7 @@ where
 
             let status = resp.result.unwrap().status;
             if status == platformvm::txs::status::Status::Committed {
-                log::info!("{} successfully committed", tx_id);
+                log::info!("{tx_id} successfully committed");
                 success = true;
                 break;
             }

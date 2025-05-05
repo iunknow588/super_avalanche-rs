@@ -3,6 +3,8 @@ use std::cmp::Ordering;
 use crate::{ids, key, platformvm, txs};
 use serde::{Deserialize, Serialize};
 
+/// 可转移的输出。
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableOutput>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableOut>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferOutput>
@@ -42,7 +44,7 @@ impl Default for Output {
 
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortTransferableOutputs>
 impl Ord for Output {
-    fn cmp(&self, other: &Output) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         let asset_id_ord = self.asset_id.cmp(&(other.asset_id));
         if asset_id_ord != Ordering::Equal {
             // no need to compare further
@@ -99,27 +101,27 @@ impl Ord for Output {
             }
             _ => {
                 // should never happen
-                panic!("unexpected type ID {} for TransferableOutput", type_id_self);
+                panic!("unexpected type ID {type_id_self} for TransferableOutput");
             }
         }
     }
 }
 
 impl PartialOrd for Output {
-    fn partial_cmp(&self, other: &Output) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Output {
-    fn eq(&self, other: &Output) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortTransferableOutputs>
 /// ref. "avalanchego/vms/components/avax.TestTransferableOutputSorting"
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::transferable::test_sort_transferable_outputs --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `txs::transferable::test_sort_transferable_outputs` --exact --show-output
 #[test]
 fn test_sort_transferable_outputs() {
     use crate::ids::short;
@@ -127,17 +129,17 @@ fn test_sort_transferable_outputs() {
     let mut outputs: Vec<Output> = Vec::new();
     for i in (0..10).rev() {
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
                         addresses: vec![
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                            short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                         ],
                     },
                 },
@@ -145,17 +147,17 @@ fn test_sort_transferable_outputs() {
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
                         addresses: vec![
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                         ],
                     },
                 },
@@ -163,85 +165,85 @@ fn test_sort_transferable_outputs() {
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: i as u64,
+                    amount: u64::from(i),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             }),
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: i as u64,
+                    amount: u64::from(i),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             }),
             ..Output::default()
@@ -253,101 +255,101 @@ fn test_sort_transferable_outputs() {
     let mut sorted_outputs: Vec<Output> = Vec::new();
     for i in 0..10 {
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: i as u64,
+                    amount: u64::from(i),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             transfer_output: Some(key::secp256k1::txs::transfer::Output {
-                amount: i as u64,
+                amount: u64::from(i),
                 output_owners: key::secp256k1::txs::OutputOwners {
-                    locktime: i as u64,
-                    threshold: i as u32,
-                    addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                    locktime: u64::from(i),
+                    threshold: u32::from(i),
+                    addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: i as u64,
+                    amount: u64::from(i),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
-                        addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
+                        addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
                     },
                 },
             }),
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
                         addresses: vec![
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                         ],
                     },
                 },
@@ -355,17 +357,17 @@ fn test_sort_transferable_outputs() {
             ..Output::default()
         });
         sorted_outputs.push(Output {
-            asset_id: ids::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
+            asset_id: ids::Id::from_slice(&[i, 2, 2, 3, 4, 5, 6, 7, 8, 9]),
             stakeable_lock_out: Some(platformvm::txs::StakeableLockOut {
-                locktime: i as u64,
+                locktime: u64::from(i),
                 transfer_output: key::secp256k1::txs::transfer::Output {
-                    amount: (i + 1) as u64,
+                    amount: u64::from(i + 1),
                     output_owners: key::secp256k1::txs::OutputOwners {
-                        locktime: i as u64,
-                        threshold: i as u32,
+                        locktime: u64::from(i),
+                        threshold: u32::from(i),
                         addresses: vec![
-                            short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                            short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                            short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                         ],
                     },
                 },
@@ -377,6 +379,8 @@ fn test_sort_transferable_outputs() {
     assert_eq!(outputs, sorted_outputs);
 }
 
+/// 可转移的输入。
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableInput>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableIn>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput>
@@ -421,7 +425,7 @@ impl Default for Input {
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortTransferableInputsWithSigners>
 impl Ord for Input {
-    fn cmp(&self, other: &Input) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.utxo_id
             .tx_id
             .cmp(&(other.utxo_id.tx_id)) // returns when "utxo_id.tx_id"s are not Equal
@@ -432,13 +436,13 @@ impl Ord for Input {
 }
 
 impl PartialOrd for Input {
-    fn partial_cmp(&self, other: &Input) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Input {
-    fn eq(&self, other: &Input) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
@@ -446,23 +450,30 @@ impl PartialEq for Input {
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortTransferableInputs>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#SortTransferableInputsWithSigners>
 /// ref. "avalanchego/vms/components/avax.TestTransferableInputSorting"
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- txs::transferable::test_sort_transferable_inputs --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- txs::transferable::test_sort_transferable_inputs --exact --show-output
 #[test]
 fn test_sort_transferable_inputs() {
     let mut inputs: Vec<Input> = Vec::new();
+
+    // 使用循环，从 i=9 递减到 i=0（(0..10).rev()）。
     for i in (0..10).rev() {
+        // 每个 i，会加入两个 Input：
+
+        // 一个 utxo_id.tx_id 数组以 [i, 1, 2, ..., 9] 构造，output_index 为 (i+1)。
         inputs.push(Input {
             utxo_id: txs::utxo::Id {
-                tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-                output_index: (i + 1) as u32,
+                tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                output_index: u32::from(i + 1),
                 ..txs::utxo::Id::default()
             },
             ..Input::default()
         });
+
+        //   另一个 utxo_id.tx_id 数组相同，但 output_index 为 i。
         inputs.push(Input {
             utxo_id: txs::utxo::Id {
-                tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-                output_index: i as u32,
+                tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                output_index: u32::from(i),
                 ..txs::utxo::Id::default()
             },
             ..Input::default()
@@ -475,16 +486,16 @@ fn test_sort_transferable_inputs() {
     for i in 0..10 {
         sorted_inputs.push(Input {
             utxo_id: txs::utxo::Id {
-                tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-                output_index: i as u32,
+                tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                output_index: u32::from(i),
                 ..txs::utxo::Id::default()
             },
             ..Input::default()
         });
         sorted_inputs.push(Input {
             utxo_id: txs::utxo::Id {
-                tx_id: ids::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
-                output_index: (i + 1) as u32,
+                tx_id: ids::Id::from_slice(&[i, 1, 2, 3, 4, 5, 6, 7, 8, 9]),
+                output_index: u32::from(i + 1),
                 ..txs::utxo::Id::default()
             },
             ..Input::default()

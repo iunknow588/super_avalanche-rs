@@ -46,9 +46,14 @@ impl Default for Request {
 }
 
 impl Request {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -76,9 +81,14 @@ impl Default for RequestWithParamsArray {
 }
 
 impl RequestWithParamsArray {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -106,9 +116,14 @@ impl Default for RequestWithParamsHashMapArray {
 }
 
 impl RequestWithParamsHashMapArray {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -136,9 +151,14 @@ impl Default for RequestWithParamsHashMapToArray {
 }
 
 impl RequestWithParamsHashMapToArray {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -151,8 +171,13 @@ pub struct EndIndex {
     pub utxo: String,
 }
 
-/// e.g., {"jsonrpc":"2.0","error":{"code":-32000,"message":"problem decoding transaction: invalid input checksum","data":null},"id":1}
-/// e.g., {"jsonrpc":"2.0","error":{"code":-32000,"message":"problem decoding transaction: missing 0x prefix to hex encoding","data":null},"id":1}
+/// Represents an error response from the JSON-RPC API.
+///
+/// Examples:
+/// ```json
+/// {"jsonrpc":"2.0","error":{"code":-32000,"message":"problem decoding transaction: invalid input checksum","data":null},"id":1}
+/// {"jsonrpc":"2.0","error":{"code":-32000,"message":"problem decoding transaction: missing 0x prefix to hex encoding","data":null},"id":1}
+/// ```
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone, Default)]
 pub struct ResponseError {
     pub code: i32,

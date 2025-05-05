@@ -6,6 +6,8 @@ use std::{
 use crate::{codec, key};
 use serde::{Deserialize, Serialize};
 
+/// Transfer output for secp256k1 transactions.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableOutput>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableOut>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferOutput>
@@ -14,29 +16,37 @@ use serde::{Deserialize, Serialize};
 pub struct Output {
     pub amount: u64,
 
-    /// The custom de/serializer embeds "output_owners" at the same level as "amount" as in avalanchego.
+    /// The custom de/serializer embeds "`output_owners`" at the same level as "amount" as in avalanchego.
     #[serde(flatten)]
     pub output_owners: key::secp256k1::txs::OutputOwners,
 }
 
 impl Output {
-    pub fn new(amount: u64, output_owners: key::secp256k1::txs::OutputOwners) -> Self {
+    #[must_use]
+    pub const fn new(amount: u64, output_owners: key::secp256k1::txs::OutputOwners) -> Self {
         Self {
             amount,
             output_owners,
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "secp256k1fx.TransferOutput".to_string()
     }
 
+    /// Returns the type ID for this output.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec types map.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::X_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::X_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::txs::transfer::test_transfer_output_custom_de_serializer --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::txs::transfer::test_transfer_output_custom_de_serializer` --exact --show-output
 #[test]
 fn test_transfer_output_custom_de_serializer() {
     use crate::ids::short;
@@ -51,18 +61,18 @@ fn test_transfer_output_custom_de_serializer() {
     };
 
     let yaml_encoded = serde_yaml::to_string(&d).unwrap();
-    println!("yaml_encoded:\n{}", yaml_encoded);
+    println!("yaml_encoded:\n{yaml_encoded}");
     let yaml_decoded = serde_yaml::from_str(&yaml_encoded).unwrap();
     assert_eq!(d, yaml_decoded);
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str(&json_encoded).unwrap();
     assert_eq!(d, json_decoded);
 }
 
 impl Ord for Output {
-    fn cmp(&self, other: &Output) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.amount
             .cmp(&(other.amount)) // returns when "amount"s are not Equal
             .then_with(
@@ -72,68 +82,69 @@ impl Ord for Output {
 }
 
 impl PartialOrd for Output {
-    fn partial_cmp(&self, other: &Output) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Output {
-    fn eq(&self, other: &Output) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::txs::transfer::test_sort_transfer_outputs --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::txs::transfer::test_sort_transfer_outputs` --exact --show-output
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_sort_transfer_outputs() {
     use crate::ids::short;
 
     let mut outputs: Vec<Output> = Vec::new();
     for i in (0..10).rev() {
         outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
                 addresses: vec![
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                    short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                 ],
             },
         });
         outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
                 addresses: vec![
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                 ],
             },
         });
         outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
         outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: i as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
         outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: i as u64,
-                threshold: i as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
     }
@@ -143,48 +154,48 @@ fn test_sort_transfer_outputs() {
     let mut sorted_outputs: Vec<Output> = Vec::new();
     for i in 0..10 {
         sorted_outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: i as u64,
-                threshold: i as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
         sorted_outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: i as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
         sorted_outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
-                addresses: vec![short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5])],
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
+                addresses: vec![short::Id::from_slice(&[i, 1, 2, 3, 4, 5])],
             },
         });
         sorted_outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
                 addresses: vec![
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
                 ],
             },
         });
         sorted_outputs.push(Output {
-            amount: i as u64,
+            amount: u64::from(i),
             output_owners: key::secp256k1::txs::OutputOwners {
-                locktime: (i + 1) as u64,
-                threshold: (i + 1) as u32,
+                locktime: u64::from(i + 1),
+                threshold: u32::from(i),
                 addresses: vec![
-                    short::Id::from_slice(&[i as u8, 1, 2, 3, 4, 5]),
-                    short::Id::from_slice(&[i as u8, 2, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 1, 2, 3, 4, 5]),
+                    short::Id::from_slice(&[i, 2, 2, 3, 4, 5]),
                 ],
             },
         });
@@ -193,6 +204,8 @@ fn test_sort_transfer_outputs() {
     assert_eq!(outputs, sorted_outputs);
 }
 
+/// Transfer input for secp256k1 transactions.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableInput>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/components/avax#TransferableIn>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/secp256k1fx#TransferInput>
@@ -205,21 +218,34 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn new(amount: u64, sig_indices: Vec<u32>) -> Self {
+    #[must_use]
+    pub const fn new(amount: u64, sig_indices: Vec<u32>) -> Self {
         Self {
             amount,
             sig_indices,
         }
     }
 
+    #[must_use]
     pub fn type_name() -> String {
         "secp256k1fx.TransferInput".to_string()
     }
 
+    /// Returns the type ID for this input.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the type name is not found in the codec types map.
+    #[must_use]
     pub fn type_id() -> u32 {
-        *(codec::X_TYPES.get(&Self::type_name()).unwrap()) as u32
+        u32::try_from(*(codec::X_TYPES.get(&Self::type_name()).unwrap())).unwrap()
     }
 
+    /// Verifies that the input is valid.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the input amount is 0, or if the signature indices are not sorted or not unique.
     pub fn verify(&self) -> io::Result<()> {
         if self.amount == 0 {
             return Err(Error::new(
@@ -237,6 +263,7 @@ impl Input {
     }
 
     /// ref. "vms/secp256k1fx.Input.Cost"
+    #[must_use]
     pub fn sig_costs(&self) -> u64 {
         let sigs = self.sig_indices.len();
         (sigs as u64) * 1000
@@ -244,7 +271,7 @@ impl Input {
 }
 
 impl Ord for Input {
-    fn cmp(&self, other: &Input) -> Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.amount
             .cmp(&(other.amount)) // returns when "amount"s are not Equal
             .then_with(
@@ -257,41 +284,55 @@ impl Ord for Input {
 }
 
 impl PartialOrd for Input {
-    fn partial_cmp(&self, other: &Input) -> Option<Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl PartialEq for Input {
-    fn eq(&self, other: &Input) -> bool {
+    fn eq(&self, other: &Self) -> bool {
         self.cmp(other) == Ordering::Equal
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::txs::transfer::test_sort_transfer_inputs --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::txs::transfer::test_sort_transfer_inputs` --exact --show-output
 #[test]
 fn test_sort_transfer_inputs() {
     let mut inputs: Vec<Input> = Vec::new();
     for i in (0..10).rev() {
         inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 2, 2, 3, 4, 5, 6, 7, 8, 9],
+            sig_indices: vec![u32::try_from(i).unwrap(), 2, 2, 3, 4, 5, 6, 7, 8, 9],
         });
         inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5, 6, 7, 8, 9],
         });
         inputs.push(Input {
             amount: 50,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5],
         });
         inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5],
         });
         inputs.push(Input {
             amount: 1,
-            sig_indices: vec![(i + 100) as u32, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+            sig_indices: vec![
+                (i + 100).try_into().unwrap(),
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+            ],
         });
     }
     assert!(!cmp_manager::is_sorted_and_unique(&inputs));
@@ -301,29 +342,43 @@ fn test_sort_transfer_inputs() {
     for i in 0..10 {
         sorted_inputs.push(Input {
             amount: 1,
-            sig_indices: vec![(i + 100) as u32, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9],
+            sig_indices: vec![
+                (i + 100).try_into().unwrap(),
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+                9,
+            ],
         });
     }
     for i in 0..10 {
         sorted_inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5],
         });
     }
     for i in 0..10 {
         sorted_inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5, 6, 7, 8, 9],
         });
         sorted_inputs.push(Input {
             amount: 5,
-            sig_indices: vec![i as u32, 2, 2, 3, 4, 5, 6, 7, 8, 9],
+            sig_indices: vec![u32::try_from(i).unwrap(), 2, 2, 3, 4, 5, 6, 7, 8, 9],
         });
     }
     for i in 0..10 {
         sorted_inputs.push(Input {
             amount: 50,
-            sig_indices: vec![i as u32, 1, 2, 3, 4, 5],
+            sig_indices: vec![u32::try_from(i).unwrap(), 1, 2, 3, 4, 5],
         });
     }
     assert!(cmp_manager::is_sorted_and_unique(&sorted_inputs));

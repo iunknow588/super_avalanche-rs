@@ -54,7 +54,7 @@ async fn main() -> io::Result<()> {
         state_mutability: StateMutability::NonPayable,
     };
     let arg_tokens = vec![Token::Address(nonce_addr)];
-    let calldata = abi::encode_calldata(func, &arg_tokens).unwrap();
+    let calldata = abi::encode_calldata(&func, &arg_tokens).unwrap();
     log::info!("calldata: 0x{}", hex::encode(calldata.clone()));
 
     let tx = Eip1559TransactionRequest::new()
@@ -66,7 +66,7 @@ async fn main() -> io::Result<()> {
     let tx: TypedTransaction = tx.into();
 
     let output = chain_rpc_provider.call(&tx, None).await.unwrap();
-    log::info!("output: {:?}", output);
+    log::info!("output: {output:?}");
 
     Ok(())
 }

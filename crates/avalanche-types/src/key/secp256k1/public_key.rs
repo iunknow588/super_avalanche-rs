@@ -16,14 +16,14 @@ use k256::{
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// The size (in bytes) of a public key.
-/// ref. "secp256k1::constants::PUBLIC_KEY_SIZE"
+/// ref. "`secp256k1::constants::PUBLIC_KEY_SIZE`"
 pub const LEN: usize = 33;
 
 /// The size (in bytes) of an serialized uncompressed public key.
-/// ref. "secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE"
+/// ref. "`secp256k1::constants::UNCOMPRESSED_PUBLIC_KEY_SIZE`"
 pub const UNCOMPRESSED_LEN: usize = 65;
 
-/// Represents "k256::PublicKey" and "k256::ecdsa::VerifyingKey".
+/// Represents "`k256::PublicKey`" and "`k256::ecdsa::VerifyingKey`".
 /// By default serializes as hex string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Key(pub PublicKey);
@@ -32,18 +32,26 @@ impl Key {
     /// Decodes compressed or uncompressed public key bytes with Elliptic-Curve-Point-to-Octet-String
     /// encoding described in SEC 1: Elliptic Curve Cryptography (Version 2.0) section 2.3.3 (page 10).
     /// ref. <http://www.secg.org/sec1-v2.pdf>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes cannot be decoded as a valid public key.
     pub fn from_sec1_bytes(b: &[u8]) -> Result<Self> {
         let pubkey = PublicKey::from_sec1_bytes(b).map_err(|e| Error::Other {
-            message: format!("failed PublicKey::from_sec1_bytes {}", e),
+            message: format!("failed PublicKey::from_sec1_bytes {e}"),
             retryable: false,
         })?;
         Ok(Self(pubkey))
     }
 
     /// Decodes ASN.1 DER-encoded public key bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bytes cannot be decoded as a valid DER-encoded public key.
     pub fn from_public_key_der(b: &[u8]) -> Result<Self> {
         let pubkey = PublicKey::from_public_key_der(b).map_err(|e| Error::Other {
-            message: format!("failed PublicKey::from_public_key_der {}", e),
+            message: format!("failed PublicKey::from_public_key_der {e}"),
             retryable: false,
         })?;
         Ok(Self(pubkey))
@@ -51,25 +59,35 @@ impl Key {
 
     /// Loads the public key from a message and its recoverable signature.
     /// ref. "fx.SECPFactory.RecoverHashPublicKey"
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signature is invalid or if the public key cannot be recovered.
     pub fn from_signature(digest: &[u8], sig: &[u8]) -> Result<Self> {
         let sig = Sig::from_bytes(sig)?;
         let (pubkey, _) = sig.recover_public_key(digest)?;
         Ok(pubkey)
     }
 
+    #[must_use]
     pub fn from_verifying_key(verifying_key: &VerifyingKey) -> Self {
         let pubkey: PublicKey = verifying_key.into();
         Self(pubkey)
     }
 
+    #[must_use]
     pub fn to_verifying_key(&self) -> VerifyingKey {
         self.0.into()
     }
 
     /// Verifies the message and the validity of its signature with recoverable code.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the signature format is incorrect, or if signature recovery or verification fails.
     pub fn verify(&self, digest: &[u8], sig: &[u8]) -> Result<bool> {
         let sig = Sig::from_bytes(sig).map_err(|e| Error::Other {
-            message: format!("failed Sig::from_bytes '{}'", e),
+            message: format!("failed Sig::from_bytes '{e}'"),
             retryable: false,
         })?;
 
@@ -82,6 +100,7 @@ impl Key {
     }
 
     /// Converts the public key to compressed bytes.
+    #[must_use]
     pub fn to_compressed_bytes(&self) -> [u8; LEN] {
         let vkey: VerifyingKey = self.0.into();
 
@@ -96,6 +115,7 @@ impl Key {
     }
 
     /// Converts the public key to uncompressed bytes.
+    #[must_use]
     pub fn to_uncompressed_bytes(&self) -> [u8; UNCOMPRESSED_LEN] {
         let vkey: VerifyingKey = self.0.into();
         let p = vkey.to_encoded_point(false);
@@ -107,13 +127,17 @@ impl Key {
 
     /// "hashing.PubkeyBytesToAddress"
     ///
-    /// ref. "pk.PublicKey().Address().Bytes()"
+    /// ref. "`pk.PublicKey().Address().Bytes()`"
     ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the short ID cannot be created from the public key bytes.
     pub fn to_short_id(&self) -> Result<crate::ids::short::Id> {
         let compressed = self.to_compressed_bytes();
         short::Id::from_public_key_bytes(compressed).map_err(|e| Error::Other {
-            message: format!("failed short::Id::from_public_key_bytes '{}'", e),
+            message: format!("failed short::Id::from_public_key_bytes '{e}'"),
             retryable: false,
         })
     }
@@ -121,14 +145,19 @@ impl Key {
     /// "hashing.PubkeyBytesToAddress" and "ids.ToShortID"
     ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/hashing#PubkeyBytesToAddress>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the short bytes cannot be created from the public key.
     pub fn to_short_bytes(&self) -> Result<Vec<u8>> {
         let compressed = self.to_compressed_bytes();
         hash::sha256_ripemd160(compressed).map_err(|e| Error::Other {
-            message: format!("failed to_short_bytes '{}'", e),
+            message: format!("failed to_short_bytes '{e}'"),
             retryable: false,
         })
     }
 
+    #[must_use]
     pub fn to_h160(&self) -> primitive_types::H160 {
         let uncompressed = self.to_uncompressed_bytes();
 
@@ -143,22 +172,27 @@ impl Key {
     /// Make sure to not double-hash.
     /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/crypto#PubkeyToAddress>
     /// ref. <https://pkg.go.dev/github.com/ethereum/go-ethereum/common#Address.Hex>
+    #[must_use]
     pub fn to_eth_address(&self) -> String {
         address::h160_to_eth_address(&self.to_h160(), None)
     }
 
+    /// Converts the public key to a human-readable address with the specified network ID and chain ID alias.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the address cannot be formatted.
     pub fn to_hrp_address(&self, network_id: u32, chain_id_alias: &str) -> Result<String> {
-        let hrp = match constants::NETWORK_ID_TO_HRP.get(&network_id) {
-            Some(v) => v,
-            None => constants::FALLBACK_HRP,
-        };
+        let hrp = constants::NETWORK_ID_TO_HRP
+            .get(&network_id)
+            .map_or(constants::FALLBACK_HRP, |v| v);
 
         // ref. "pk.PublicKey().Address().Bytes()"
         let short_address_bytes = self.to_short_bytes()?;
 
         // ref. "formatting.FormatAddress(chainIDAlias, hrp, pubBytes)"
         formatting::address(chain_id_alias, hrp, &short_address_bytes).map_err(|e| Error::Other {
-            message: format!("failed formatting::address '{}'", e),
+            message: format!("failed formatting::address '{e}'"),
             retryable: false,
         })
     }
@@ -214,7 +248,7 @@ impl From<Key> for VerifyingKey {
 ///
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
 ///
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", hex::encode(self.to_compressed_bytes()))
@@ -248,7 +282,7 @@ impl key::secp256k1::ReadOnly for Key {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::public_key::test_public_key --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::public_key::test_public_key` --exact --show-output
 #[test]
 fn test_public_key() {
     use primitive_types::H160;
@@ -285,7 +319,7 @@ fn test_public_key() {
     assert!(pubkey3.verify(&hashed, &sig1.to_bytes()).unwrap());
     assert!(pubkey4.verify(&hashed, &sig1.to_bytes()).unwrap());
 
-    log::info!("public key: {}", pubkey1);
+    log::info!("public key: {pubkey1}");
     log::info!("to_short_id: {}", pubkey1.to_short_id().unwrap());
     log::info!("to_h160: {}", pubkey1.to_h160());
     log::info!("eth_address: {}", pubkey1.to_eth_address());
@@ -297,27 +331,28 @@ fn test_public_key() {
 
     let x_avax_addr = pubkey1.to_hrp_address(1, "X").unwrap();
     let p_avax_addr = pubkey1.to_hrp_address(1, "P").unwrap();
-    log::info!("AVAX X address: {}", x_avax_addr);
-    log::info!("AVAX P address: {}", p_avax_addr);
+    log::info!("AVAX X address: {x_avax_addr}");
+    log::info!("AVAX P address: {p_avax_addr}");
 }
 
-/// Same as "from_public_key_der".
-/// ref. <https://github.com/gakonst/ethers-rs/tree/master/ethers-signers/src/aws> "decode_pubkey"
+/// Same as "`from_public_key_der`".
+/// ref. <https://github.com/gakonst/ethers-rs/tree/master/ethers-signers/src/aws> `decode_pubkey`
+///
+/// # Errors
+///
+/// Returns an error if the public key cannot be loaded.
 pub fn load_ecdsa_verifying_key_from_public_key(b: &[u8]) -> Result<VerifyingKey> {
     let spk = spki::SubjectPublicKeyInfoRef::try_from(b).map_err(|e| Error::Other {
-        message: format!("failed to load spki::SubjectPublicKeyInfoRef {}", e),
+        message: format!("failed to load spki::SubjectPublicKeyInfoRef {e}"),
         retryable: false,
     })?;
     VerifyingKey::from_sec1_bytes(spk.subject_public_key.raw_bytes()).map_err(|e| Error::Other {
-        message: format!(
-            "failed to load k256::ecdsa::VerifyingKey::from_sec1_bytes {}",
-            e
-        ),
+        message: format!("failed to load k256::ecdsa::VerifyingKey::from_sec1_bytes {e}"),
         retryable: false,
     })
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- key::secp256k1::signature::test_key_serialization --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `key::secp256k1::signature::test_key_serialization` --exact --show-output
 #[test]
 fn test_key_serialization() {
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -330,7 +365,7 @@ fn test_key_serialization() {
     let d = Data { key: pubkey };
 
     let json_encoded = serde_json::to_string(&d).unwrap();
-    println!("json_encoded:\n{}", json_encoded);
+    println!("json_encoded:\n{json_encoded}");
     let json_decoded = serde_json::from_str::<Data>(&json_encoded).unwrap();
     assert_eq!(pubkey, json_decoded.key);
 }

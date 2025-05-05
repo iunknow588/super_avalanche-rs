@@ -1,4 +1,4 @@
-//! AvalancheGo health status response.
+//! `AvalancheGo` health status response.
 use std::{
     collections::HashMap,
     io::{Error, ErrorKind},
@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde_with::serde_as;
 
-/// Represents AvalancheGo health status.
+/// Represents `AvalancheGo` health status.
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/api/health#APIHealthReply>
 #[derive(Debug, Deserialize, Eq, PartialEq, Clone)]
 pub struct Response {
@@ -27,6 +27,7 @@ pub struct CheckResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde_as(as = "crate::codec::serde::rfc_3339::DateTimeUtc")]
+    /// 时间戳，类型为 `DateTime<Utc>`
     pub timestamp: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<i64>,
@@ -34,6 +35,7 @@ pub struct CheckResult {
     pub contiguous_failures: Option<i64>,
     #[serde_as(as = "Option<crate::codec::serde::rfc_3339::DateTimeUtc>")]
     #[serde(default)]
+    /// 首次失败的时间，类型为 `Option<DateTime<Utc>>`
     pub time_of_first_failure: Option<DateTime<Utc>>,
 }
 
@@ -44,13 +46,13 @@ impl FromStr for Response {
         serde_json::from_str(s).map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed serde_json::from_str '{}'", e),
+                format!("failed serde_json::from_str '{e}'"),
             )
         })
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::health::test_parse --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::health::test_parse` --exact --show-output
 #[test]
 fn test_parse() {
     use log::info;
@@ -133,6 +135,6 @@ fn test_parse() {
 "#;
 
     let parsed = Response::from_str(data).unwrap();
-    info!("parsed: {:?}", parsed);
+    info!("parsed: {parsed:?}");
     assert!(parsed.healthy);
 }

@@ -1,5 +1,5 @@
 //! An in-memory database which perists mutations to the underlying database on
-//! commit().
+//! `commit()`.
 pub mod batch;
 pub mod iterator;
 
@@ -26,8 +26,11 @@ use tokio::sync::RwLock;
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/database/versiondb#Database>
 #[derive(Clone)]
 pub struct Database {
+    /// The underlying database
     db: BoxedDatabase,
+    /// In-memory storage for uncommitted changes
     mem: Arc<RwLock<HashMap<Vec<u8>, iterator::ValueDelete>>>,
+    /// Batch for committing changes
     #[allow(dead_code)] // 这个字段在将来可能会用到
     batch: BoxedBatch,
     /// True if the database is closed.
@@ -35,6 +38,8 @@ pub struct Database {
 }
 
 impl Database {
+    /// Creates a new versiondb database
+    #[must_use]
     pub fn new(db: BoxedDatabase, batch: BoxedBatch) -> Self {
         Self {
             db,
@@ -53,8 +58,7 @@ impl database::KeyValueReaderWriterDeleter for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mem = self.mem.read().await;
-        if let Some(value) = mem.get(key) {
+        if let Some(value) = self.mem.read().await.get(key) {
             return Ok(!value.delete);
         }
 
@@ -67,8 +71,7 @@ impl database::KeyValueReaderWriterDeleter for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mem = self.mem.read().await;
-        if let Some(val) = mem.get(key) {
+        if let Some(val) = self.mem.read().await.get(key) {
             return Ok(val.value.clone());
         }
 
@@ -81,8 +84,7 @@ impl database::KeyValueReaderWriterDeleter for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mut mem = self.mem.write().await;
-        mem.insert(
+        self.mem.write().await.insert(
             key.to_vec(),
             iterator::ValueDelete {
                 value: value.to_vec(),
@@ -110,6 +112,7 @@ impl database::KeyValueReaderWriterDeleter for Database {
                 delete: true,
             },
         );
+        drop(mem);
 
         Ok(())
     }
@@ -167,7 +170,7 @@ impl database::iterator::Iteratee for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mem = self.mem.write().await;
+        let mem = self.mem.read().await;
         let mut keys: Vec<Vec<u8>> = Vec::with_capacity(mem.len());
         for (k, _v) in mem.iter() {
             if k.starts_with(prefix) && k >= &start.to_vec() {
@@ -179,7 +182,7 @@ impl database::iterator::Iteratee for Database {
         keys.sort();
 
         let mut values: Vec<iterator::ValueDelete> = Vec::with_capacity(keys.len());
-        for key in keys.iter() {
+        for key in &keys {
             if let Some(v) = mem.get(key) {
                 values.push(v.to_owned());
             }
@@ -220,8 +223,7 @@ impl database::Commitable for Database {
 
     /// Implements the [`crate::subnet::rpc::database::Commitable`] trait.
     async fn abort(&self) -> io::Result<()> {
-        let mut mem = self.mem.write().await;
-        mem.clear();
+        self.mem.write().await.clear();
         Ok(())
     }
 
@@ -231,6 +233,7 @@ impl database::Commitable for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
+        // Drop mem after the function completes
         let mem = self.mem.read().await;
         self.batch.reset().await;
         for (key, value) in mem.iter() {
@@ -240,6 +243,7 @@ impl database::Commitable for Database {
                 self.batch.put(key, &value.value).await?;
             }
         }
+        drop(mem);
 
         Ok(self.batch.clone())
     }

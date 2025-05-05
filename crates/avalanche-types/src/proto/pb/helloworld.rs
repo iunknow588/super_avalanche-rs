@@ -1,3 +1,4 @@
+#[allow(clippy::all)]
 // @generated
 /// The request message containing the user's name.
 #[allow(clippy::derive_partial_eq_without_eq)]

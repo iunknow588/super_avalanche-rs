@@ -17,7 +17,7 @@ async fn generate_certificate_to_node_id() {
     log::debug!("cert: {} bytes", cert.len());
     let node_id = node::Id::from_cert_der_bytes(&cert).expect("failed from_cert_der_bytes");
 
-    log::info!("sending node id {}", node_id);
+    log::info!("sending node id {node_id}");
 
     let resp = cli
         .certificate_to_node_id(CertificateToNodeIdRequest {
@@ -56,7 +56,7 @@ async fn load_certificate_to_node_id() {
         log::debug!("cert: {} bytes", cert.len());
 
         let node_id = node::Id::from_cert_pem_file(cert_path).expect("failed from_cert_pem_file");
-        log::debug!("node id: {}", node_id);
+        log::debug!("node id: {node_id}");
 
         let resp = cli
             .certificate_to_node_id(CertificateToNodeIdRequest {

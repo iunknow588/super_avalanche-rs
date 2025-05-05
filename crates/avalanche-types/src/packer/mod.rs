@@ -1,7 +1,7 @@
 //! Low-level byte-packing utilities.
 pub mod ip;
 
-use std::{cell::Cell, u16};
+use std::cell::Cell;
 
 use crate::errors::{Error, Result};
 use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -33,6 +33,7 @@ pub const BOOL_LEN: usize = 1;
 pub const BOOL_SENTINEL: bool = false;
 
 /// Packer packs and unpacks the underlying bytes array.
+///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer>
 /// ref. <https://doc.rust-lang.org/1.7.0/book/mutability.html>
 /// ref. <https://doc.rust-lang.org/std/cell/struct.Cell.html>
@@ -41,7 +42,7 @@ pub struct Packer {
     max_size: usize,
     /// current byte array
     bytes: Cell<BytesMut>,
-    /// If true, then the first 4-bytes in "take_bytes"
+    /// If true, then the first 4-bytes in `take_bytes`
     /// encodes the length of the message.
     /// The returned bytes length will be 4-byte + message.
     header: bool,
@@ -50,6 +51,7 @@ pub struct Packer {
 }
 
 impl Packer {
+    #[must_use]
     pub fn new(max_size: usize, initial_cap: usize) -> Self {
         let bytes = Cell::new(BytesMut::with_capacity(initial_cap));
         Self {
@@ -61,6 +63,7 @@ impl Packer {
     }
 
     /// Creates a new Packer with 32-bit message length header.
+    #[must_use]
     pub fn new_with_header(max_size: usize, initial_cap: usize) -> Self {
         let mut b = BytesMut::with_capacity(initial_cap);
         b.put_slice(&[0x00, 0x00, 0x00, 0x00]);
@@ -76,6 +79,7 @@ impl Packer {
 
     /// Create a new packer from the existing bytes.
     /// Resets the offset to the end of the existing bytes.
+    #[must_use]
     pub fn load_bytes_for_pack(max_size: usize, b: &[u8]) -> Self {
         Self {
             max_size,
@@ -87,6 +91,7 @@ impl Packer {
 
     /// Create a new packer from the existing bytes.
     /// Resets the offset to the beginning of the existing bytes.
+    #[must_use]
     pub fn load_bytes_for_unpack(max_size: usize, b: &[u8]) -> Self {
         Self {
             max_size,
@@ -102,15 +107,20 @@ impl Packer {
     /// will be 4-byte + message.
     ///
     /// Be cautious! Once bytes are taken out, the "bytes" field is set to default (empty).
-    /// To continue to write to bytes, remember to put it back with "set_bytes"
-    /// because "bytes.take" leaves the field as "Default::default()".
+    /// To continue to write to bytes, remember to put it back with `set_bytes`
+    /// because "bytes.take" leaves the field as `Default::default()`.
     /// TODO: make sure this does shallow copy!
+    ///
+    /// # Panics
+    ///
+    /// Panics if header is true and the bytes length is less than 4.
     pub fn take_bytes(&self) -> Bytes {
         let mut b = self.bytes.take();
         let n = b.len();
         if self.header {
             assert!(n >= 4);
-            let msg_length = (n - 4) as u32;
+            // We already asserted n >= 4, and n is typically small for messages
+            let msg_length = u32::try_from(n - 4).expect("message length should fit in u32");
 
             let header = msg_length.to_be_bytes();
             assert!(header.len() == 4);
@@ -123,7 +133,7 @@ impl Packer {
     }
 
     /// Sets the current bytes array as an immutable bytes array.
-    /// Useful to reuse packer after calling "take_bytes", which
+    /// Useful to reuse packer after calling `take_bytes`, which
     /// makes the "bytes" field default (empty).
     pub fn set_bytes(&self, b: &[u8]) {
         self.bytes.set(BytesMut::from(b));
@@ -131,7 +141,7 @@ impl Packer {
 
     /// Updates the "offset" field.
     fn set_offset(&self, offset: usize) {
-        self.offset.set(offset)
+        self.offset.set(offset);
     }
 
     /// Returns the "offset" value.
@@ -185,6 +195,10 @@ impl Packer {
     /// so it can write "n" bytes to the array.
     /// ref. "avalanchego/utils/wrappers.Packer.Expand"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.Expand>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the needed size exceeds the maximum size.
     pub fn expand(&self, n: usize) -> Result<()> {
         // total number of bytes that must be remained in the bytes array
         let needed_size = self.get_offset() + n;
@@ -229,20 +243,22 @@ impl Packer {
         let bytes_n = self.bytes_len();
         if needed_size > bytes_n {
             return Err(Error::Other {
-                message:  format!(
-                    "bad length to read; offset + bytes ({}) to read exceeds current total bytes size {}",
-                    needed_size,
-                    bytes_n
+                message: format!(
+                    "bad length to read; offset + bytes ({needed_size}) to read exceeds current total bytes size {bytes_n}"
                 ), // ref. "errBadLength"
                 retryable: false,
             });
-        };
+        }
         Ok(())
     }
 
     /// Writes the "u8" value at the offset and increments the offset afterwards.
     /// ref. "avalanchego/utils/wrappers.Packer.PackByte"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackByte>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the byte.
     pub fn pack_byte(&self, v: u8) -> Result<()> {
         self.expand(BYTE_LEN)?;
 
@@ -270,6 +286,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackByte"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackByte>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack a byte.
     pub fn unpack_byte(&self) -> Result<u8> {
         self.check_remaining_unpack(BYTE_LEN)?;
 
@@ -289,6 +309,10 @@ impl Packer {
     /// Writes the "u16" value at the offset and increments the offset afterwards.
     /// ref. "avalanchego/utils/wrappers.Packer.PackShort"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackShort>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the u16.
     pub fn pack_u16(&self, v: u16) -> Result<()> {
         self.expand(U16_LEN)?;
 
@@ -317,6 +341,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackShort"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackShort>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack a u16.
     pub fn unpack_u16(&self) -> Result<u16> {
         self.check_remaining_unpack(U16_LEN)?;
 
@@ -340,6 +368,10 @@ impl Packer {
     /// This is also used for encoding the type IDs from codec.
     /// ref. "avalanchego/utils/wrappers.Packer.PackInt"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackInt>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the u32.
     pub fn pack_u32(&self, v: u32) -> Result<()> {
         self.expand(U32_LEN)?;
 
@@ -368,6 +400,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackInt"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackInt>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack a u32.
     pub fn unpack_u32(&self) -> Result<u32> {
         self.check_remaining_unpack(U32_LEN)?;
 
@@ -390,6 +426,10 @@ impl Packer {
     /// Writes the "u64" value at the offset and increments the offset afterwards.
     /// ref. "avalanchego/utils/wrappers.Packer.PackLong"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackLong>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the u64.
     pub fn pack_u64(&self, v: u64) -> Result<()> {
         self.expand(U64_LEN)?;
 
@@ -418,6 +458,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackLong"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackLong>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack a u64.
     pub fn unpack_u64(&self) -> Result<u64> {
         self.check_remaining_unpack(U64_LEN)?;
 
@@ -442,6 +486,10 @@ impl Packer {
     /// Writes the "bool" value at the offset and increments the offset afterwards.
     /// ref. "avalanchego/utils/wrappers.Packer.PackBool"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackBool>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the bool.
     pub fn pack_bool(&self, v: bool) -> Result<()> {
         if v {
             self.pack_byte(1)
@@ -454,6 +502,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackBool"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackBool>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack a bool or if the value is not 0 or 1.
     pub fn unpack_bool(&self) -> Result<bool> {
         let b = self.unpack_byte()?;
         match b {
@@ -471,6 +523,10 @@ impl Packer {
     /// Writes the "u8" fixed-size array from the offset and increments the offset as much.
     /// ref. "avalanchego/utils/wrappers.Packer.PackFixedBytes"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackFixedBytes>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the bytes.
     pub fn pack_bytes(&self, v: &[u8]) -> Result<()> {
         let n = v.len();
         self.expand(n)?;
@@ -500,6 +556,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackFixedBytes"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackFixedBytes>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack the requested number of bytes.
     pub fn unpack_bytes(&self, n: usize) -> Result<Vec<u8>> {
         self.check_remaining_unpack(n)?;
 
@@ -520,8 +580,12 @@ impl Packer {
     /// The first 4-byte is used for encoding length header.
     /// ref. "avalanchego/utils/wrappers.Packer.PackBytes"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackBytes>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the bytes or if the length exceeds `u32::MAX`.
     pub fn pack_bytes_with_header(&self, v: &[u8]) -> Result<()> {
-        self.pack_u32(v.len() as u32)?;
+        self.pack_u32(u32::try_from(v.len())?)?;
         self.pack_bytes(v)
     }
 
@@ -529,6 +593,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackBytes"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackBytes>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack the bytes or if the length header is invalid.
     pub fn unpack_bytes_with_header(&self) -> Result<Vec<u8>> {
         let n = self.unpack_u32()?;
         self.unpack_bytes(n as usize)
@@ -537,9 +605,13 @@ impl Packer {
     /// Writes the two-dimensional "u8" slice from the offset and increments the offset as much.
     /// ref. "avalanchego/utils/wrappers.Packer.PackFixedByteSlices"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackFixedByteSlices>
-    pub fn pack_2d_bytes(&self, v: Vec<Vec<u8>>) -> Result<()> {
-        self.pack_u32(v.len() as u32)?;
-        for vv in v.iter() {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the bytes or if the length exceeds `u32::MAX`.
+    pub fn pack_2d_bytes(&self, v: &[Vec<u8>]) -> Result<()> {
+        self.pack_u32(u32::try_from(v.len())?)?;
+        for vv in v {
             self.pack_bytes(vv)?;
         }
         Ok(())
@@ -549,6 +621,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackFixedByteSlices"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackFixedByteSlices>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack the bytes or if the length header is invalid.
     pub fn unpack_2d_bytes(&self, n: usize) -> Result<Vec<Vec<u8>>> {
         let total = self.unpack_u32()?;
         let mut rs: Vec<Vec<u8>> = Vec::new();
@@ -562,9 +638,13 @@ impl Packer {
     /// Writes the two-dimensional "u8" slice from the offset and increments the offset as much.
     /// ref. "avalanchego/utils/wrappers.Packer.Pack2DByteSlice"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.Pack2DByteSlice>
-    pub fn pack_2d_bytes_with_header(&self, v: Vec<Vec<u8>>) -> Result<()> {
-        self.pack_u32(v.len() as u32)?;
-        for vv in v.iter() {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the bytes or if the length exceeds `u32::MAX`.
+    pub fn pack_2d_bytes_with_header(&self, v: &[Vec<u8>]) -> Result<()> {
+        self.pack_u32(u32::try_from(v.len())?)?;
+        for vv in v {
             self.pack_bytes_with_header(vv)?;
         }
         Ok(())
@@ -574,6 +654,10 @@ impl Packer {
     /// and advances the cursor and offset.
     /// ref. "avalanchego/utils/wrappers.Packer.Unpack2DByteSlice"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.Unpack2DByteSlice>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack the bytes or if the length header is invalid.
     pub fn unpack_2d_bytes_with_header(&self) -> Result<Vec<Vec<u8>>> {
         let total = self.unpack_u32()?;
         let mut rs: Vec<Vec<u8>> = Vec::new();
@@ -587,11 +671,15 @@ impl Packer {
     /// Writes str from the offset and increments the offset as much.
     /// ref. "avalanchego/utils/wrappers.Packer.PackStr"
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.PackStr>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer cannot be expanded to accommodate the string or if the string length exceeds `MAX_STR_LEN`.
     pub fn pack_str(&self, v: &str) -> Result<()> {
-        let n = v.len() as u16;
+        let n = u16::try_from(v.len())?;
         if n > MAX_STR_LEN {
             return Err(Error::Other {
-                message: format!("str {} > max_size {}", n, MAX_STR_LEN),
+                message: format!("str {n} > max_size {MAX_STR_LEN}"),
                 retryable: false,
             });
         }
@@ -602,11 +690,15 @@ impl Packer {
     /// Unpacks str from the offset.
     /// ref. "avalanchego/utils/wrappers.Packer.UnpackStr"
     ///
-    /// TODO: Go "UnpackStr" does deep-copy of bytes to "string" cast
+    /// TODO: Go `UnpackStr` does deep-copy of bytes to "string" cast
     /// Can we bypass deep-copy by passing around bytes?
     /// ref. <https://github.com/golang/go/issues/25484>
     ///
     /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/utils/wrappers#Packer.UnpackStr>
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is not enough data to unpack the string or if the data is not valid UTF-8.
     pub fn unpack_str(&self) -> Result<String> {
         let n = self.unpack_u16()?;
         let d = self.unpack_bytes(n as usize)?;
@@ -614,7 +706,7 @@ impl Packer {
             Ok(v) => v,
             Err(e) => {
                 return Err(Error::Other {
-                    message: format!("failed String::from_utf8 {}", e),
+                    message: format!("failed String::from_utf8 {e}"),
                     retryable: false,
                 });
             }
@@ -623,7 +715,7 @@ impl Packer {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_expand --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_expand` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerExpand"
 #[test]
 fn test_expand() {
@@ -655,7 +747,7 @@ fn test_expand() {
     assert_eq!(packer.bytes_cap(), 10000);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_packer_from_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_packer_from_bytes` --exact --show-output
 #[test]
 fn test_packer_from_bytes() {
     let s: Vec<u8> = vec![0x01, 0x02, 0x03];
@@ -670,7 +762,7 @@ fn test_packer_from_bytes() {
     assert_eq!(&b[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_byte --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_byte` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackByte"
 #[test]
 fn test_pack_byte() {
@@ -699,7 +791,7 @@ fn test_pack_byte() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_byte --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_byte` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackByte"
 #[test]
 fn test_unpack_byte() {
@@ -718,7 +810,7 @@ fn test_unpack_byte() {
     assert!(packer.unpack_byte().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_u16 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_u16` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackShort"
 #[test]
 fn test_pack_u16() {
@@ -742,7 +834,7 @@ fn test_pack_u16() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_u16 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_u16` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackShort"
 #[test]
 fn test_unpack_u16() {
@@ -761,7 +853,7 @@ fn test_unpack_u16() {
     assert!(packer.unpack_u16().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_u16_short --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_u16_short` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPacker"
 #[test]
 fn test_pack_u16_short() {
@@ -798,7 +890,7 @@ fn test_pack_u16_short() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_u32 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_u32` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackInt"
 #[test]
 fn test_pack_u32() {
@@ -818,7 +910,7 @@ fn test_pack_u32() {
     assert_eq!(&b[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_u32 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_u32` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackInt"
 #[test]
 fn test_unpack_u32() {
@@ -835,7 +927,7 @@ fn test_unpack_u32() {
     assert!(packer.unpack_u32().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_u64 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_u64` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackLong"
 #[test]
 fn test_pack_u64() {
@@ -864,7 +956,7 @@ fn test_pack_u64() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_u64 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_u64` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackLong"
 #[test]
 fn test_unpack_u64() {
@@ -881,7 +973,7 @@ fn test_unpack_u64() {
     assert!(packer.unpack_u64().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_bool --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_bool` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackBool"
 /// ref. "avalanchego/utils/wrappers.TestPackerPackBool"
 #[test]
@@ -923,7 +1015,7 @@ fn test_pack_bool() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_bool --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_bool` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackBool"
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackBool"
 #[test]
@@ -941,7 +1033,7 @@ fn test_unpack_bool() {
     assert!(packer.unpack_bool().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_bytes` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackFixedBytes"
 #[test]
 fn test_pack_bytes() {
@@ -974,7 +1066,7 @@ fn test_pack_bytes() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_bytes` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackFixedBytes"
 #[test]
 fn test_unpack_bytes() {
@@ -992,7 +1084,7 @@ fn test_unpack_bytes() {
     assert!(packer.unpack_bytes(4).is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_bytes_with_header --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_bytes_with_header` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackBytes"
 #[test]
 fn test_pack_bytes_with_header() {
@@ -1023,7 +1115,7 @@ fn test_pack_bytes_with_header() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_bytes_with_header --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_bytes_with_header` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackBytes"
 #[test]
 fn test_unpack_bytes_with_header() {
@@ -1041,7 +1133,7 @@ fn test_unpack_bytes_with_header() {
     assert!(packer.unpack_bytes_with_header().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_2d_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_2d_bytes` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerPackFixedByteSlices"
 #[test]
 fn test_pack_2d_bytes() {
@@ -1055,15 +1147,13 @@ fn test_pack_2d_bytes() {
     // first 4-byte is for length
     let s1 = "Avax";
     let s2 = "Evax";
-    packer
-        .pack_2d_bytes(vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())])
-        .unwrap();
+    let data = vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())];
+    packer.pack_2d_bytes(&data).unwrap();
     assert_eq!(packer.bytes_len(), 12);
 
     // beyond max size
-    assert!(packer
-        .pack_2d_bytes(vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes()),])
-        .is_err());
+    let data2 = vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())];
+    assert!(packer.pack_2d_bytes(&data2).is_err());
 
     let b = packer.take_bytes();
     assert_eq!(&b[..], b"\x00\x00\x00\x02AvaxEvax");
@@ -1071,16 +1161,15 @@ fn test_pack_2d_bytes() {
     assert_eq!(&b[..], &expected[..]);
 
     let packer = Packer::new_with_header(4 + 12, 0);
-    packer
-        .pack_2d_bytes(vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())])
-        .unwrap();
+    let data3 = vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())];
+    packer.pack_2d_bytes(&data3).unwrap();
     let expected = [
         0x00, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x02, 65, 118, 97, 120, 69, 118, 97, 120,
     ];
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_2d_bytes --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_2d_bytes` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerUnpackFixedByteSlices"
 #[test]
 fn test_unpack_2d_bytes() {
@@ -1093,15 +1182,12 @@ fn test_unpack_2d_bytes() {
         offset: Cell::new(0),
     };
     let b = packer.unpack_2d_bytes(4).unwrap();
-    assert_eq!(
-        &b[..],
-        vec![Vec::from("Avax".as_bytes()), Vec::from("Evax".as_bytes()),]
-    );
+    assert_eq!(&b[..], vec![Vec::from(b"Avax"), Vec::from(b"Evax"),]);
     assert_eq!(packer.get_offset(), 12);
     assert!(packer.unpack_2d_bytes(4).is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_2d_bytes_with_header --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_2d_bytes_with_header` --exact --show-output
 #[test]
 fn test_pack_2d_bytes_with_header() {
     let packer = Packer {
@@ -1115,9 +1201,8 @@ fn test_pack_2d_bytes_with_header() {
     // two more 4-bytes for each length
     let s1 = "Avax";
     let s2 = "Evax";
-    packer
-        .pack_2d_bytes_with_header(vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())])
-        .unwrap();
+    let data = vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())];
+    packer.pack_2d_bytes_with_header(&data).unwrap();
     assert_eq!(packer.bytes_len(), 20); // 4*3 + 4*2
 
     let b = packer.take_bytes();
@@ -1132,9 +1217,8 @@ fn test_pack_2d_bytes_with_header() {
     assert_eq!(&b[..], &expected[..]);
 
     let packer = Packer::new_with_header(4 + 20, 0);
-    packer
-        .pack_2d_bytes_with_header(vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())])
-        .unwrap();
+    let data = vec![Vec::from(s1.as_bytes()), Vec::from(s2.as_bytes())];
+    packer.pack_2d_bytes_with_header(&data).unwrap();
     let expected = [
         0x00, 0x00, 0x00, 20, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x04, 65, 118, 97, 120,
         0x00, 0x00, 0x00, 0x04, 69, 118, 97, 120,
@@ -1142,7 +1226,7 @@ fn test_pack_2d_bytes_with_header() {
     assert_eq!(&packer.take_bytes()[..], &expected[..]);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_unpack_2d_bytes_with_header --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_unpack_2d_bytes_with_header` --exact --show-output
 #[test]
 fn test_unpack_2d_bytes_with_header() {
     let s: Vec<u8> = vec![
@@ -1157,15 +1241,12 @@ fn test_unpack_2d_bytes_with_header() {
         offset: Cell::new(0),
     };
     let b = packer.unpack_2d_bytes_with_header().unwrap();
-    assert_eq!(
-        &b[..],
-        vec![Vec::from("Avax".as_bytes()), Vec::from("Evax".as_bytes()),]
-    );
+    assert_eq!(&b[..], vec![Vec::from(b"Avax"), Vec::from(b"Evax"),]);
     assert_eq!(packer.get_offset(), 20);
     assert!(packer.unpack_2d_bytes_with_header().is_err());
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_2d_bytes_with_header_123 --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_2d_bytes_with_header_123` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPacker2DByteSlice"
 #[test]
 fn test_pack_2d_bytes_with_header_123() {
@@ -1176,7 +1257,8 @@ fn test_pack_2d_bytes_with_header_123() {
         header: false,
         offset: Cell::new(0),
     };
-    packer.pack_2d_bytes_with_header(vec![]).unwrap();
+    let empty_data: Vec<Vec<u8>> = vec![];
+    packer.pack_2d_bytes_with_header(&empty_data).unwrap();
     assert_eq!(packer.bytes_len(), 4);
     assert!(packer.unpack_2d_bytes_with_header().is_err());
 
@@ -1187,9 +1269,8 @@ fn test_pack_2d_bytes_with_header_123() {
         header: false,
         offset: Cell::new(0),
     };
-    packer
-        .pack_2d_bytes_with_header(vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
-        .unwrap();
+    let data = vec![vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]];
+    packer.pack_2d_bytes_with_header(&data).unwrap();
     assert_eq!(packer.bytes_len(), 4 + 4 + 10);
 
     let b = packer.take_bytes();
@@ -1215,12 +1296,11 @@ fn test_pack_2d_bytes_with_header_123() {
         header: false,
         offset: Cell::new(0),
     };
-    packer
-        .pack_2d_bytes_with_header(vec![
-            vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            vec![11, 12, 3, 4, 5, 6, 7, 8, 9, 10],
-        ])
-        .unwrap();
+    let data = vec![
+        vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        vec![11, 12, 3, 4, 5, 6, 7, 8, 9, 10],
+    ];
+    packer.pack_2d_bytes_with_header(&data).unwrap();
     assert_eq!(packer.bytes_len(), 4 + 4 + 10 + 4 + 10);
 
     let b = packer.take_bytes();
@@ -1252,7 +1332,7 @@ fn test_pack_2d_bytes_with_header_123() {
     assert_eq!(packer.get_offset(), 4 + 4 + 10 + 4 + 10);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- packer::test_pack_str --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `packer::test_pack_str` --exact --show-output
 /// ref. "avalanchego/utils/wrappers.TestPackerString"
 #[test]
 fn test_pack_str() {

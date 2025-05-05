@@ -34,6 +34,7 @@ pub struct Database {
 }
 
 impl Database {
+    #[must_use]
     pub fn new_boxed() -> BoxedDatabase {
         Box::new(Self {
             state: Arc::new(RwLock::new(HashMap::new())),
@@ -60,10 +61,8 @@ impl super::KeyValueReaderWriterDeleter for Database {
         }
 
         let db = self.state.read().await;
-        match db.get(&key.to_vec()) {
-            Some(key) => Ok(key.to_vec()),
-            None => Err(Error::NotFound.to_err()),
-        }
+        db.get(&key.to_vec())
+            .map_or_else(|| Err(Error::NotFound.to_err()), |key| Ok(key.clone()))
     }
 
     /// Attempts to set the value this key maps to.
@@ -72,8 +71,10 @@ impl super::KeyValueReaderWriterDeleter for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mut db = self.state.write().await;
-        db.insert(key.to_vec(), value.to_vec());
+        self.state
+            .write()
+            .await
+            .insert(key.to_vec(), value.to_vec());
         Ok(())
     }
 
@@ -83,8 +84,7 @@ impl super::KeyValueReaderWriterDeleter for Database {
             return Err(Error::DatabaseClosed.to_err());
         }
 
-        let mut db = self.state.write().await;
-        db.remove(&key.to_vec());
+        self.state.write().await.remove(&key.to_vec());
         Ok(())
     }
 }
@@ -151,7 +151,7 @@ impl super::iterator::Iteratee for Database {
         keys.sort();
 
         let mut values: Vec<Vec<u8>> = Vec::with_capacity(keys.len());
-        for key in keys.iter() {
+        for key in &keys {
             if let Some(v) = db.get(key) {
                 values.push(v.to_owned());
             }
@@ -195,7 +195,7 @@ async fn test_memdb() {
     let db = Database::new_boxed();
     let _ = db.close().await;
     let resp = db.get(b"foo").await;
-    print!("found {:?}", resp);
+    print!("found {resp:?}");
     assert!(resp.is_err());
     assert_eq!(resp.err().unwrap().to_string(), "database closed");
 

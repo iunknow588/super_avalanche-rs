@@ -2,7 +2,7 @@
 //!
 //! avalanche-types contains the foundational types used in the Avalanche ecosystem in Rust.
 //! This include types used by the Avalanche JSON-RPC API and the EVM. Modules
-//! for serialization/deserialization, hashing, and codecs are all provided.  
+//! for serialization/deserialization, hashing, and codecs are all provided.
 //!
 //! The APIs can be used to build a custom, high-performance Rust VM that can run on
 //! Avalanche. See the `subnet` subdirectory for an SDK that makes it easy to build a
@@ -13,6 +13,10 @@
 
 #![allow(unsafe_code)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![allow(clippy::cast_possible_wrap)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::too_many_lines)]
+#![allow(clippy::significant_drop_tightening)]
 pub mod avm;
 pub mod choices;
 pub mod codec;
@@ -66,3 +70,27 @@ pub mod proto;
 #[cfg(feature = "subnet")]
 #[cfg_attr(docsrs, doc(cfg(feature = "subnet")))]
 pub mod subnet;
+
+/// 重要结构体
+#[derive(Debug)]
+#[must_use]
+pub struct ImportantStruct {
+    // ...
+}
+
+/// 重要函数
+///
+/// # Errors
+/// 可能返回错误
+pub const fn important_function() -> Result<(), crate::errors::Error> {
+    // ...
+    Ok(())
+}
+
+/// 可能panic的函数
+///
+/// # Panics
+/// 当输入无效时panic
+pub const fn potential_panic_func() {
+    // ...
+}

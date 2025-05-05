@@ -80,45 +80,45 @@ impl Node {
     /// For example, inserting "010" to "000" returns a binary choice.
     ///
     /// ref. <https://github.com/ava-labs/avalanchego/blob/master/snow/consensus/snowball/tree.go>
+    #[allow(clippy::too_many_lines)]
     pub fn add(&mut self, new_choice: &Id) -> snowball::Node {
         if self.finalized() {
             // tree is finalized, or leaf node
             return snowball::Node::Unary(self.clone());
         }
 
-        let (index, found) = bits::first_difference_subset(
-            self.decided_prefix() as usize,
-            self.common_prefix() as usize,
-            &self.preference(),
-            new_choice,
-        );
-        if !found {
-            // no difference, thus this node shouldn't be split (case #1)
-            // e.g., insert "000 01" to "000"
-            if let Some(child) = self.child.clone() {
-                let added_child = match *child {
-                    snowball::Node::Unary(mut unary_node) => unary_node.add(new_choice),
-                    snowball::Node::Binary(mut binary_node) => binary_node.add(new_choice),
-                };
-                self.child = Some(Box::new(added_child));
+        // 首先找到差异位的索引
+        let mut index =
+            usize::try_from(self.decided_prefix()).expect("decided prefix should be non-negative");
+        let common_prefix_usize =
+            usize::try_from(self.common_prefix()).expect("common prefix should be non-negative");
+
+        // 使用 try_from 替代 as 转换
+        let found = !bits::equal_subset(index, common_prefix_usize, &self.preference(), new_choice);
+
+        // 如果找到差异，确定差异位的索引
+        if found {
+            // 找到第一个不同的位
+            while index < common_prefix_usize {
+                if self.preference().bit(index) != new_choice.bit(index) {
+                    break;
+                }
+                index += 1;
             }
 
-            // if child is none, then we are attempting to add the same choice
-            // into the tree, which should be a no-op
-        } else {
-            // difference is found, thus split
-
-            // currently preferred bit
+            // 差异被找到，因此分裂
+            // 当前首选位
             let bit = self.preference().bit(index);
             let mut b = binary::node::Node {
                 parameters: self.parameters.clone(),
 
-                snowball: self
-                    .snowball
-                    .extend(self.parameters.beta_rogue.into(), bit.as_usize() as i64),
+                snowball: self.snowball.extend(
+                    self.parameters.beta_rogue.into(),
+                    i64::try_from(bit.as_usize()).expect("bit index should fit in i64"),
+                ),
 
                 preferences: Cell::new([Id::empty(), Id::empty()]),
-                bit: Cell::new(index as i64),
+                bit: Cell::new(i64::try_from(index).expect("index should fit in i64")),
                 should_reset: Cell::new([self.should_reset.get(), self.should_reset.get()]),
 
                 child0: None,
@@ -135,9 +135,9 @@ impl Node {
                 preference: Cell::new(*new_choice),
 
                 // new child assumes this branch has decided in it's favor
-                decided_prefix: Cell::new(index as i64 + 1),
+                decided_prefix: Cell::new(i64::try_from(index).unwrap() + 1),
                 // new child has no conflicts under this branch
-                common_prefix: Cell::new(bits::NUM_BITS as i64),
+                common_prefix: Cell::new(i64::try_from(bits::NUM_BITS).unwrap()),
 
                 should_reset: Cell::new(false),
                 child: None,
@@ -148,13 +148,13 @@ impl Node {
             if self.decided_prefix() == self.common_prefix() - 1 {
                 match bit {
                     bits::Bit::Zero => {
-                        b.child0 = self.child.clone();
+                        b.child0.clone_from(&self.child);
                         if self.child.is_some() {
                             b.child1 = Some(Box::new(snowball::Node::Unary(new_child)));
                         }
                     }
                     bits::Bit::One => {
-                        b.child1 = self.child.clone();
+                        b.child1.clone_from(&self.child);
                         if self.child.is_some() {
                             b.child0 = Some(Box::new(snowball::Node::Unary(new_child)));
                         }
@@ -165,7 +165,7 @@ impl Node {
 
             // this node was split on the first bit (case #3)
             // e.g., inserting "10" to "00" returns a binary choice
-            if index as i64 == self.decided_prefix() {
+            if i64::try_from(index).unwrap() == self.decided_prefix() {
                 let decided_prefix = self.decided_prefix.take();
                 self.decided_prefix.set(decided_prefix + 1);
 
@@ -185,19 +185,19 @@ impl Node {
 
             // this node was split on the last bit (case #4)
             // e.g., inserting "01" to "00" returns a binary choice in its child
-            if index as i64 == self.common_prefix() - 1 {
+            if i64::try_from(index).unwrap() == self.common_prefix() - 1 {
                 let common_prefix = self.common_prefix.take();
                 self.common_prefix.set(common_prefix - 1);
 
                 match bit {
                     bits::Bit::Zero => {
-                        b.child0 = self.child.clone();
+                        b.child0.clone_from(&self.child);
                         if self.child.is_some() {
                             b.child1 = Some(Box::new(snowball::Node::Unary(new_child)));
                         }
                     }
                     bits::Bit::One => {
-                        b.child1 = self.child.clone();
+                        b.child1.clone_from(&self.child);
                         if self.child.is_some() {
                             b.child0 = Some(Box::new(snowball::Node::Unary(new_child)));
                         }
@@ -211,7 +211,7 @@ impl Node {
             // this node was split on an interior bit (case #5)
             // e.g., inserting "010" to "000" returns a binary choice
             let original_decided_prefix = self.decided_prefix.take();
-            self.decided_prefix.set(index as i64 + 1);
+            self.decided_prefix.set(i64::try_from(index).unwrap() + 1);
 
             match bit {
                 bits::Bit::Zero => {
@@ -229,19 +229,31 @@ impl Node {
                 snowball: self.snowball.clone(),
                 preference: Cell::new(self.preference()),
                 decided_prefix: Cell::new(original_decided_prefix),
-                common_prefix: Cell::new(index as i64),
+                common_prefix: Cell::new(i64::try_from(index).unwrap()),
                 should_reset: Cell::new(false),
                 child: Some(Box::new(snowball::Node::Binary(b))),
             });
         }
 
-        // do nothing, the choice was already rejected
+        // 没有差异，因此这个节点不应该被分裂 (case #1)
+        // 例如，插入 "000 01" 到 "000"
+        if let Some(child) = self.child.clone() {
+            let added_child = match *child {
+                snowball::Node::Unary(mut unary_node) => unary_node.add(new_choice),
+                snowball::Node::Binary(mut binary_node) => binary_node.add(new_choice),
+            };
+            self.child = Some(Box::new(added_child));
+        }
+
+        // if child is none, then we are attempting to add the same choice
+        // into the tree, which should be a no-op
+
         snowball::Node::Unary(self.clone())
     }
 
     /// Returns the new node and whether the vote was successful.
     /// ref. "avalanchego/snow/consensus/tree.go" "unaryNode.RecordPoll"
-    pub fn record_poll(&mut self, votes: Bag, reset: bool) -> (snowball::Node, bool) {
+    pub fn record_poll(&mut self, votes: &Bag, reset: bool) -> (snowball::Node, bool) {
         // we are guaranteed that the votes are of IDs that have previously been added
         // this ensures that the provided votes all have the same bits in the
         // range [u.decidedPrefix, u.commonPrefix) as in u.preference
@@ -252,7 +264,7 @@ impl Node {
             self.should_reset.set(true); // Make sure my child is also reset correctly
         }
 
-        if votes.len() < self.parameters.alpha as u32 {
+        if votes.len() < u32::from(self.parameters.alpha) {
             // didn't get enough votes
             // I must reset and my child must reset as well
             self.snowball.record_unsuccessful_poll();
@@ -307,7 +319,7 @@ impl Node {
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl std::fmt::Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(

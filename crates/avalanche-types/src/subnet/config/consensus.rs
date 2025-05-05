@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowball#Parameters>
 ///
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/avalanche#Parameters>
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SnowballParameters {
     /// Sample size.
@@ -49,10 +49,10 @@ impl Default for SnowballParameters {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Parameters {
-    /// Embeds "SnowballParameters" at the same level as other fields.
+    /// Embeds "`SnowballParameters`" at the same level as other fields.
     #[serde(flatten)]
     pub snowball_parameters: SnowballParameters,
     pub parents: i32,

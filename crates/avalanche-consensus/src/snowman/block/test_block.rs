@@ -8,7 +8,7 @@ use avalanche_types::{
 use bytes::Bytes;
 
 /// Implements test block.
-/// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#TestBlock>
+/// See: <https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#TestBlock>.
 #[derive(Clone, Debug)]
 pub struct TestBlock {
     decidable: TestDecidable,
@@ -38,9 +38,9 @@ impl TestBlock {
         }
     }
 
-    /// Returns a new instantiation of "Block" trait
-    /// which itself implies "Decidable" trait.
-    /// Must import "Decidable" trait for use.
+    /// Returns a new instantiation of the `Block` trait,
+    /// which itself implies the `Decidable` trait.
+    /// Must import the `Decidable` trait for use.
     pub fn new_trait(
         decidable: TestDecidable,
         parent_id: Id,
@@ -102,7 +102,7 @@ impl Block for TestBlock {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::block::test_block::test_block --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::block::test_block::test_block --exact --show-output
 #[test]
 fn test_block() {
     use avalanche_types::errors::Error;

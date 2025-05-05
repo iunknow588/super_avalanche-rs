@@ -90,7 +90,7 @@ async fn byzantine() {
                     true
                 }
                 Err(e) => {
-                    log::warn!("not healthy yet {}", e);
+                    log::warn!("not healthy yet {e}");
                     false
                 }
             }

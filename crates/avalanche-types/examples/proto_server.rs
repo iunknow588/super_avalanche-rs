@@ -29,7 +29,7 @@ impl Greeter for MyGreeter {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse().unwrap();
-    println!("server listening on {}", addr);
+    println!("server listening on {addr}");
 
     // ref. https://github.com/hyperium/tonic/blob/v0.8.1/examples/src/reflection/server.rs
     let reflection_svc = tonic_reflection::server::Builder::configure()

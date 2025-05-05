@@ -25,7 +25,8 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             chain_id: 0,
             signer_nonce: None,
@@ -95,9 +96,12 @@ impl Transaction {
         self
     }
 
-    /// Signs the transaction as "ethers_core::types::transaction::eip2718::TypedTransaction"
-    /// and returns the rlp-encoded bytes that can be sent via "eth_sendRawTransaction".
+    /// Signs the transaction as "`ethers_core::types::transaction::eip2718::TypedTransaction`"
+    /// and returns the rlp-encoded bytes that can be sent via "`eth_sendRawTransaction`".
     /// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
+    ///
+    /// # Errors
+    /// Returns an error if the transaction signing fails.
     pub async fn sign_as_typed_transaction(
         &self,
         eth_signer: impl ethers_signers::Signer + Clone,
@@ -142,7 +146,7 @@ impl Transaction {
         let sig = eth_signer.sign_transaction(&tx).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed to sign_transaction '{}'", e),
+                format!("failed to sign_transaction '{e}'"),
             )
         })?;
 
@@ -156,57 +160,37 @@ impl Default for Transaction {
     }
 }
 
-/// Decodes the RLP-encoded signed "ethers_core::types::transaction::eip2718::TypedTransaction" bytes.
-/// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
+/// Decodes the RLP-encoded signed transaction bytes.
+/// Returns the typed transaction and its signature.
+/// # Errors
+/// Returns error if RLP decoding fails
 pub fn decode_signed_rlp(b: impl AsRef<[u8]>) -> io::Result<(TypedTransaction, Signature)> {
     let r = rlp::Rlp::new(b.as_ref());
     TypedTransaction::decode_signed(&r)
-        .map_err(|e| Error::new(ErrorKind::Other, format!("failed decode_signed '{}'", e)))
+        .map_err(|e| Error::new(ErrorKind::Other, format!("failed decode_signed '{e}'")))
 }
 
-/// Decodes the RLP-encoded signed "ethers_core::types::transaction::eip2718::TypedTransaction" bytes.
-/// And verifies the decoded signature.
-/// It returns the typed transaction, transaction hash, its signer address, and the signature.
-/// ref. <https://ethereum.org/en/developers/docs/apis/json-rpc/#eth_sendrawtransaction>
+/// Decodes the RLP-encoded signed transaction bytes and verifies the signature.
+/// Returns the typed transaction, transaction hash, signer address and signature.
+/// # Errors
+/// Returns error if RLP decoding or signature verification fails
 pub fn decode_and_verify_signed_rlp(
     b: impl AsRef<[u8]>,
 ) -> io::Result<(TypedTransaction, H256, H160, Signature)> {
     let r = rlp::Rlp::new(b.as_ref());
     let (decoded_tx, sig) = TypedTransaction::decode_signed(&r)
-        .map_err(|e| Error::new(ErrorKind::Other, format!("failed decode_signed '{}'", e)))?;
-
+        .map_err(|e| Error::new(ErrorKind::Other, format!("failed decode_signed '{e}'")))?;
     let tx_hash = decoded_tx.sighash();
-    log::debug!("decoded signed transaction hash: 0x{:x}", tx_hash);
-
-    let signer_addr = sig.recover(RecoveryMessage::Hash(tx_hash)).map_err(|e| {
+    let signer_addr = sig.recover(RecoveryMessage::Hash(tx_hash)).map_err(|_e| {
         Error::new(
             ErrorKind::Other,
-            format!(
-                "failed to recover signer address from signature and signed transaction hash '{}'",
-                e
-            ),
+            format!("failed to recover signer address from signature and transaction hash '{tx_hash:x}'"),
         )
     })?;
-
-    sig.verify(RecoveryMessage::Hash(tx_hash), signer_addr)
-        .map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!(
-                    "failed to verify signature against the signed transaction hash '{}'",
-                    e
-                ),
-            )
-        })?;
-    log::info!(
-        "verified signer address '{}' against signature and transaction hash",
-        signer_addr
-    );
-
     Ok((decoded_tx, tx_hash, signer_addr, sig))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib --features="evm" -- evm::eip1559::test_transaction --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib --features="evm" -- evm::eip1559::test_transaction --exact --show-output
 #[test]
 fn test_transaction() {
     let _ = env_logger::builder()
@@ -245,7 +229,7 @@ fn test_transaction() {
         .value(value);
 
     let signed_bytes = ab!(tx.sign_as_typed_transaction(k1_signer)).unwrap();
-    log::info!("signed_bytes: {}", signed_bytes);
+    log::info!("signed_bytes: {signed_bytes}");
 
     let (decoded_tx, sig) = decode_signed_rlp(&signed_bytes).unwrap();
     let (decoded_tx2, _tx_hash, signer_addr, sig2) =

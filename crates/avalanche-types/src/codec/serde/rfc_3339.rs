@@ -2,7 +2,10 @@ use chrono::{DateTime, SecondsFormat, TimeZone, Utc};
 use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
-/// ref. <https://serde.rs/custom-date-format.html>
+/// 将`DateTime`<Utc>序列化为RFC3339格式字符串。
+///
+/// # Errors
+/// 序列化器失败时返回错误。
 pub fn serialize<S>(x: &DateTime<Utc>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -11,7 +14,10 @@ where
     serializer.serialize_str(&x.to_rfc3339_opts(SecondsFormat::Millis, true))
 }
 
-/// ref. <https://serde.rs/custom-date-format.html>
+/// 从RFC3339格式字符串反序列化为 `DateTime<Utc>`。
+///
+/// # Errors
+/// 字符串格式不合法或反序列化失败时返回错误。
 pub fn deserialize<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,

@@ -23,17 +23,17 @@ async fn iterator_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    let mut db = CorruptableDb::new_boxed(Box::new(DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    )));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
-    let key2 = "hello2".as_bytes();
-    let value2 = "world2".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
+    let key2 = b"hello2";
+    let value2 = b"world2";
 
     db.put(key1, value1).await.unwrap();
     db.put(key2, value2).await.unwrap();
@@ -56,7 +56,7 @@ async fn iterator_test() {
     assert!(!iterator.next().await.unwrap());
 
     // cleanup
-    let _ = iterator.release().await;
+    let () = iterator.release().await;
 }
 
 // Test to make sure the the iterator can be configured to
@@ -72,17 +72,17 @@ async fn iterator_start_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    let mut db = CorruptableDb::new_boxed(Box::new(DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    )));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
-    let key2 = "goodbye".as_bytes();
-    let value2 = "world2".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
+    let key2 = b"goodbye";
+    let value2 = b"world2";
 
     db.put(key1, value1).await.unwrap();
     db.put(key2, value2).await.unwrap();
@@ -97,7 +97,7 @@ async fn iterator_start_test() {
     assert_eq!(iterator.value().await.unwrap(), value2);
 
     // cleanup
-    let _ = iterator.release().await;
+    let () = iterator.release().await;
 }
 
 // Test to make sure the iterator can be configured to skip
@@ -113,25 +113,25 @@ async fn iterator_prefix_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    let mut db = CorruptableDb::new_boxed(Box::new(DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    )));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
-    let key2 = "goodbye".as_bytes();
-    let value2 = "world2".as_bytes();
-    let key3 = "joy".as_bytes();
-    let value3 = "world3".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
+    let key2 = b"goodbye";
+    let value2 = b"world2";
+    let key3 = b"joy";
+    let value3 = b"world3";
 
     db.put(key1, value1).await.unwrap();
     db.put(key2, value2).await.unwrap();
     db.put(key3, value3).await.unwrap();
 
-    let resp = db.new_iterator_with_prefix("h".as_bytes()).await;
+    let resp = db.new_iterator_with_prefix(b"h").await;
     assert!(resp.is_ok());
 
     let mut iterator = resp.unwrap();
@@ -143,7 +143,7 @@ async fn iterator_prefix_test() {
     assert!(!iterator.next().await.unwrap());
 
     // cleanup
-    let _ = iterator.release().await;
+    let () = iterator.release().await;
 }
 
 // Tests to make sure that an iterator on a database will report itself as being
@@ -161,17 +161,17 @@ async fn iterator_error_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    let mut db = CorruptableDb::new_boxed(Box::new(DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    )));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
-    let key2 = "hello2".as_bytes();
-    let value2 = "world2".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
+    let key2 = b"hello2";
+    let value2 = b"world2";
 
     db.put(key1, value1).await.unwrap();
     db.put(key2, value2).await.unwrap();
@@ -209,15 +209,15 @@ async fn iterator_error_after_release_test() {
     });
     tokio::time::sleep(Duration::from_millis(100)).await;
 
-    let client_conn = Channel::builder(format!("http://{}", addr).parse().unwrap())
-        .connect()
-        .await
-        .unwrap();
+    let mut db = CorruptableDb::new_boxed(Box::new(DatabaseClient::new(
+        Channel::builder(format!("http://{addr}").parse().unwrap())
+            .connect()
+            .await
+            .unwrap(),
+    )));
 
-    let mut db = CorruptableDb::new_boxed(DatabaseClient::new_boxed(client_conn));
-
-    let key1 = "hello1".as_bytes();
-    let value1 = "world1".as_bytes();
+    let key1 = b"hello1";
+    let value1 = b"world1";
 
     db.put(key1, value1).await.unwrap();
 
@@ -228,7 +228,7 @@ async fn iterator_error_after_release_test() {
     assert!(resp.is_ok());
 
     let mut iterator = resp.unwrap();
-    let _ = iterator.release().await;
+    let () = iterator.release().await;
 
     assert!(!iterator.next().await.unwrap());
 

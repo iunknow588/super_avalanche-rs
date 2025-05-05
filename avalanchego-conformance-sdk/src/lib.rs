@@ -43,7 +43,7 @@ pub struct GrpcClient<T> {
 }
 
 impl Client<Channel> {
-    /// Creates a new avalanchego-conformance client.
+    /// Creates a new `avalanchego-conformance` client.
     ///
     /// # Arguments
     ///
@@ -74,7 +74,7 @@ impl Client<Channel> {
         let resp = ping_client
             .ping_service(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ping_service '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ping_service '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -87,7 +87,7 @@ impl Client<Channel> {
         let resp = cli.certificate_to_node_id(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed certificate_to_node_id '{}'", e),
+                format!("failed certificate_to_node_id '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -105,7 +105,7 @@ impl Client<Channel> {
             .map_err(|e| {
                 Error::new(
                     ErrorKind::Other,
-                    format!("failed secp256k1_recover_hash_public_key '{}'", e),
+                    format!("failed secp256k1_recover_hash_public_key '{e}'"),
                 )
             })?;
         Ok(resp.into_inner())
@@ -120,7 +120,7 @@ impl Client<Channel> {
         let resp = cli
             .secp256k1_info(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed secp256k1_info '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed secp256k1_info '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -133,7 +133,7 @@ impl Client<Channel> {
         let resp = cli
             .bls_signature(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed bls_signature '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed bls_signature '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -143,7 +143,7 @@ impl Client<Channel> {
         let resp = cli
             .build_vertex(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed build_vertex '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed build_vertex '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -153,12 +153,10 @@ impl Client<Channel> {
     ) -> io::Result<AcceptedFrontierResponse> {
         let mut cli = self.grpc_client.message_service_client.lock().await;
         let req = tonic::Request::new(req);
-        let resp = cli.accepted_frontier(req).await.map_err(|e| {
-            Error::new(
-                ErrorKind::Other,
-                format!("failed accepted_frontier '{}'", e),
-            )
-        })?;
+        let resp = cli
+            .accepted_frontier(req)
+            .await
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed accepted_frontier '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -171,7 +169,7 @@ impl Client<Channel> {
         let resp = cli.accepted_state_summary(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed accepted_state_summary '{}'", e),
+                format!("failed accepted_state_summary '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -183,7 +181,7 @@ impl Client<Channel> {
         let resp = cli
             .accepted(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed accepted '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed accepted '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -193,7 +191,7 @@ impl Client<Channel> {
         let resp = cli
             .ancestors(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ancestors '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ancestors '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -203,7 +201,7 @@ impl Client<Channel> {
         let resp = cli
             .app_gossip(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_gossip '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_gossip '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -213,7 +211,7 @@ impl Client<Channel> {
         let resp = cli
             .app_request(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_request '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_request '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -223,7 +221,7 @@ impl Client<Channel> {
         let resp = cli
             .app_response(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_response '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed app_response '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -233,7 +231,7 @@ impl Client<Channel> {
         let resp = cli
             .chits(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed chits '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed chits '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -246,7 +244,7 @@ impl Client<Channel> {
         let resp = cli.get_accepted_frontier(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed get_accepted_frontier '{}'", e),
+                format!("failed get_accepted_frontier '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -261,7 +259,7 @@ impl Client<Channel> {
         let resp = cli.get_accepted_state_summary(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed get_accepted_state_summary '{}'", e),
+                format!("failed get_accepted_state_summary '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -273,7 +271,7 @@ impl Client<Channel> {
         let resp = cli
             .get_accepted(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get_accepted '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get_accepted '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -286,7 +284,7 @@ impl Client<Channel> {
         let resp = cli
             .get_ancestors(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get_ancestors '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get_ancestors '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -299,7 +297,7 @@ impl Client<Channel> {
         let resp = cli.get_state_summary_frontier(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed get_state_summary_frontier '{}'", e),
+                format!("failed get_state_summary_frontier '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -311,7 +309,7 @@ impl Client<Channel> {
         let resp = cli
             .get(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed get '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -321,7 +319,7 @@ impl Client<Channel> {
         let resp = cli
             .peerlist(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed peerlist '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed peerlist '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -331,7 +329,7 @@ impl Client<Channel> {
         let resp = cli
             .ping(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ping '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed ping '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -341,7 +339,7 @@ impl Client<Channel> {
         let resp = cli
             .pong(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed pong '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed pong '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -351,7 +349,7 @@ impl Client<Channel> {
         let resp = cli
             .pull_query(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed pull_query '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed pull_query '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -361,7 +359,7 @@ impl Client<Channel> {
         let resp = cli
             .push_query(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed push_query '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed push_query '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -371,7 +369,7 @@ impl Client<Channel> {
         let resp = cli
             .put(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed put '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed put '{e}'")))?;
         Ok(resp.into_inner())
     }
 
@@ -384,7 +382,7 @@ impl Client<Channel> {
         let resp = cli.state_summary_frontier(req).await.map_err(|e| {
             Error::new(
                 ErrorKind::Other,
-                format!("failed state_summary_frontier '{}'", e),
+                format!("failed state_summary_frontier '{e}'"),
             )
         })?;
         Ok(resp.into_inner())
@@ -396,7 +394,7 @@ impl Client<Channel> {
         let resp = cli
             .version(req)
             .await
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed version '{}'", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed version '{e}'")))?;
         Ok(resp.into_inner())
     }
 }

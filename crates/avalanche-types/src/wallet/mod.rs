@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Wallet<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone> {
+pub struct Wallet<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync> {
     pub key_type: key::secp256k1::KeyType,
     pub keychain: key::secp256k1::keychain::Keychain<T>,
 
@@ -53,10 +53,10 @@ pub struct Wallet<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone
 
 /// ref. <https://doc.rust-lang.org/std/string/trait.ToString.html>
 /// ref. <https://doc.rust-lang.org/std/fmt/trait.Display.html>
-/// Use "Self.to_string()" to directly invoke this.
+/// Use `Self.to_string()` to directly invoke this.
 impl<T> fmt::Display for Wallet<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "key_type: {}", self.key_type.as_str())?;
@@ -92,24 +92,41 @@ where
 
 impl<T> Wallet<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     /// Picks one endpoint in roundrobin, and updates the cursor for next calls.
     /// Returns the pair of an index and its corresponding endpoint.
+    /// Picks a base HTTP URL from the list of available URLs.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the mutex is poisoned.
+    #[must_use]
     pub fn pick_base_http_url(&self) -> (usize, String) {
-        let mut idx = self.base_http_url_cursor.lock().unwrap();
-
-        let picked = *idx;
-        let http_rpc = self.base_http_urls[picked].clone();
-        *idx = (picked + 1) % self.base_http_urls.len();
+        let picked;
+        let http_rpc;
+        {
+            let mut idx = self.base_http_url_cursor.lock().unwrap();
+            picked = *idx;
+            http_rpc = self.base_http_urls[picked].clone();
+            *idx = (picked + 1) % self.base_http_urls.len();
+        }
 
         log::debug!("picked base http URL {http_rpc} at index {picked}");
         (picked, http_rpc)
     }
+
+    /// Returns the P-chain wallet.
+    #[must_use]
+    pub fn p(&self) -> p::P<T> {
+        p::P {
+            inner: self.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct Builder<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone> {
+pub struct Builder<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync> {
     pub key: T,
     pub base_http_urls: Vec<String>,
     pub only_evm: bool,
@@ -117,7 +134,7 @@ pub struct Builder<T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clon
 
 impl<T> Builder<T>
 where
-    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone,
+    T: key::secp256k1::ReadOnly + key::secp256k1::SignOnly + Clone + Send + Sync,
 {
     pub fn new(key: &T) -> Self {
         Self {
@@ -130,20 +147,17 @@ where
     /// Adds an HTTP rpc endpoint to the `http_rpcs` field in the Builder.
     /// If URL path is specified, it strips the URL path.
     #[must_use]
-    pub fn base_http_url(mut self, u: String) -> Self {
+    /// Sets the base HTTP URL.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the URL is invalid.
+    pub fn base_http_url(mut self, u: &str) -> Self {
         let (scheme, host, port, _, _) =
-            utils::urls::extract_scheme_host_port_path_chain_alias(&u).unwrap();
-        let scheme = if let Some(s) = scheme {
-            format!("{s}://")
-        } else {
-            String::new()
-        };
+            utils::urls::extract_scheme_host_port_path_chain_alias(u).unwrap();
+        let scheme = scheme.map_or_else(String::new, |s| format!("{s}://"));
         let rpc_ep = format!("{scheme}{host}");
-        let rpc_url = if let Some(port) = port {
-            format!("{rpc_ep}:{port}")
-        } else {
-            rpc_ep.clone() // e.g., DNS
-        };
+        let rpc_url = port.map_or_else(|| rpc_ep.clone(), |port| format!("{rpc_ep}:{port}"));
 
         if self.base_http_urls.is_empty() {
             self.base_http_urls = vec![rpc_url];
@@ -154,7 +168,7 @@ where
     }
 
     #[must_use]
-    pub fn only_evm(mut self) -> Self {
+    pub const fn only_evm(mut self) -> Self {
         self.only_evm = true;
         self
     }
@@ -162,22 +176,19 @@ where
     /// Overwrites the HTTP rpc endpoints to the `urls` field in the Builder.
     /// If URL path is specified, it strips the URL path.
     #[must_use]
-    pub fn base_http_urls(mut self, urls: Vec<String>) -> Self {
+    /// Sets the base HTTP URLs.
+    ///
+    /// # Panics
+    ///
+    /// Panics if any of the URLs are invalid.
+    pub fn base_http_urls(mut self, urls: &[String]) -> Self {
         let mut base_http_urls = Vec::new();
-        for http_rpc in urls.iter() {
+        for http_rpc in urls {
             let (scheme, host, port, _, _) =
                 utils::urls::extract_scheme_host_port_path_chain_alias(http_rpc).unwrap();
-            let scheme = if let Some(s) = scheme {
-                format!("{s}://")
-            } else {
-                String::new()
-            };
+            let scheme = scheme.map_or_else(String::new, |s| format!("{s}://"));
             let rpc_ep = format!("{scheme}{host}");
-            let rpc_url = if let Some(port) = port {
-                format!("{rpc_ep}:{port}")
-            } else {
-                rpc_ep.clone() // e.g., DNS
-            };
+            let rpc_url = port.map_or_else(|| rpc_ep.clone(), |port| format!("{rpc_ep}:{port}"));
 
             base_http_urls.push(rpc_url);
         }
@@ -185,6 +196,15 @@ where
         self
     }
 
+    /// Builds the wallet.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the wallet creation fails.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the network ID is not available.
     pub async fn build(&self) -> Result<Wallet<T>> {
         log::info!(
             "building wallet with {} endpoints",
@@ -285,7 +305,7 @@ where
             create_blockchain_tx_fee,
         };
 
-        log::info!("initiated the wallet:\n{}", w);
+        log::info!("initiated the wallet:\n{w}");
 
         Ok(w)
     }

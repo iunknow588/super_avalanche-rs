@@ -95,14 +95,14 @@ impl Spec {
             Ok(s) => Ok(s),
             Err(e) => Err(Error::new(
                 ErrorKind::Other,
-                format!("failed to serialize Spec to YAML {}", e),
+                format!("failed to serialize Spec to YAML {e}"),
             )),
         }
     }
 
     /// Saves the current spec to disk and overwrites the file.
     pub fn sync(&self, file_path: &str) -> io::Result<()> {
-        log::info!("syncing Spec to '{}'", file_path);
+        log::info!("syncing Spec to '{file_path}'");
         let path = Path::new(file_path);
         if let Some(parent_dir) = path.parent() {
             log::info!("creating parent dir '{}'", parent_dir.display());
@@ -110,7 +110,7 @@ impl Spec {
         }
 
         let d = serde_yaml::to_string(self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize YAML {}", e)))?;
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize YAML {e}")))?;
 
         let mut f = File::create(file_path)?;
         f.write_all(d.as_bytes())?;
@@ -124,10 +124,10 @@ impl Spec {
 
         let spec = if file_path.ends_with(".yaml") || file_path.ends_with(".yml") {
             serde_yaml::from_str(&raw_data)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse YAML: {}", e)))?
+                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse YAML: {e}")))?
         } else {
             serde_json::from_str(&raw_data)
-                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse JSON: {}", e)))?
+                .map_err(|e| Error::new(ErrorKind::Other, format!("failed to parse JSON: {e}")))?
         };
 
         Ok(spec)
@@ -157,7 +157,7 @@ impl Spec {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-e2e -- spec::test_spec --exact \
+/// `RUST_LOG=debug` cargo test --package avalanche-e2e -- spec::test_spec --exact \
 /// --show-output
 #[test]
 fn test_spec() {

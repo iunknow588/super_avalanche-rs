@@ -3,6 +3,11 @@ use std::io::{self, Error, ErrorKind};
 use url::Url;
 
 #[allow(clippy::type_complexity)]
+/// 从URL字符串中提取scheme、host、port、path和chain alias。
+///
+/// # Errors
+///
+/// 如果URL解析失败，则返回错误。
 pub fn extract_scheme_host_port_path_chain_alias(
     s: &str,
 ) -> io::Result<(
@@ -20,6 +25,11 @@ pub fn extract_scheme_host_port_path_chain_alias(
 }
 
 #[allow(clippy::type_complexity)]
+/// 解析URL字符串，提取scheme、host、port、path和chain alias。
+///
+/// # Errors
+///
+/// 如果URL解析失败，则返回错误。
 fn parse_url(
     s: &str,
 ) -> io::Result<(
@@ -29,12 +39,8 @@ fn parse_url(
     Option<String>,
     Option<String>,
 )> {
-    let url = Url::parse(s).map_err(|e| {
-        Error::new(
-            ErrorKind::InvalidInput,
-            format!("failed Url::parse '{}'", e),
-        )
-    })?;
+    let url = Url::parse(s)
+        .map_err(|e| Error::new(ErrorKind::InvalidInput, format!("failed Url::parse '{e}'")))?;
 
     let host = if let Some(hs) = url.host_str() {
         hs.to_string()
@@ -48,18 +54,18 @@ fn parse_url(
         (None, None)
     } else {
         // e.g., "/ext/bc/C/rpc"
-        if let Some(mut path_segments) = url.path_segments() {
-            let _ext = path_segments.next();
-            let _bc = path_segments.next();
-            let chain_alias = path_segments.next();
-            if let Some(ca) = chain_alias {
-                (Some(url.path().to_string()), Some(ca.to_string()))
-            } else {
-                (Some(url.path().to_string()), None)
-            }
-        } else {
-            (Some(url.path().to_string()), None)
-        }
+        url.path_segments().map_or_else(
+            || (Some(url.path().to_string()), None),
+            |mut path_segments| {
+                let _ext = path_segments.next();
+                let _bc = path_segments.next();
+                let chain_alias = path_segments.next();
+                chain_alias.map_or_else(
+                    || (Some(url.path().to_string()), None),
+                    |ca| (Some(url.path().to_string()), Some(ca.to_string())),
+                )
+            },
+        )
     };
 
     Ok((
@@ -71,9 +77,18 @@ fn parse_url(
     ))
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- utils::urls::test_extract_scheme_host_port_path_chain_alias --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- utils::urls::test_extract_scheme_host_port_path_chain_alias --exact --show-output
 #[test]
 fn test_extract_scheme_host_port_path_chain_alias() {
+    // 将测试拆分为多个函数，以降低复杂度
+    test_basic_urls();
+    test_chain_urls();
+}
+
+/// 测试基本URL解析
+#[allow(dead_code)]
+#[allow(clippy::cognitive_complexity)]
+fn test_basic_urls() {
     let (scheme, host, port, path, chain_alias) =
         extract_scheme_host_port_path_chain_alias("http://localhost:9650").unwrap();
     assert_eq!(scheme.unwrap(), "http");
@@ -121,7 +136,11 @@ fn test_extract_scheme_host_port_path_chain_alias() {
     assert_eq!(port.unwrap(), 9650);
     assert!(path.is_none());
     assert!(chain_alias.is_none());
+}
 
+/// 测试带有链ID的URL解析
+#[allow(dead_code)]
+fn test_chain_urls() {
     let (scheme, host, port, path, chain_alias) =
         extract_scheme_host_port_path_chain_alias("http://127.0.0.1:9650/ext/bc/C/rpc").unwrap();
     assert_eq!(scheme.unwrap(), "http");

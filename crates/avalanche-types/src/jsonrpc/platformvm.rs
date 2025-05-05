@@ -38,9 +38,14 @@ impl Default for IssueTxRequest {
 }
 
 impl IssueTxRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -89,14 +94,14 @@ impl Default for IssueTxResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_issue_tx --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_issue_tx` --exact --show-output
 #[test]
 fn test_issue_tx() {
     use std::str::FromStr;
 
     let resp: IssueTxResponse = serde_json::from_str(
         "
-    
+
     {
         \"jsonrpc\": \"2.0\",
         \"result\": {
@@ -104,7 +109,7 @@ fn test_issue_tx() {
         },
         \"id\": 1
     }
-    
+
     ",
     )
     .unwrap();
@@ -151,7 +156,7 @@ pub struct GetTxResult {
     pub encoding: String,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_tx --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_tx` --exact --show-output
 #[test]
 fn test_get_tx() {
     let parsed_resp: GetTxResponse = serde_json::from_str(
@@ -219,7 +224,7 @@ fn test_get_tx() {
     .unwrap();
 
     assert_eq!(parsed_resp.jsonrpc, "2.0");
-    assert_eq!(parsed_resp.result.clone().unwrap().encoding, "json");
+    assert_eq!(parsed_resp.result.as_ref().unwrap().encoding, "json");
 }
 
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain/#platformgettxstatus>
@@ -262,7 +267,7 @@ impl Default for GetTxStatusResult {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_tx_status --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_tx_status` --exact --show-output
 #[test]
 fn test_get_tx_status() {
     let resp: GetTxStatusResponse = serde_json::from_str(
@@ -312,7 +317,7 @@ pub struct GetHeightResult {
     pub height: u64,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_height --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_height` --exact --show-output
 #[test]
 fn test_get_height() {
     // ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetheight
@@ -364,9 +369,14 @@ impl Default for GetUtxosRequest {
 }
 
 impl GetUtxosRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -411,7 +421,7 @@ pub struct GetUtxosResult {
     pub encoding: Option<String>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_utxos_empty --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_utxos_empty` --exact --show-output
 #[test]
 fn test_get_utxos_empty() {
     // ref. https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetutxos
@@ -453,7 +463,7 @@ fn test_get_utxos_empty() {
     assert_eq!(resp, expected);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_utxos_non_empty --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_utxos_non_empty` --exact --show-output
 #[test]
 fn test_get_utxos_non_empty() {
     // ref. https://docs.avax.network/build/avalanchego-apis/p-chain/#platformgetbalance
@@ -541,7 +551,7 @@ pub struct GetBalanceResult {
     pub utxo_ids: Option<Vec<txs::utxo::Id>>,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_balance --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_balance` --exact --show-output
 #[test]
 fn test_get_balance() {
     use crate::ids;
@@ -675,6 +685,8 @@ impl Default for GetPendingValidatorsResponse {
     }
 }
 
+/// Reference documentation for pending validators.
+///
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetpendingvalidators>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientPermissionlessValidator>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientStaker>
@@ -684,9 +696,12 @@ pub struct GetPendingValidatorsResult {
     pub delegators: Vec<ApiPrimaryDelegator>,
 }
 
+/// Reference documentation for current validators.
+///
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetcurrentvalidators>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientPermissionlessValidator>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientStaker>
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -785,9 +800,12 @@ pub struct ApiOwner {
     pub addresses: Vec<String>,
 }
 
+/// Reference documentation for primary delegator.
+///
 /// ref. <https://docs.avax.network/apis/avalanchego/apis/p-chain#platformgetcurrentvalidators>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientPermissionlessValidator>
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/vms/platformvm#ClientStaker>
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -828,8 +846,9 @@ impl Default for ApiPrimaryDelegator {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_current_validators --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_current_validators` --exact --show-output
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_get_current_validators() {
     use std::str::FromStr;
 
@@ -978,7 +997,7 @@ fn test_get_current_validators() {
     assert_eq!(resp, expected);
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_pending_validators --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_pending_validators` --exact --show-output
 #[test]
 
 fn test_get_pending_validators() {
@@ -1102,7 +1121,7 @@ impl Default for Subnet {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_subnets --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_subnets` --exact --show-output
 #[test]
 fn test_get_subnets() {
     use crate::ids;
@@ -1192,7 +1211,7 @@ impl Default for Blockchain {
     }
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_blockchains --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_blockchains` --exact --show-output
 #[test]
 fn test_get_blockchains() {
     use crate::ids;
@@ -1296,9 +1315,14 @@ impl Default for GetBlockchainStatusRequest {
 }
 
 impl GetBlockchainStatusRequest {
+    /// Encodes the request as JSON.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if JSON serialization fails.
     pub fn encode_json(&self) -> io::Result<String> {
         serde_json::to_string(&self)
-            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {}", e)))
+            .map_err(|e| Error::new(ErrorKind::Other, format!("failed to serialize JSON {e}")))
     }
 }
 
@@ -1337,12 +1361,12 @@ pub struct GetBlockchainStatusResult {
     pub status: String,
 }
 
-/// RUST_LOG=debug cargo test --package avalanche-types --lib -- jsonrpc::platformvm::test_get_blockchain_status --exact --show-output
+/// `RUST_LOG=debug` cargo test --package avalanche-types --lib -- `jsonrpc::platformvm::test_get_blockchain_status` --exact --show-output
 #[test]
 fn test_get_blockchain_status() {
     let resp: GetBlockchainStatusResponse = serde_json::from_str(
         "
-    
+
     {
         \"jsonrpc\": \"2.0\",
         \"result\": {
@@ -1350,7 +1374,7 @@ fn test_get_blockchain_status() {
         },
         \"id\": 1
     }
-    
+
     ",
     )
     .unwrap();
