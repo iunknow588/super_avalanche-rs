@@ -19,12 +19,12 @@ impl Iterator {
 
 #[tonic::async_trait]
 impl crate::subnet::rpc::database::iterator::Iterator for Iterator {
-    /// Implements the [`crate::subnet::rpc::database::Iterator`] trait.
+    /// Implements the `crate::subnet::rpc::database::iterator::Iterator` trait.
     async fn next(&mut self) -> Result<bool> {
         Ok(false)
     }
 
-    /// Implements the [`crate::subnet::rpc::database::Iterator`] trait.
+    /// Implements the `crate::subnet::rpc::database::iterator::Iterator` trait.
     async fn error(&mut self) -> Result<()> {
         if let Some(err) = &self.err {
             return Err(Error::new(err.kind(), err.to_string()));
@@ -32,16 +32,16 @@ impl crate::subnet::rpc::database::iterator::Iterator for Iterator {
         Ok(())
     }
 
-    /// Implements the [`crate::subnet::rpc::database::Iterator`] trait.
+    /// Implements the `crate::subnet::rpc::database::iterator::Iterator` trait.
     async fn key(&self) -> Result<&[u8]> {
         Ok(&[])
     }
 
-    /// Implements the [`crate::subnet::rpc::database::Iterator`] trait.
+    /// Implements the `crate::subnet::rpc::database::iterator::Iterator` trait.
     async fn value(&self) -> Result<&[u8]> {
         Ok(&[])
     }
 
-    /// Implements the [`crate::subnet::rpc::database::Iterator`] trait.
+    /// Implements the `crate::subnet::rpc::database::iterator::Iterator` trait.
     async fn release(&mut self) {}
 }

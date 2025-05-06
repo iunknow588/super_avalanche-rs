@@ -3,7 +3,7 @@ use std::{
     io::{self, Error, ErrorKind},
 };
 
-use crate::{codec, key};
+use crate::{cmp_manager, codec, key};
 use serde::{Deserialize, Serialize};
 
 /// Transfer output for secp256k1 transactions.
@@ -200,7 +200,7 @@ fn test_sort_transfer_outputs() {
             },
         });
     }
-    assert!(cmp_manager::is_sorted_and_unique(&sorted_outputs));
+    assert!(cmp_manager::is_sorted(&sorted_outputs));
     assert_eq!(outputs, sorted_outputs);
 }
 

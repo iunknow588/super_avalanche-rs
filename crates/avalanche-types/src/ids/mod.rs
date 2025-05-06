@@ -406,8 +406,8 @@ fn test_serialize() {
 /// <https://pkg.go.dev/github.com/ava-labs/avalanchego/ids#Set>
 pub type Set = HashSet<Id>;
 
-/// Return a new set with initial capacity [`size`].
-/// More or less than [`size`] elements can be added to this set.
+/// Return a new set with initial capacity `size`.
+/// More or less than `size` elements can be added to this set.
 #[must_use]
 pub fn new_set(size: usize) -> Set {
     let set: HashSet<Id> = HashSet::with_capacity(size);

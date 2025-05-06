@@ -564,7 +564,7 @@ fn test_get_balance() {
 {
     \"jsonrpc\": \"2.0\",
     \"result\": {
-        \"balance\": \"200_000_000_00000000\",
+        \"balance\": \"20000000000000000\",
         \"unlocked\": \"10000000000000000\",
         \"lockedStakeable\": \"10000000000000000\",
         \"lockedNotStakeable\": \"0\",
@@ -1013,8 +1013,8 @@ fn test_get_pending_validators() {
       {
         "txID": "2NNkpYTGfTFLSGXJcHtVv6drwVU2cczhmjK2uhvwDyxwsjzZMm",
         "startTime": "1600368632",
-        "endTime": "1_602_960_455",
-        "stakeAmount": "200_000_000_000",
+        "endTime": "1602960455",
+        "stakeAmount": "200000000000",
         "nodeID": "NodeID-5mb46qkSBj81k9g9e4VFjGGSbaaSLFRzD",
         "delegationFee": "10.0000",
         "connected": false
@@ -1023,8 +1023,8 @@ fn test_get_pending_validators() {
     "delegators": [
       {
         "txID": "Bbai8nzGVcyn2VmeYcbS74zfjJLjDacGNVuzuvAQkHn1uWfoV",
-        "startTime": "1_600_368_523",
-        "endTime": "1_602_960_342",
+        "startTime": "1600368523",
+        "endTime": "1602960342",
         "stakeAmount": "20000000000",
         "nodeID": "NodeID-7Xhw2mDxuDS44j42TCB6U5579esbSt3Lg"
       }

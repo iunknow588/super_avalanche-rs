@@ -42,7 +42,7 @@ impl Key {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [`self.0`] 和 [`sig`] have both been validated.
+    /// Invariant: `self.0` 和 `sig` have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.Verify"
     #[must_use]
     pub fn verify(&self, msg: &[u8], sig: &Sig) -> bool {
@@ -50,7 +50,7 @@ impl Key {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [`self.0`] 和 [`sig`] have both been validated.
+    /// Invariant: `self.0` 和 `sig` have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.VerifyProofOfPossession"
     #[must_use]
     pub fn verify_proof_of_possession(&self, msg: &[u8], sig: &Sig) -> bool {

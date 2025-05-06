@@ -216,8 +216,10 @@ where
     /// Reference: [Topological.NumProcessing](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.NumProcessing)
     pub fn num_processing(&self) -> i64 {
         // "blocks" includes the last accepted block and all the pending blocks.
+        // 使用临时变量存储blocks的引用，避免多次借用
+        let blocks_ref = self.blocks.clone();
         let blocks_len = {
-            let blocks_ref = self.blocks.as_ref().borrow();
+            let blocks_ref = blocks_ref.as_ref().borrow();
             blocks_ref.len()
         };
         i64::try_from(blocks_len.saturating_sub(1)).unwrap()
@@ -418,8 +420,10 @@ where
         }
         self.tail.set(last_preferred);
 
+        // 使用临时变量存储blocks的引用，避免多次借用
+        let blocks_ref = self.blocks.clone();
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.as_ref().borrow();
+        let borrowed_blks = blocks_ref.as_ref().borrow();
 
         // runtime = |live set|
         // space = constant
@@ -674,8 +678,10 @@ where
             };
 
             // Update the parent's kahn node and check if it's now a leaf
+            // 使用临时变量存储kahn_nodes的引用，避免多次借用
+            let kahn_nodes_ref = self.kahn_nodes.clone();
             let is_now_leaf = {
-                let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
+                let mut borrowed_mut_kahn_nodes = kahn_nodes_ref.borrow_mut();
                 let parent_kahn = borrowed_mut_kahn_nodes
                     .get_mut(&parent_blk_id)
                     .expect("parent kahn node should exist");

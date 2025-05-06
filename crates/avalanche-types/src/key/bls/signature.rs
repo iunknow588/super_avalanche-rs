@@ -43,7 +43,7 @@ impl Sig {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [`pubkey`] 和 [`self.0`] have both been validated.
+    /// Invariant: `pubkey` 和 `self.0` have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.Verify"
     #[must_use]
     pub fn verify(&self, msg: &[u8], pubkey: &PublicKey) -> bool {
@@ -58,7 +58,7 @@ impl Sig {
     }
 
     /// Verifies the message and the validity of its signature.
-    /// Invariant: [`pubkey`] 和 [`self.0`] have both been validated.
+    /// Invariant: `pubkey` 和 `self.0` have both been validated.
     /// ref. "avalanchego/utils/crypto/bls.VerifyProofOfPossession"
     #[must_use]
     pub fn verify_proof_of_possession(&self, msg: &[u8], pubkey: &PublicKey) -> bool {

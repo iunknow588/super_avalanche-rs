@@ -462,15 +462,15 @@ fn test_get_tx_fee() {
 {
     \"jsonrpc\": \"2.0\",
     \"result\": {
-        \"txFee\": \"1_000_000\",
-        \"createAssetTxFee\": \"1_000_000\",
-        \"createSubnetTxFee\": \"100_000_000\",
-        \"transformSubnetTxFee\": \"100_000_000\",
-        \"createBlockchainTxFee\": \"100_000_000\",
+        \"txFee\": \"1000000\",
+        \"createAssetTxFee\": \"1000000\",
+        \"createSubnetTxFee\": \"100000000\",
+        \"transformSubnetTxFee\": \"100000000\",
+        \"createBlockchainTxFee\": \"100000000\",
         \"addPrimaryNetworkValidatorFee\": \"0\",
-        \"addPrimaryNetworkDelegatorFee\": \"1_000_000\",
-        \"addSubnetValidatorFee\": \"1_000_000\",
-        \"addSubnetDelegatorFee\": \"1_000_000\"
+        \"addPrimaryNetworkDelegatorFee\": \"1000000\",
+        \"addSubnetValidatorFee\": \"1000000\",
+        \"addSubnetDelegatorFee\": \"1000000\"
     },
     \"id\": 1
 }

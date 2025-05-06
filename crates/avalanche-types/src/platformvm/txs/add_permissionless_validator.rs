@@ -25,9 +25,9 @@ pub struct Tx {
     /// ref. "github.com/ava-labs/avalanchego/utils/constants.PrimaryNetworkID" (ids.Empty).
     #[serde(rename = "subnetID")]
     pub subnet_id: ids::Id,
-    /// If the [`subnet_id`] is the primary network,
+    /// If the `subnet_id` is the primary network,
     /// `signer` is the BLS key for this validator.
-    /// If the [`subnet_id`] is not the primary network,
+    /// If the `subnet_id` is not the primary network,
     /// `signer` is empty.
     pub signer: Option<key::bls::ProofOfPossession>,
 

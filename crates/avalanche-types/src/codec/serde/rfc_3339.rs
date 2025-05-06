@@ -2,7 +2,7 @@ use chrono::{DateTime, SecondsFormat, TimeZone, Utc};
 use serde::{self, Deserialize, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
-/// 将`DateTime`<Utc>序列化为RFC3339格式字符串。
+/// 将`DateTime&lt;Utc&gt;`序列化为RFC3339格式字符串。
 ///
 /// # Errors
 /// 序列化器失败时返回错误。

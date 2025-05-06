@@ -19,6 +19,7 @@
 #![allow(clippy::significant_drop_tightening)]
 pub mod avm;
 pub mod choices;
+pub mod cmp_manager;
 pub mod codec;
 pub mod constants;
 pub mod errors;

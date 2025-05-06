@@ -407,28 +407,28 @@ impl Set64 {
         Self(0_u64)
     }
 
-    /// Add [`i`] to the set of ints.
+    /// Add `i` to the set of ints.
     pub fn add(&mut self, i: u64) {
         self.0 |= 1 << i;
     }
 
-    /// Adds all the elements in [`s`] to this set.
+    /// Adds all the elements in `s` to this set.
     pub fn union(&mut self, s: Self) {
         self.0 |= s.0;
     }
 
-    /// Takes the intersection of [`s`] with this set.
+    /// Takes the intersection of `s` with this set.
     pub fn intersection(&mut self, s: Self) {
         self.0 &= s.0;
     }
 
-    /// Removes all the elements in [`s`] from this set.
+    /// Removes all the elements in `s` from this set.
     pub fn difference(&mut self, s: Self) {
         // ref. *bs &^= s
         self.0 &= !(s.0);
     }
 
-    /// Removes [`i`] from the set of ints with bitclear (AND NOT) operation.
+    /// Removes `i` from the set of ints with bitclear (AND NOT) operation.
     pub fn remove(&mut self, i: u64) {
         // ref. *bs &^= 1 << i
         self.0 &= !(1 << i);
@@ -439,7 +439,7 @@ impl Set64 {
         self.0 = 0;
     }
 
-    /// Returns true if [`i`] was previously added to this set.
+    /// Returns true if `i` was previously added to this set.
     #[must_use]
     pub const fn contains(&self, i: u64) -> bool {
         (self.0 & (1 << i)) != 0

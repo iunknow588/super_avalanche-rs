@@ -195,8 +195,8 @@ impl Bag {
     }
 
     /// Retaining the same count values, only selects the IDs that
-    /// in the 0th index have a 0 at bit [`index`],
-    /// and all ids in the 1st index have a 1 at bit [`index`].
+    /// in the 0th index have a 0 at bit `index`,
+    /// and all ids in the 1st index have a 1 at bit `index`.
     #[must_use]
     pub fn split(&self, index: usize) -> [Self; 2] {
         let split_votes = [Self::new(), Self::new()];

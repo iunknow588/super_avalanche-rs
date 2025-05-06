@@ -389,9 +389,9 @@ fn test_serialize() {
 /// ref. <https://pkg.go.dev/github.com/ava-labs/avalanchego/ids#NewNodeIDSet>
 pub type Set = HashSet<Id>;
 
-/// Return a new `NodeIdSet` with initial capacity [`size`].
+/// Return a new `NodeIdSet` with initial capacity `size`.
 ///
-/// More or less than [`size`] elements can be added to this set.
+/// More or less than `size` elements can be added to this set.
 /// Using `NewNodeIDSet()` rather than ids.NodeIDSet{} is just an optimization
 /// that can be used if you know how many elements will be put in this set.
 #[must_use]
