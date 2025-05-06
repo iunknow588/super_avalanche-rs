@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 // @@protoc_insertion_point(attribute:aliasreader)
 pub mod aliasreader {
@@ -56,11 +69,6 @@ pub mod keystore {
     include!("keystore.rs");
     // @@protoc_insertion_point(keystore)
 }
-// @@protoc_insertion_point(attribute:message)
-pub mod message {
-    include!("message.rs");
-    // @@protoc_insertion_point(message)
-}
 // @@protoc_insertion_point(attribute:messenger)
 pub mod messenger {
     include!("messenger.rs");
@@ -77,6 +85,11 @@ pub mod net {
 pub mod p2p {
     include!("p2p.rs");
     // @@protoc_insertion_point(p2p)
+}
+// @@protoc_insertion_point(attribute:platformvm)
+pub mod platformvm {
+    include!("platformvm.rs");
+    // @@protoc_insertion_point(platformvm)
 }
 // @@protoc_insertion_point(attribute:rpcdb)
 pub mod rpcdb {

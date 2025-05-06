@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// Generated client implementations.
 pub mod validator_state_client {
@@ -191,6 +204,36 @@ pub mod validator_state_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn get_current_validator_set(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetCurrentValidatorSetRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCurrentValidatorSetResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/validatorstate.ValidatorState/GetCurrentValidatorSet",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "validatorstate.ValidatorState",
+                        "GetCurrentValidatorSet",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -226,6 +269,13 @@ pub mod validator_state_server {
             request: tonic::Request<super::GetValidatorSetRequest>,
         ) -> std::result::Result<
             tonic::Response<super::GetValidatorSetResponse>,
+            tonic::Status,
+        >;
+        async fn get_current_validator_set(
+            &self,
+            request: tonic::Request<super::GetCurrentValidatorSetRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::GetCurrentValidatorSetResponse>,
             tonic::Status,
         >;
     }
@@ -351,8 +401,8 @@ pub mod validator_state_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -399,8 +449,8 @@ pub mod validator_state_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -445,8 +495,8 @@ pub mod validator_state_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -491,8 +541,54 @@ pub mod validator_state_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/validatorstate.ValidatorState/GetCurrentValidatorSet" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetCurrentValidatorSetSvc<T: ValidatorState>(pub Arc<T>);
+                    impl<
+                        T: ValidatorState,
+                    > tonic::server::UnaryService<super::GetCurrentValidatorSetRequest>
+                    for GetCurrentValidatorSetSvc<T> {
+                        type Response = super::GetCurrentValidatorSetResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetCurrentValidatorSetRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).get_current_validator_set(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = GetCurrentValidatorSetSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }

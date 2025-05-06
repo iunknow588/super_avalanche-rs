@@ -10,7 +10,7 @@ MODIFIED_FILES=$(mktemp)
 
 # 修复自动生成文件中的重复属性
 echo "Fixing duplicate attributes in auto-generated files..."
-find . -name "*.rs" \( -path "**/pb/*.rs" -o -path "**/proto/pb/*.rs" -o -path "**/proto/tmp/*.rs" -o -path "**/generated/*.rs" -o -path "**/proto/generated/*.rs" \) | while read -r file; do
+find . -name "*.rs" \( -path "**/pb/*.rs" -o -path "**/proto/pb/*.rs" -o -path "**/proto/tmp/*.rs" -o -path "**/generated/*.rs" -o -path "**/proto/generated/*.rs" -o -path "**/fuzz/target/**/*.rs" \) | while read -r file; do
     # 检查文件是否同时具有外部和内部属性
     if grep -q "#\[allow(clippy::all)\]" "$file" && grep -q "#!\[allow(clippy::all)\]" "$file"; then
         # 删除内部属性

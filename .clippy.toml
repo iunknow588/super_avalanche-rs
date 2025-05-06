@@ -1,0 +1,15 @@
+# 排除特定目录中的文件
+ignore-paths = [
+    "target",
+    "fuzz/target",
+    "**/pb",
+    "**/proto/pb",
+    "**/proto/tmp",
+    "**/generated",
+    "**/proto/generated",
+]
+
+# 排除特定文件
+ignore-files = [
+    "**/fuzz/target/release/build/typenum-89e3146b89b94c95/out/tests.rs",
+]

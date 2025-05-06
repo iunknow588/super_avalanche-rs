@@ -3,8 +3,7 @@ use std::io::{Error, ErrorKind, Result};
 use crate::{
     ids,
     proto::pb::appsender::{
-        app_sender_client, SendAppGossipMsg, SendAppGossipSpecificMsg, SendAppRequestMsg,
-        SendAppResponseMsg, SendCrossChainAppRequestMsg, SendCrossChainAppResponseMsg,
+        app_sender_client, SendAppGossipMsg, SendAppRequestMsg, SendAppResponseMsg,
     },
 };
 use prost::bytes::Bytes;
@@ -92,89 +91,14 @@ impl super::AppSender for AppSenderClient {
         self.inner
             .clone()
             .send_app_gossip(SendAppGossipMsg {
+                node_ids: Vec::new(),
+                validators: 0,
+                non_validators: 0,
+                peers: 0,
                 msg: Bytes::from(msg),
             })
             .await
             .map_err(|e| Error::new(ErrorKind::Other, format!("send_app_gossip failed: {e:?}")))?;
-
-        Ok(())
-    }
-
-    /// Gossip an application-level message to a list of `nodeIds`.
-    /// A non-`nil` error should be considered fatal.
-    async fn send_app_gossip_specific(&self, node_ids: ids::node::Set, msg: Vec<u8>) -> Result<()> {
-        let mut node_id_bytes: Vec<Bytes> = Vec::with_capacity(node_ids.len());
-        for node_id in &node_ids {
-            node_id_bytes.push(Bytes::from(node_id.to_vec()));
-        }
-
-        self.inner
-            .clone()
-            .send_app_gossip_specific(SendAppGossipSpecificMsg {
-                node_ids: node_id_bytes,
-                msg: Bytes::from(msg),
-            })
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_app_gossip_specific failed: {e:?}"),
-                )
-            })?;
-
-        Ok(())
-    }
-
-    /// Send a cross-chain application request.
-    /// This sends a request to the specified `chain_id` with the given `request_id`.
-    /// A non-`nil` error should be considered fatal.
-    async fn send_cross_chain_app_request(
-        &self,
-        chain_id: ids::Id,
-        request_id: u32,
-        app_request_bytes: Vec<u8>,
-    ) -> Result<()> {
-        self.inner
-            .clone()
-            .send_cross_chain_app_request(SendCrossChainAppRequestMsg {
-                chain_id: Bytes::from(chain_id.to_vec()),
-                request_id,
-                request: Bytes::from(app_request_bytes),
-            })
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_cross_chain_app_request failed: {e:?}"),
-                )
-            })?;
-
-        Ok(())
-    }
-
-    /// Send a cross-chain application response.
-    /// This sends a response to the specified `chain_id` for the given `request_id`.
-    /// A non-`nil` error should be considered fatal.
-    async fn send_cross_chain_app_response(
-        &self,
-        chain_id: ids::Id,
-        request_id: u32,
-        app_response_bytes: Vec<u8>,
-    ) -> Result<()> {
-        self.inner
-            .clone()
-            .send_cross_chain_app_response(SendCrossChainAppResponseMsg {
-                chain_id: Bytes::from(chain_id.to_vec()),
-                request_id,
-                response: Bytes::from(app_response_bytes),
-            })
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_cross_chain_app_response failed: {e:?}"),
-                )
-            })?;
 
         Ok(())
     }

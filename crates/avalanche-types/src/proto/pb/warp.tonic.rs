@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// Generated client implementations.
 pub mod signer_client {
@@ -100,9 +113,9 @@ pub mod signer_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static("/warp.Signer/Sign");
-            let mut unary_res = request.into_request();
-            unary_res.extensions_mut().insert(GrpcMethod::new("warp.Signer", "Sign"));
-            self.inner.unary(unary_res, path, codec).await
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new("warp.Signer", "Sign"));
+            self.inner.unary(req, path, codec).await
         }
     }
 }
@@ -234,8 +247,8 @@ pub mod signer_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }

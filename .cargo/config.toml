@@ -2,6 +2,10 @@
 PROTOC_FLAGS = "--experimental_allow_proto3_optional"
 PROTOC_ARG = "--experimental_allow_proto3_optional"
 
+# 排除特定目录中的文件进行 clippy 检查
+[alias]
+clippy = "clippy --all --all-features --tests --benches --examples -- --exclude-files=**/fuzz/target/**"
+
 [build]
 # 根据CPU核心数设置并行任务数
 # 建议设置为 CPU核心数 - 1 或 CPU核心数 - 2

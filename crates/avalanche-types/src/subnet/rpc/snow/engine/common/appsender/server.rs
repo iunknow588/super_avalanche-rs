@@ -7,11 +7,7 @@ use crate::{
     ids,
     proto::pb::{
         self,
-        appsender::{
-            SendAppErrorMsg, SendAppGossipMsg, SendAppGossipSpecificMsg, SendAppRequestMsg,
-            SendAppResponseMsg, SendCrossChainAppErrorMsg, SendCrossChainAppRequestMsg,
-            SendCrossChainAppResponseMsg,
-        },
+        appsender::{SendAppErrorMsg, SendAppGossipMsg, SendAppRequestMsg, SendAppResponseMsg},
         google::protobuf::Empty,
     },
 };
@@ -97,89 +93,5 @@ impl pb::appsender::app_sender_server::AppSender for Server {
             .map_err(|e| Error::new(ErrorKind::Other, format!("send_app_gossip failed: {e:?}")))?;
 
         Ok(Response::new(Empty {}))
-    }
-
-    async fn send_app_gossip_specific(
-        &self,
-        request: Request<SendAppGossipSpecificMsg>,
-    ) -> Result<Response<Empty>, Status> {
-        let req = request.into_inner();
-
-        let mut node_ids = ids::node::new_set(req.node_ids.len());
-        for node_id_bytes in &req.node_ids {
-            let node_id = ids::node::Id::from_slice(node_id_bytes);
-            node_ids.insert(node_id);
-        }
-
-        self.inner
-            .read()
-            .await
-            .send_app_gossip_specific(node_ids, req.msg.to_vec())
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_app_gossip_specific failed: {e:?}"),
-                )
-            })?;
-
-        Ok(Response::new(Empty {}))
-    }
-
-    async fn send_cross_chain_app_request(
-        &self,
-        request: Request<SendCrossChainAppRequestMsg>,
-    ) -> Result<Response<Empty>, Status> {
-        let req = request.into_inner();
-
-        self.inner
-            .read()
-            .await
-            .send_cross_chain_app_request(
-                ids::Id::from_slice(&req.chain_id),
-                req.request_id,
-                req.request.to_vec(),
-            )
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_cross_chain_app_request failed: {e:?}"),
-                )
-            })?;
-
-        Ok(Response::new(Empty {}))
-    }
-
-    async fn send_cross_chain_app_response(
-        &self,
-        request: Request<SendCrossChainAppResponseMsg>,
-    ) -> Result<Response<Empty>, Status> {
-        let req = request.into_inner();
-
-        self.inner
-            .read()
-            .await
-            .send_cross_chain_app_response(
-                ids::Id::from_slice(&req.chain_id),
-                req.request_id,
-                req.response.to_vec(),
-            )
-            .await
-            .map_err(|e| {
-                Error::new(
-                    ErrorKind::Other,
-                    format!("send_cross_chain_app_response failed: {e:?}"),
-                )
-            })?;
-
-        Ok(Response::new(Empty {}))
-    }
-
-    async fn send_cross_chain_app_error(
-        &self,
-        _request: Request<SendCrossChainAppErrorMsg>,
-    ) -> Result<Response<Empty>, Status> {
-        unimplemented!("not implemented")
     }
 }

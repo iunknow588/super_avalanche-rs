@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// Generated client implementations.
 pub mod vm_client {
@@ -105,8 +118,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Initialize");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Initialize"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn set_state(
             &mut self,
@@ -128,8 +140,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/SetState");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "SetState"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn shutdown(
             &mut self,
@@ -151,8 +162,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Shutdown");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Shutdown"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn create_handlers(
             &mut self,
@@ -174,8 +184,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/CreateHandlers");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "CreateHandlers"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn connected(
             &mut self,
@@ -197,8 +206,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Connected");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Connected"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn disconnected(
             &mut self,
@@ -220,8 +228,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Disconnected");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Disconnected"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn build_block(
             &mut self,
@@ -243,8 +250,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BuildBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BuildBlock"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn parse_block(
             &mut self,
@@ -266,8 +272,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/ParseBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "ParseBlock"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_block(
             &mut self,
@@ -289,8 +294,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetBlock"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn set_preference(
             &mut self,
@@ -312,8 +316,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/SetPreference");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "SetPreference"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn health(
             &mut self,
@@ -332,13 +335,15 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Health");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Health"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn version(
             &mut self,
             request: impl tonic::IntoRequest<super::super::google::protobuf::Empty>,
-        ) -> std::result::Result<tonic::Response<super::VersionResponse>, tonic::Status> {
+        ) -> std::result::Result<
+            tonic::Response<super::VersionResponse>,
+            tonic::Status,
+        > {
             self.inner
                 .ready()
                 .await
@@ -352,8 +357,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Version");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Version"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn app_request(
             &mut self,
@@ -375,8 +379,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppRequest");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppRequest"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn app_request_failed(
             &mut self,
@@ -398,8 +401,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppRequestFailed");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppRequestFailed"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn app_response(
             &mut self,
@@ -421,8 +423,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppResponse");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppResponse"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn app_gossip(
             &mut self,
@@ -444,8 +445,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/AppGossip");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "AppGossip"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn gather(
             &mut self,
@@ -464,86 +464,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/Gather");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "Gather"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
-        }
-        pub async fn cross_chain_app_request(
-            &mut self,
-            request: impl tonic::IntoRequest<super::CrossChainAppRequestMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/vm.VM/CrossChainAppRequest",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("vm.VM", "CrossChainAppRequest"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
-        }
-        pub async fn cross_chain_app_request_failed(
-            &mut self,
-            request: impl tonic::IntoRequest<super::CrossChainAppRequestFailedMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/vm.VM/CrossChainAppRequestFailed",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("vm.VM", "CrossChainAppRequestFailed"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
-        }
-        pub async fn cross_chain_app_response(
-            &mut self,
-            request: impl tonic::IntoRequest<super::CrossChainAppResponseMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/vm.VM/CrossChainAppResponse",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("vm.VM", "CrossChainAppResponse"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_ancestors(
             &mut self,
@@ -565,8 +486,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetAncestors");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetAncestors"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn batched_parse_block(
             &mut self,
@@ -588,31 +508,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BatchedParseBlock");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BatchedParseBlock"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
-        }
-        pub async fn verify_height_index(
-            &mut self,
-            request: impl tonic::IntoRequest<super::super::google::protobuf::Empty>,
-        ) -> std::result::Result<
-            tonic::Response<super::VerifyHeightIndexResponse>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static("/vm.VM/VerifyHeightIndex");
-            let mut req = request.into_request();
-            req.extensions_mut().insert(GrpcMethod::new("vm.VM", "VerifyHeightIndex"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_block_id_at_height(
             &mut self,
@@ -634,8 +530,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetBlockIDAtHeight");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetBlockIDAtHeight"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn state_sync_enabled(
             &mut self,
@@ -657,8 +552,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/StateSyncEnabled");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "StateSyncEnabled"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_ongoing_sync_state_summary(
             &mut self,
@@ -683,8 +577,7 @@ pub mod vm_client {
             let mut req = request.into_request();
             req.extensions_mut()
                 .insert(GrpcMethod::new("vm.VM", "GetOngoingSyncStateSummary"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_last_state_summary(
             &mut self,
@@ -708,8 +601,7 @@ pub mod vm_client {
             );
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetLastStateSummary"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn parse_state_summary(
             &mut self,
@@ -731,8 +623,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/ParseStateSummary");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "ParseStateSummary"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn get_state_summary(
             &mut self,
@@ -754,8 +645,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/GetStateSummary");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "GetStateSummary"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn block_verify(
             &mut self,
@@ -777,8 +667,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockVerify");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockVerify"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn block_accept(
             &mut self,
@@ -800,8 +689,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockAccept");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockAccept"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn block_reject(
             &mut self,
@@ -823,8 +711,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/BlockReject");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "BlockReject"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
         pub async fn state_summary_accept(
             &mut self,
@@ -846,8 +733,7 @@ pub mod vm_client {
             let path = http::uri::PathAndQuery::from_static("/vm.VM/StateSummaryAccept");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("vm.VM", "StateSummaryAccept"));
-            let unary_res = self.inner.unary(req, path, codec).await;
-            unary_res
+            self.inner.unary(req, path, codec).await
         }
     }
 }
@@ -968,27 +854,6 @@ pub mod vm_server {
             &self,
             request: tonic::Request<super::super::google::protobuf::Empty>,
         ) -> std::result::Result<tonic::Response<super::GatherResponse>, tonic::Status>;
-        async fn cross_chain_app_request(
-            &self,
-            request: tonic::Request<super::CrossChainAppRequestMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn cross_chain_app_request_failed(
-            &self,
-            request: tonic::Request<super::CrossChainAppRequestFailedMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn cross_chain_app_response(
-            &self,
-            request: tonic::Request<super::CrossChainAppResponseMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
         async fn get_ancestors(
             &self,
             request: tonic::Request<super::GetAncestorsRequest>,
@@ -1001,13 +866,6 @@ pub mod vm_server {
             request: tonic::Request<super::BatchedParseBlockRequest>,
         ) -> std::result::Result<
             tonic::Response<super::BatchedParseBlockResponse>,
-            tonic::Status,
-        >;
-        async fn verify_height_index(
-            &self,
-            request: tonic::Request<super::super::google::protobuf::Empty>,
-        ) -> std::result::Result<
-            tonic::Response<super::VerifyHeightIndexResponse>,
             tonic::Status,
         >;
         async fn get_block_id_at_height(
@@ -1197,8 +1055,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1239,8 +1097,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1285,8 +1143,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1333,8 +1191,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1375,8 +1233,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1419,8 +1277,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1461,8 +1319,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1503,8 +1361,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1545,8 +1403,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1589,8 +1447,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1635,8 +1493,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1681,8 +1539,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1723,8 +1581,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1767,8 +1625,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1811,8 +1669,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1853,8 +1711,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -1899,146 +1757,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/vm.VM/CrossChainAppRequest" => {
-                    #[allow(non_camel_case_types)]
-                    struct CrossChainAppRequestSvc<T: Vm>(pub Arc<T>);
-                    impl<
-                        T: Vm,
-                    > tonic::server::UnaryService<super::CrossChainAppRequestMsg>
-                    for CrossChainAppRequestSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::CrossChainAppRequestMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).cross_chain_app_request(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = CrossChainAppRequestSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/vm.VM/CrossChainAppRequestFailed" => {
-                    #[allow(non_camel_case_types)]
-                    struct CrossChainAppRequestFailedSvc<T: Vm>(pub Arc<T>);
-                    impl<
-                        T: Vm,
-                    > tonic::server::UnaryService<super::CrossChainAppRequestFailedMsg>
-                    for CrossChainAppRequestFailedSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::CrossChainAppRequestFailedMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).cross_chain_app_request_failed(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = CrossChainAppRequestFailedSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/vm.VM/CrossChainAppResponse" => {
-                    #[allow(non_camel_case_types)]
-                    struct CrossChainAppResponseSvc<T: Vm>(pub Arc<T>);
-                    impl<
-                        T: Vm,
-                    > tonic::server::UnaryService<super::CrossChainAppResponseMsg>
-                    for CrossChainAppResponseSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::CrossChainAppResponseMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).cross_chain_app_response(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = CrossChainAppResponseSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2081,8 +1801,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2127,56 +1847,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/vm.VM/VerifyHeightIndex" => {
-                    #[allow(non_camel_case_types)]
-                    struct VerifyHeightIndexSvc<T: Vm>(pub Arc<T>);
-                    impl<
-                        T: Vm,
-                    > tonic::server::UnaryService<super::super::google::protobuf::Empty>
-                    for VerifyHeightIndexSvc<T> {
-                        type Response = super::VerifyHeightIndexResponse;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<
-                                super::super::google::protobuf::Empty,
-                            >,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).verify_height_index(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = VerifyHeightIndexSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2221,8 +1893,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2269,8 +1941,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2317,8 +1989,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2365,8 +2037,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2411,8 +2083,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2457,8 +2129,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2501,8 +2173,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2545,8 +2217,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2589,8 +2261,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -2635,8 +2307,8 @@ pub mod vm_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }

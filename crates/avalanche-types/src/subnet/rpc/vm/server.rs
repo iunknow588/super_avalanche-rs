@@ -101,33 +101,8 @@ where
         + Sync
         + 'static,
 {
-    async fn cross_chain_app_request(
-        &self,
-        request: Request<vm::CrossChainAppRequestMsg>,
-    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
-        self.cross_chain_app_request(request).await
-    }
-
-    async fn cross_chain_app_request_failed(
-        &self,
-        request: Request<vm::CrossChainAppRequestFailedMsg>,
-    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
-        self.cross_chain_app_request_failed(request).await
-    }
-
-    async fn cross_chain_app_response(
-        &self,
-        request: Request<vm::CrossChainAppResponseMsg>,
-    ) -> std::result::Result<Response<pb::google::protobuf::Empty>, tonic::Status> {
-        self.cross_chain_app_response(request).await
-    }
-
-    async fn verify_height_index(
-        &self,
-        _request: Request<pb::google::protobuf::Empty>,
-    ) -> std::result::Result<Response<vm::VerifyHeightIndexResponse>, tonic::Status> {
-        unimplemented!("verify_height_index is not implemented yet.")
-    }
+    // Cross-chain methods have been removed from the VM trait
+    // These methods are now handled by the app_request, app_request_failed, and app_response methods
     /// Implements "avalanchego/vms/rpcchainvm#VMServer.Initialize".
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.11.1/vms/rpcchainvm/vm_server.go#L98>
     /// ref. <https://github.com/ava-labs/avalanchego/blob/v1.11.1/vms/rpcchainvm/vm_client.go#L123-L133>
@@ -380,7 +355,6 @@ where
             .map_err(|e| tonic::Status::unknown(e.to_string()))?;
 
         Ok(Response::new(vm::ParseBlockResponse {
-            status: 0,
             id: Bytes::from(block.id().await.to_vec()),
             parent_id: Bytes::from(block.parent().await.to_vec()),
             height: block.height().await,
@@ -419,7 +393,6 @@ where
         // determine if response is an error or not
         match inner_vm.get_block(ids::Id::from_slice(&req.id)).await {
             Ok(block) => Ok(Response::new(vm::GetBlockResponse {
-                status: 0,
                 parent_id: Bytes::from(block.parent().await.to_vec()),
                 bytes: Bytes::from(block.bytes().await.to_vec()),
                 height: block.height().await,
@@ -438,7 +411,6 @@ where
             Err(e) => {
                 log::debug!("Error getting block");
                 Ok(Response::new(vm::GetBlockResponse {
-                    status: 0,
                     parent_id: Bytes::new(),
                     bytes: Bytes::new(),
                     height: 0,

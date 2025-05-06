@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// Generated client implementations.
 pub mod app_sender_client {
@@ -185,112 +198,6 @@ pub mod app_sender_client {
                 .insert(GrpcMethod::new("appsender.AppSender", "SendAppGossip"));
             self.inner.unary(req, path, codec).await
         }
-        pub async fn send_app_gossip_specific(
-            &mut self,
-            request: impl tonic::IntoRequest<super::SendAppGossipSpecificMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/appsender.AppSender/SendAppGossipSpecific",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(GrpcMethod::new("appsender.AppSender", "SendAppGossipSpecific"));
-            self.inner.unary(req, path, codec).await
-        }
-        pub async fn send_cross_chain_app_request(
-            &mut self,
-            request: impl tonic::IntoRequest<super::SendCrossChainAppRequestMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/appsender.AppSender/SendCrossChainAppRequest",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("appsender.AppSender", "SendCrossChainAppRequest"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
-        pub async fn send_cross_chain_app_response(
-            &mut self,
-            request: impl tonic::IntoRequest<super::SendCrossChainAppResponseMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/appsender.AppSender/SendCrossChainAppResponse",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("appsender.AppSender", "SendCrossChainAppResponse"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
-        pub async fn send_cross_chain_app_error(
-            &mut self,
-            request: impl tonic::IntoRequest<super::SendCrossChainAppErrorMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/appsender.AppSender/SendCrossChainAppError",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new("appsender.AppSender", "SendCrossChainAppError"),
-                );
-            self.inner.unary(req, path, codec).await
-        }
     }
 }
 /// Generated server implementations.
@@ -324,34 +231,6 @@ pub mod app_sender_server {
         async fn send_app_gossip(
             &self,
             request: tonic::Request<super::SendAppGossipMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn send_app_gossip_specific(
-            &self,
-            request: tonic::Request<super::SendAppGossipSpecificMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn send_cross_chain_app_request(
-            &self,
-            request: tonic::Request<super::SendCrossChainAppRequestMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn send_cross_chain_app_response(
-            &self,
-            request: tonic::Request<super::SendCrossChainAppResponseMsg>,
-        ) -> std::result::Result<
-            tonic::Response<super::super::google::protobuf::Empty>,
-            tonic::Status,
-        >;
-        async fn send_cross_chain_app_error(
-            &self,
-            request: tonic::Request<super::SendCrossChainAppErrorMsg>,
         ) -> std::result::Result<
             tonic::Response<super::super::google::protobuf::Empty>,
             tonic::Status,
@@ -477,8 +356,8 @@ pub mod app_sender_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -523,8 +402,8 @@ pub mod app_sender_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -569,8 +448,8 @@ pub mod app_sender_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -615,192 +494,8 @@ pub mod app_sender_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/appsender.AppSender/SendAppGossipSpecific" => {
-                    #[allow(non_camel_case_types)]
-                    struct SendAppGossipSpecificSvc<T: AppSender>(pub Arc<T>);
-                    impl<
-                        T: AppSender,
-                    > tonic::server::UnaryService<super::SendAppGossipSpecificMsg>
-                    for SendAppGossipSpecificSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::SendAppGossipSpecificMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).send_app_gossip_specific(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SendAppGossipSpecificSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/appsender.AppSender/SendCrossChainAppRequest" => {
-                    #[allow(non_camel_case_types)]
-                    struct SendCrossChainAppRequestSvc<T: AppSender>(pub Arc<T>);
-                    impl<
-                        T: AppSender,
-                    > tonic::server::UnaryService<super::SendCrossChainAppRequestMsg>
-                    for SendCrossChainAppRequestSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::SendCrossChainAppRequestMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).send_cross_chain_app_request(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SendCrossChainAppRequestSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/appsender.AppSender/SendCrossChainAppResponse" => {
-                    #[allow(non_camel_case_types)]
-                    struct SendCrossChainAppResponseSvc<T: AppSender>(pub Arc<T>);
-                    impl<
-                        T: AppSender,
-                    > tonic::server::UnaryService<super::SendCrossChainAppResponseMsg>
-                    for SendCrossChainAppResponseSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::SendCrossChainAppResponseMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).send_cross_chain_app_response(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SendCrossChainAppResponseSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
-                    };
-                    Box::pin(fut)
-                }
-                "/appsender.AppSender/SendCrossChainAppError" => {
-                    #[allow(non_camel_case_types)]
-                    struct SendCrossChainAppErrorSvc<T: AppSender>(pub Arc<T>);
-                    impl<
-                        T: AppSender,
-                    > tonic::server::UnaryService<super::SendCrossChainAppErrorMsg>
-                    for SendCrossChainAppErrorSvc<T> {
-                        type Response = super::super::google::protobuf::Empty;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::SendCrossChainAppErrorMsg>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).send_cross_chain_app_error(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = SendCrossChainAppErrorSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }

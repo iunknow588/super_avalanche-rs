@@ -1,4 +1,17 @@
-#[allow(clippy::all)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// Generated client implementations.
 pub mod alias_reader_client {
@@ -289,8 +302,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -333,8 +346,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }
@@ -375,8 +388,8 @@ pub mod alias_reader_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let unary_res = grpc.unary(method, req).await;
-                        Ok(unary_res)
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
                     };
                     Box::pin(fut)
                 }

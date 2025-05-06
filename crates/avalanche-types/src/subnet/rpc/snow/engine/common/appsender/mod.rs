@@ -23,19 +23,6 @@ pub trait AppSender: Send + Sync + CloneBox {
         response: Vec<u8>,
     ) -> Result<()>;
     async fn send_app_gossip(&self, msg: Vec<u8>) -> Result<()>;
-    async fn send_app_gossip_specific(&self, node_ids: ids::node::Set, msg: Vec<u8>) -> Result<()>;
-    async fn send_cross_chain_app_request(
-        &self,
-        chain_id: ids::Id,
-        request_id: u32,
-        app_request_bytes: Vec<u8>,
-    ) -> Result<()>;
-    async fn send_cross_chain_app_response(
-        &self,
-        chain_id: ids::Id,
-        request_id: u32,
-        app_response_bytes: Vec<u8>,
-    ) -> Result<()>;
 }
 
 pub trait CloneBox {
