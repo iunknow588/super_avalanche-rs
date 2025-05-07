@@ -1,85 +1,12 @@
-# Avalanche-rs 项目结构与功能分析
+# 1  Super Avalanche 项目中文说明
 
-## 1. 项目概述
+基于 Rust 实现的 Avalanche 共识协议，包含核心实现、测试工具和开发SDK。
+
 - 这是一个用 Rust 实现的 Avalanche 区块链生态系统开发工具集
 - 目前处于 alpha 阶段，版本为 0.1.1
 - 主要目标是为 Rust 开发者提供构建 Avalanche 应用和虚拟机(VM)的基础设施
 
-## 2. 主要组件结构
-
-### 核心 Crates:
-```
-/crates
-├── avalanche-types/      # 基础类型定义
-│   ├── src/subnet/      # 子网和VM开发SDK
-│   ├── src/key/        # 密钥管理
-│   └── src/proto/      # Protocol Buffers定义
-└── avalanche-consensus/ # 共识引擎实现
-```
-
-### 核心功能模块:
-```
-/core
-├── cert-manager/    # 证书管理
-├── network/        # 网络组件
-└── server/        # 服务器实现
-```
-
-### 测试相关:
-```
-/tests
-├── avalanche-e2e/           # 端到端测试
-├── avalanchego-byzantine/   # 拜占庭测试
-└── avalanchego-conformance/ # 一致性测试
-```
-
-## 3. 主要功能模块
-
-### avalanche-types
-- 实现 Avalanche 生态系统的基础类型
-- 提供 JSON-RPC API 和 EVM 相关类型
-- 包含序列化/反序列化、哈希和编解码功能
-
-### avalanche-consensus
-- 实现 Avalanche 共识协议
-- 支持 Snowball、Slush 和区块共识
-
-### Subnet SDK 
-- 位于 `avalanche-types/src/subnet/`
-- 提供构建自定义 VM 的工具
-- 包含共识、gossip 和 JSON-RPC 端点实现
-
-### 网络组件
-- 实现 P2P 网络功能
-- 处理证书管理
-- 提供网络消息传递
-
-## 4. 特性支持
-
-通过 Cargo features 提供可选功能:
-- EVM 支持
-- JSON-RPC 客户端
-- AWS KMS 集成
-- 钱包功能
-- 子网支持
-- 协议消息处理
-
-## 5. 工具链支持
-- 使用 Protocol Buffers (protobuf) 进行序列化
-- 支持 gRPC 服务
-- 提供与 avalanchego 的互操作性
-- 包含完整的测试框架
-
----
-
-这个项目为 Rust 开发者提供了完整的工具链，使其能够参与 Avalanche 生态系统的开发，特别是在构建自定义虚拟机和子网方面。项目采用模块化设计，允许开发者根据需求选择所需组件。
-
-
-## 有关测试使用流程如下:
-
-# Avalanche-rs 项目编译与测试指南
-
-## 1. 环境准备
+## 1.1 环境准备
 
 ### 必需工具
 - Rust 工具链 (最低版本 1.70)
@@ -110,7 +37,7 @@ brew install protobuf
 cargo install cargo-nextest
 ```
 
-## 2. 代码检查
+## 1.2. 代码检查
 
 ###  运行代码格式化检查 ,运行 clippy 静态分析, 代码质量检查
 ```bash
@@ -125,7 +52,7 @@ cargo install cargo-nextest
 
 
 
-## 3. 项目编译
+## 1.3. 项目编译
 
 ### 开发版本编译
 ```bash
@@ -142,7 +69,7 @@ cargo build --all-features
 ./scripts/build.release.sh
 ```
 
-## 4. 运行测试
+## 1.4. 运行测试
 
 ### 单元测试
 ```bash
@@ -193,7 +120,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 ./scripts/tests.unused.sh
 ```
 
-## 4. CI/CD 流程
+## 1.5. CI/CD 流程
 
 项目使用 GitHub Actions 进行持续集成，包含以下步骤：
 
@@ -212,7 +139,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
    - 运行拜占庭测试
    - 运行一致性测试
 
-## 5. 常见问题处理
+## 1.6. 常见问题处理
 
 ### 编译错误
 - 确保 Rust 版本满足要求 (1.70+)
@@ -229,7 +156,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 - 使用 `--release` 编译发布版本
 - 适当使用并行测试运行
 
-## 6. 最佳实践
+## 1.7. 最佳实践
 
 1. **开发流程**
    - 在修改代码前运行测试确保基线正常
@@ -246,3 +173,87 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
    - 使用 `--nocapture` 查看测试输出
    - 适当使用 `println!` 或日志进行调试
 
+# 2 项目结构
+
+## 2.1 核心组件
+
+- `core/`: 核心共识算法实现
+- `crates/`: Rust 模块库
+- `protos/`: Protobuf 协议定义
+
+其中,crates 主要功能如下:
+
+### 核心 Crates:
+/crates
+├── avalanche-types/      # 基础类型定义
+│   ├── src/subnet/      # 子网和VM开发SDK
+│   ├── src/key/        # 密钥管理
+│   └── src/proto/      # Protocol Buffers定义
+└── avalanche-consensus/ # 共识引擎实现 
+
+### 核心功能模块:
+```
+/core
+├── cert-manager/    # 证书管理
+├── network/        # 网络组件
+└── server/        # 服务器实现
+```
+
+### 测试相关:
+```
+/tests
+├── avalanche-e2e/           # 端到端测试
+├── avalanchego-byzantine/   # 拜占庭测试
+└── avalanchego-conformance/ # 一致性测试
+```
+
+
+### 开发工具
+- `avalanchego-conformance/`: 一致性测试框架
+- `avalanchego-conformance-sdk/`: Rust SDK
+- `tests/`: 测试套件
+
+### 构建配置
+- `Cargo.toml`: 项目依赖配置
+- `build.rs`: 自定义构建脚本
+- `.cargo/`: Cargo 配置
+- `scripts/`: 构建和部署脚本
+
+### 文档
+- `project_structure_readme.md`: 项目结构说明
+- `LICENSE`: 许可证
+
+##  2.2 设计模式
+
+1. **模块化架构**: 功能按crate划分
+2. **协议优先**: 使用Protobuf定义接口
+3. **测试驱动**: 包含完整测试套件
+4. **多层级抽象**: 从核心算法到应用层SDK
+
+##  2.3 关键目录说明
+
+### `core/`
+实现Avalanche共识核心算法:
+- 雪崩协议状态机
+- 网络通信层
+- 交易处理逻辑
+
+### `crates/`
+功能模块库:
+- 加密算法
+- 数据结构
+- 工具函数
+
+### `protos/`
+跨语言接口定义:
+- gRPC服务接口
+- 核心数据结构
+
+## 2.4 开发指南
+
+1. 安装Rust工具链
+2. 使用`cargo build`构建项目
+3. 运行`cargo test`执行测试
+4. 参考各子目录文档进行开发
+
+完整文档请参考各子目录中的README文件。
