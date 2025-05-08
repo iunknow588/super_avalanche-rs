@@ -208,21 +208,14 @@ where
     /// Reference: [Topological.Finalized](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Finalized)
     pub fn finalized(&self) -> bool {
         // "blocks" includes the last accepted block and all the pending blocks.
-        let blocks_ref = self.blocks.as_ref().borrow();
-        blocks_ref.len() == 1
+        self.blocks.borrow().len() == 1
     }
 
     /// Returns the number of blocks being processed.
     /// Reference: [Topological.NumProcessing](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.NumProcessing)
     pub fn num_processing(&self) -> i64 {
         // "blocks" includes the last accepted block and all the pending blocks.
-        // 使用临时变量存储blocks的引用，避免多次借用
-        let blocks_ref = self.blocks.clone();
-        let blocks_len = {
-            let blocks_ref = blocks_ref.as_ref().borrow();
-            blocks_ref.len()
-        };
-        i64::try_from(blocks_len.saturating_sub(1)).unwrap()
+        (self.blocks.borrow().len() - 1) as i64
     }
 
     /// Returns true if the block is currently processing.
@@ -235,41 +228,39 @@ where
         }
         // not the head, and pending block
         // then the block is currently processing
-        let blocks_ref = self.blocks.as_ref().borrow();
-        blocks_ref.contains_key(&blk_id)
+        self.blocks.borrow().contains_key(&blk_id)
     }
 
     /// Returns true if the block is currently on the preferred chain.
     /// Reference: [Topological.IsPreferred](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.IsPreferred)
-    pub fn block_preferred(&self, blk: &Rc<RefCell<SnowmanBlock<B>>>) -> bool {
+    pub fn block_preferred(&self, blk: Rc<RefCell<SnowmanBlock<B>>>) -> bool {
         // if the block is accepted, then it must be transitively preferred
-        let blk_ref = blk.as_ref().borrow();
-        if blk_ref.accepted() {
+        if blk.borrow().accepted() {
             return true;
         }
 
-        let preferred_ids_ref = self.preferred_ids.as_ref().borrow();
-        preferred_ids_ref.contains(&blk_ref.id().unwrap())
+        self.preferred_ids
+            .borrow()
+            .contains(&blk.borrow().id().unwrap())
     }
 
     /// Returns true if the block has been decided.
     /// Reference: [Topological.Decided](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.Decided)
-    pub fn block_decided(&self, blk: &Rc<RefCell<SnowmanBlock<B>>>) -> bool {
+    pub fn block_decided(&self, blk: Rc<RefCell<SnowmanBlock<B>>>) -> bool {
         // genesis block
-        let blk_ref = blk.as_ref().borrow();
-        if blk_ref.status().is_none() {
+        if blk.borrow().status().is_none() {
             return true;
         }
 
         // if the block is decided, it must have been previously issued
-        if blk_ref.status().unwrap().decided() {
+        if blk.borrow().status().unwrap().decided() {
             return true;
         }
 
         // if the block is marked as fetched,
         // check if it has been transitively rejected
-        blk_ref.status().unwrap() == Status::Processing
-            && blk_ref.height().unwrap() <= self.height()
+        blk.borrow().status().unwrap() == Status::Processing
+            && blk.borrow().height().unwrap() <= self.height()
     }
 
     /// Adds a block decision to the consensus.
@@ -309,7 +300,7 @@ where
         // added in topological order. Essentially, a block that is being added should
         // never have a child that was already added. Additionally, this prevents any
         // edge cases that may occur due to adding different blocks with the same ID.
-        if self.block_decided(&snowman_blk_rc) {
+        if self.block_decided(Rc::clone(&snowman_blk_rc)) {
             return Err(Error::Other {
                 message: "duplicate block add".to_string(),
                 retryable: false,
@@ -327,10 +318,7 @@ where
         }
 
         log::debug!("adding {blk_id} as a child to {parent_blk_id}");
-        let parent_blk = res.ok_or_else(|| Error::Other {
-            message: "parent block not found".to_string(),
-            retryable: false,
-        })?;
+        let parent_blk = res.unwrap();
         parent_blk.borrow_mut().add_child(Rc::clone(&blk_rc));
 
         // "blocks" should include the last accepted block and all the pending blocks
@@ -373,12 +361,12 @@ where
     ///
     /// Reference: [Topological.RecordPoll](https://pkg.go.dev/github.com/ava-labs/avalanchego/snow/consensus/snowman#Topological.RecordPoll)
     #[allow(clippy::unwrap_in_result)]
-    pub fn record_poll(&self, votes_bag: &Bag) -> Result<()> {
+    pub fn record_poll(&self, votes_bag: Bag) -> Result<()> {
         // register a new poll call
         self.poll_number.set(self.poll_number.get() + 1);
 
         let mut votes_stack = {
-            if votes_bag.len() >= u32::from(self.parameters.alpha) {
+            if votes_bag.len() >= self.parameters.alpha as u32 {
                 // received at least alpha votes, thus possibly reached
                 // an alpha majority on the processing block
                 // must perform the traversals to calculate all blocks
@@ -407,106 +395,40 @@ where
         // preferred, then we know that following the preferences down the chain
         // will return the current tail.
         let last_preferred = self.last_preferred.get();
-        let preferred_ids_ref = self.preferred_ids.as_ref().borrow();
-        if preferred_ids_ref.contains(&last_preferred) {
+        if self.preferred_ids.borrow().contains(&last_preferred) {
             return Ok(());
         }
 
         // runtime = |live set|
         // space = constant
-        {
-            let mut preferred_ids = self.preferred_ids.borrow_mut();
-            preferred_ids.clear();
-        }
+        self.preferred_ids.borrow_mut().clear();
         self.tail.set(last_preferred);
 
-        // 使用临时变量存储blocks的引用，避免多次借用
-        let blocks_ref = self.blocks.clone();
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = blocks_ref.as_ref().borrow();
+        let borrowed_blks = self.blocks.borrow();
 
         // runtime = |live set|
         // space = constant
         // traverse from the preferred Id to the last accepted ancestor
+        let mut cursor = borrowed_blks.get(&self.tail.get()).expect("unexpected missing block for tail (possibly hash collsion of previously accepted block)").borrow();
+        while !cursor.accepted() {
+            let blk_id = cursor.blk.as_ref().unwrap().borrow().id();
+            self.preferred_ids.borrow_mut().insert(blk_id);
 
-        // Use a different approach to avoid type inference issues
-        let mut current_id = self.tail.get();
-        let mut done = false;
-
-        while !done {
-            let snowman_block = borrowed_blks
-                .get(&current_id)
-                .expect("snowman block should exist");
-            let is_accepted;
-            let next_id;
-
-            {
-                let block_ref = snowman_block.as_ref().borrow();
-                is_accepted = block_ref.accepted();
-
-                if is_accepted {
-                    next_id = Id::empty();
-                    done = true;
-                } else {
-                    let inner_block = block_ref
-                        .blk
-                        .as_ref()
-                        .expect("block should have inner block");
-                    let inner_block_ref = inner_block.as_ref().borrow();
-                    let blk_id = inner_block_ref.id();
-                    next_id = inner_block_ref.parent();
-                    drop(inner_block_ref);
-                    drop(block_ref);
-
-                    // Insert into preferred_ids in a separate scope
-                    {
-                        let mut preferred_ids = self.preferred_ids.borrow_mut();
-                        preferred_ids.insert(blk_id);
-                    }
-                }
-            }
-
-            if !done {
-                current_id = next_id;
-            }
+            let parent_id = cursor.blk.as_ref().unwrap().borrow().parent();
+            cursor = borrowed_blks.get(&parent_id).unwrap().borrow();
         }
 
         // traverse from the preferred Id to the preferred child
         // until there are no child
-        let mut current_id = self.tail.get();
-        let mut done = false;
+        let mut cursor = borrowed_blks.get(&self.tail.get()).expect("unexpected missing block for tail (possibly hash collsion of previously accepted block)").borrow();
+        while cursor.sb.is_some() {
+            let cur_preference = cursor.sb.as_ref().unwrap().preference();
+            self.tail.set(cur_preference);
 
-        while !done {
-            let snowman_block = borrowed_blks
-                .get(&current_id)
-                .expect("snowman block should exist");
-            let has_snowball;
-            let next_id;
+            self.preferred_ids.borrow_mut().insert(cur_preference);
 
-            {
-                let block_ref = snowman_block.as_ref().borrow();
-                has_snowball = block_ref.sb.is_some();
-
-                if has_snowball {
-                    let sb = block_ref.sb.as_ref().expect("block should have snowball");
-                    next_id = sb.preference();
-                    self.tail.set(next_id);
-                    drop(block_ref);
-
-                    // Insert into preferred_ids in a separate scope
-                    {
-                        let mut preferred_ids = self.preferred_ids.borrow_mut();
-                        preferred_ids.insert(next_id);
-                    }
-                } else {
-                    next_id = Id::empty();
-                    done = true;
-                }
-            }
-
-            if !done {
-                current_id = next_id;
-            }
+            cursor = borrowed_blks.get(&cur_preference).unwrap().borrow();
         }
 
         Ok(())
@@ -517,9 +439,9 @@ where
     /// of inbound edges and the non-transitively applied votes.
     /// Also, updates the list of leaf blocks.
     /// Reference: `avalanchego/snow/consensus/snowman#Topological.calculateInDegree`
-    fn calculate_in_degree(&self, votes_bag: &Bag) {
+    fn calculate_in_degree(&self, votes_bag: Bag) {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.as_ref().borrow();
+        let borrowed_blks = self.blocks.borrow();
 
         self.leaves.borrow_mut().clear();
         self.kahn_nodes.borrow_mut().clear();
@@ -532,18 +454,13 @@ where
                 continue;
             }
             let voted_block = res.unwrap();
-            let voted_block_ref = voted_block.as_ref().borrow();
-            if voted_block_ref.accepted() {
+            if voted_block.borrow().accepted() {
                 // if the vote is for the last accepted block, the vote is dropped
                 continue;
             }
 
             // parent contains the snowball instance of its children
-            let blk = voted_block_ref.blk.as_ref().unwrap();
-            let blk_ref = blk.as_ref().borrow();
-            let parent_blk_id = blk_ref.parent();
-            drop(blk_ref);
-            drop(voted_block_ref);
+            let parent_blk_id = voted_block.borrow().blk.as_ref().unwrap().borrow().parent();
 
             // add votes for this block to the parent's set of responses
             let num_votes = votes_bag.count(&vote);
@@ -579,34 +496,21 @@ where
             // set up the in_degree of the blocks
             let mut cursor = parent_blk_id;
             while let Some(blk) = borrowed_blks.get(&cursor) {
-                let blk_ref = blk.as_ref().borrow();
-                if blk_ref.accepted() {
+                if blk.borrow().accepted() {
                     break;
                 }
 
-                let inner_blk = blk_ref.blk.as_ref().unwrap();
-                let inner_blk_ref = inner_blk.as_ref().borrow();
-                let parent_id = inner_blk_ref.parent();
-                drop(inner_blk_ref);
-                drop(blk_ref);
-                cursor = parent_id;
+                cursor = blk.borrow().blk.as_ref().unwrap().borrow().parent();
 
                 let in_degree = {
-                    // 使用两个单独的作用域来避免同时借用问题
-                    let kahn_opt = {
-                        let borrowed_kahn_nodes = self.kahn_nodes.borrow();
-                        borrowed_kahn_nodes.get(&cursor).cloned()
-                    };
+                    // let Some(k) = ....borrow() then the else-case "borrow_mut" will
+                    // "already borrowed: BorrowMutError"
+                    let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
 
-                    if let Some(kahn) = kahn_opt {
-                        // 使用克隆的kahn节点更新in_degree
+                    if let Some(kahn) = borrowed_mut_kahn_nodes.get(&cursor) {
                         kahn.in_degree.set(kahn.in_degree.get() + 1);
-                        let new_in_degree = kahn.in_degree.get();
-                        // 然后更新到HashMap中
-                        self.kahn_nodes.borrow_mut().insert(cursor, kahn);
-                        new_in_degree
+                        kahn.in_degree.get()
                     } else {
-                        let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
                         let kahn_node = KahnNode::new();
                         kahn_node.in_degree.set(kahn_node.in_degree.get() + 1);
                         let in_degree = kahn_node.in_degree.get();
@@ -635,76 +539,50 @@ where
     /// Reference: `avalanchego/snow/consensus/snowman#Topological.pushVotes`
     fn push_votes(&self) -> Vec<Votes> {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.as_ref().borrow();
+        let borrowed_blks = self.blocks.borrow();
 
         let mut leaves: VecDeque<Id> = self.leaves.borrow_mut().drain().collect();
-        let kahn_nodes_ref = self.kahn_nodes.as_ref().borrow();
-        let mut votes_stack: Vec<Votes> = Vec::with_capacity(kahn_nodes_ref.len());
+        let mut votes_stack: Vec<Votes> = Vec::with_capacity(self.kahn_nodes.borrow().len());
 
         while !leaves.is_empty() {
             let leaf_blk_id = leaves.pop_front().unwrap();
 
-            // Process the current leaf block
-            let (parent_blk_id, kahn_votes_len) = {
-                // Get information about the block from kahn nodes
-                let borrowed_kahn_nodes = self.kahn_nodes.borrow();
-                let kahn = borrowed_kahn_nodes.get(&leaf_blk_id).unwrap();
-                let kahn_votes = kahn.votes.deep_copy();
-                let kahn_votes_len = kahn_votes.len();
+            // remove an inbound edge from the parent kahn node and push the votes
+            let mut borrowed_mut_kahn_nodes = self.kahn_nodes.borrow_mut();
 
-                // at least alpha votes, then this block needs to record
-                // the poll on the snowball instance
-                if kahn_votes.len() >= u32::from(self.parameters.alpha) {
-                    votes_stack.push(Votes::new(leaf_blk_id, kahn_votes));
-                }
+            // get the block and sort information about the block
+            let kahn = borrowed_mut_kahn_nodes.get(&leaf_blk_id).unwrap();
+            let kahn_votes = kahn.votes.deep_copy();
+            let kahn_votes_len = kahn_votes.len();
 
-                // Check if the block is accepted
-                let blk = borrowed_blks.get(&leaf_blk_id).expect("block should exist");
-                let blk_ref = blk.as_ref().borrow();
-                if blk_ref.accepted() {
-                    // if the block is accepted, no need to push votes to parent block
-                    drop(blk_ref);
-                    continue;
-                }
+            // at least alpha votes, then this block needs to record
+            // the poll on the snowball instance
+            if kahn_votes.len() >= self.parameters.alpha as u32 {
+                votes_stack.push(Votes::new(leaf_blk_id, kahn_votes));
+            }
 
-                // Get the parent block ID
-                let inner_blk = blk_ref.blk.as_ref().expect("block should have inner block");
-                let inner_blk_ref = inner_blk.as_ref().borrow();
-                let parent_id = inner_blk_ref.parent();
-                drop(inner_blk_ref);
-                drop(blk_ref);
+            let blk = borrowed_blks.get(&leaf_blk_id).unwrap();
+            if blk.borrow().accepted() {
+                // if the block is accepted, no need to push votes to parent block
+                continue;
+            }
 
-                (parent_id, kahn_votes_len)
-            };
+            let parent_blk_id = blk.borrow().blk.as_ref().unwrap().borrow().parent();
 
-            // Update the parent's kahn node and check if it's now a leaf
-            // 使用临时变量存储kahn_nodes的引用，避免多次借用
-            let kahn_nodes_ref = self.kahn_nodes.clone();
-            let is_now_leaf = {
-                let mut borrowed_mut_kahn_nodes = kahn_nodes_ref.borrow_mut();
-                let parent_kahn = borrowed_mut_kahn_nodes
-                    .get_mut(&parent_blk_id)
-                    .expect("parent kahn node should exist");
-                parent_kahn.in_degree.set(parent_kahn.in_degree.get() - 1);
-                parent_kahn.votes.add_count(&leaf_blk_id, kahn_votes_len);
+            let parent_kahn = borrowed_mut_kahn_nodes.get_mut(&parent_blk_id).unwrap();
+            parent_kahn.in_degree.set(parent_kahn.in_degree.get() - 1);
+            parent_kahn.votes.add_count(&leaf_blk_id, kahn_votes_len);
 
-                // if in_degree is zero, then the parent node is now a leaf
-                parent_kahn.in_degree.get() == 0
-            };
-
-            if is_now_leaf {
+            // if in_degree is zero, then the parent node is now a leaf
+            if parent_kahn.in_degree.get() == 0 {
                 leaves.push_back(parent_blk_id);
             }
         }
 
-        // If there are any leaves left, add them back to the leaves set
         if !leaves.is_empty() {
-            // Use a separate scope to avoid borrowing issues
-            {
-                let mut borrowed_mut_leaves = self.leaves.borrow_mut();
-                for id in leaves {
-                    borrowed_mut_leaves.insert(id);
-                }
+            let mut borrowed_mut_leaves = self.leaves.borrow_mut();
+            for id in leaves {
+                borrowed_mut_leaves.insert(id);
             }
         }
 
@@ -723,7 +601,7 @@ where
     fn apply_votes_stack(&self, votes_stack: &mut Vec<Votes>) -> Result<()> {
         if votes_stack.is_empty() {
             // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-            let borrowed_blks = self.blocks.as_ref().borrow();
+            let borrowed_blks = self.blocks.borrow();
 
             let head_blk = borrowed_blks
                 .get(&self.head.get())
@@ -791,7 +669,7 @@ where
                     votes_stack.last().unwrap().parent_id
                 }
             };
-            self.update_preferences(prev_should_falter, &votes.parent_id, next_id);
+            self.update_preferences(prev_should_falter, &votes.parent_id, next_id)?;
 
             self.remove_blocks(&pending_removals);
         }
@@ -809,8 +687,7 @@ where
     /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
     fn block_exists(&self, blk_id: &Id) -> bool {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let blocks_ref = self.blocks.as_ref().borrow();
-        blocks_ref.get(blk_id).is_some()
+        self.blocks.borrow().get(blk_id).is_some()
     }
 
     fn remove_blocks(&self, blk_ids: &HashSet<Id>) {
@@ -837,29 +714,20 @@ where
             .expect("votes.parent_id not found in 'blocks', must be rejected");
 
         // keep track of transitive falters to propagate to this block's children
-        let prev_should_falter;
-        {
-            let parent_blk_ref = parent_blk.as_ref().borrow();
-            prev_should_falter = parent_blk_ref.should_falter.get();
+        let prev_should_falter = parent_blk.borrow().should_falter.get();
+        if prev_should_falter {
+            // update falter to propagate to this block's children
+            log::debug!("resetting confidence below parent Id {}", votes.parent_id);
 
-            if prev_should_falter {
-                // update falter to propagate to this block's children
-                log::debug!("resetting confidence below parent Id {}", votes.parent_id);
+            let borrowed_parent_blk = parent_blk.borrow();
+            let sb = borrowed_parent_blk.sb.as_ref().unwrap();
 
-                let sb = parent_blk_ref
-                    .sb
-                    .as_ref()
-                    .expect("block should have snowball");
-                sb.record_unsuccessful_poll();
-                parent_blk_ref.should_falter.set(false);
-            }
+            sb.record_unsuccessful_poll();
+            borrowed_parent_blk.should_falter.set(false);
         }
 
         let mut borrowed_mut_parent_blk = parent_blk.borrow_mut();
-        let sb = borrowed_mut_parent_blk
-            .sb
-            .as_mut()
-            .expect("block should have snowball");
+        let sb = borrowed_mut_parent_blk.sb.as_mut().unwrap();
         let poll_successful = sb.record_poll(&votes.votes);
 
         (prev_should_falter, sb.finalized(), poll_successful)
@@ -877,42 +745,27 @@ where
     #[allow(clippy::unwrap_in_result)]
     fn accept_preferred_child(&self, parent_blk_id: &Id) -> Result<Vec<Id>> {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.as_ref().borrow();
+        let borrowed_blks = self.blocks.borrow();
         let parent_blk = borrowed_blks
             .get(parent_blk_id)
             .expect("block Id not found in 'blocks', must be rejected");
 
-        let preference;
-        {
-            let borrowed_parent_blk = parent_blk.as_ref().borrow();
-            let sb = borrowed_parent_blk
-                .sb
-                .as_ref()
-                .expect("unexpected None snowball for SnowmanBlock");
-            preference = sb.preference();
-        }
+        let borrowed_parent_blk = parent_blk.borrow();
+        let preference = borrowed_parent_blk
+            .sb
+            .as_ref()
+            .expect("unexpected None snowball for SnowmanBlock")
+            .preference();
 
         // we are finalizing the block's child
-        let children;
-        {
-            let borrowed_parent_blk = parent_blk.as_ref().borrow();
-            children = borrowed_parent_blk
-                .children
-                .as_ref()
-                .expect("unexpected None children for SnowmanBlock")
-                .clone();
-        }
-
-        // Get the child block to accept
-        let child_blk = {
-            let mut borrowed_mut_children = children.borrow_mut();
-            borrowed_mut_children
-                .get_mut(&preference)
-                .unwrap_or_else(|| {
-                    panic!("missing child in SnowmanBlock for preference {preference}")
-                })
-                .clone()
-        };
+        let children = borrowed_parent_blk
+            .children
+            .as_ref()
+            .expect("unexpected None children for SnowmanBlock");
+        let mut borrowed_mut_children = children.borrow_mut();
+        let child_blk = borrowed_mut_children
+            .get_mut(&preference)
+            .unwrap_or_else(|| panic!("missing child in SnowmanBlock for preference {preference}"));
 
         log::info!("accepting the block {preference}");
         child_blk.borrow_mut().accept()?;
@@ -920,39 +773,32 @@ where
         // because this is the newest accepted block,
         // this is the new head
         self.head.set(preference);
-        let child_blk_ref = child_blk.as_ref().borrow();
-        self.height.set(child_blk_ref.height());
-        drop(child_blk_ref);
+        self.height.set(child_blk.borrow().height());
 
         // remove the decided block from the set of processing Ids,
         // as its status now implies its preferredness
-        // 直接从preferred_ids中移除，不需要take
-        self.preferred_ids.borrow_mut().remove(&preference);
+        let mut preferred_ids = self.preferred_ids.take();
+        preferred_ids.remove(&preference);
 
-        // Process other children
-        let mut rejected: Vec<Id>;
-        {
-            let mut borrowed_mut_children = children.borrow_mut();
-            if borrowed_mut_children.is_empty() {
-                return Ok(Vec::new());
+        if borrowed_mut_children.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // because self.blocks contains the last accepted block,
+        // we don't delete the block from the blocks map here
+        let mut rejected: Vec<Id> = Vec::with_capacity(borrowed_mut_children.len() - 1);
+        for (child_id, child) in borrowed_mut_children.iter_mut() {
+            if *child_id == preference {
+                // don't reject the block we just accepted
+                continue;
             }
 
-            // because self.blocks contains the last accepted block,
-            // we don't delete the block from the blocks map here
-            rejected = Vec::with_capacity(borrowed_mut_children.len() - 1);
-            for (child_id, child) in borrowed_mut_children.iter_mut() {
-                if *child_id == preference {
-                    // don't reject the block we just accepted
-                    continue;
-                }
+            log::debug!(
+                "rejecting {child_id} due to conflict with the accepted block {preference}"
+            );
+            child.borrow_mut().reject()?;
 
-                log::debug!(
-                    "rejecting {child_id} due to conflict with the accepted block {preference}"
-                );
-                child.borrow_mut().reject()?;
-
-                rejected.push(*child_id);
-            }
+            rejected.push(*child_id);
         }
 
         Ok(rejected)
@@ -963,8 +809,8 @@ where
     /// Reference: `avalanchego/snow/consensus/snowman#Topological.rejectTransitively`
     #[allow(clippy::unwrap_in_result)]
     fn reject_block_transitively(&self, blk_id: &Id) -> Result<Vec<Id>> {
-        let borrowed_blks = self.blocks.as_ref().borrow();
-        let blk = borrowed_blks.get(blk_id).expect("block should exist");
+        let borrowed_blks = self.blocks.borrow();
+        let blk = borrowed_blks.get(blk_id).unwrap();
 
         let mut pending_rejects: Vec<Id> = Vec::new();
         let mut borrowed_mut_blk = blk.borrow_mut();
@@ -981,25 +827,22 @@ where
     }
 
     /// Reference: `avalanchego/snow/consensus/snowman#Topological.vote`
-    fn update_preferences(&self, prev_should_falter: bool, parent_id: &Id, next_id: Id) {
+    fn update_preferences(
+        &self,
+        prev_should_falter: bool,
+        parent_id: &Id,
+        next_id: Id,
+    ) -> Result<()> {
         // not mutating (e.g., insert/remove) blocks itself, thus read-only borrower
-        let borrowed_blks = self.blocks.as_ref().borrow();
-        let parent_blk = borrowed_blks
-            .get(parent_id)
-            .expect("parent block should exist");
+        let borrowed_blks = self.blocks.borrow();
+        let parent_blk = borrowed_blks.get(parent_id).unwrap();
 
-        let parent_preference;
-        {
-            let borrowed_parent_blk = parent_blk.as_ref().borrow();
-            // if we are on the preferred branch, then the parent's preference is
-            // the next block on the preferred branch
-            let sb = borrowed_parent_blk
-                .sb
-                .as_ref()
-                .expect("block should have snowball");
-            parent_preference = sb.preference();
-        }
+        let borrowed_parent_blk = parent_blk.borrow();
 
+        // if we are on the preferred branch, then the parent's preference is
+        // the next block on the preferred branch
+        let sb = borrowed_parent_blk.sb.as_ref().unwrap();
+        let parent_preference = sb.preference();
         if self.currently_on_preferred_branch.get() {
             self.last_preferred.set(parent_preference);
         }
@@ -1012,18 +855,8 @@ where
         // if there wasn't an alpha threshold on the branch
         // (either on this vote or a past transitive vote),
         // this should falter now
-        let children;
-        {
-            let borrowed_parent_blk = parent_blk.as_ref().borrow();
-            children = borrowed_parent_blk
-                .children
-                .as_ref()
-                .expect("block should have children")
-                .clone();
-        }
-
-        let children_ref = children.as_ref().borrow();
-        for (child_id, _) in children_ref.iter() {
+        let children = borrowed_parent_blk.children.as_ref().unwrap();
+        for (child_id, _) in children.borrow().iter() {
             if !prev_should_falter && *child_id == next_id {
                 // if we don't need to transitively falter and the child is going to
                 // have RecordPoll called on it, then there is no reason to reset
@@ -1038,14 +871,16 @@ where
             if res.is_none() {
                 continue;
             }
-            let child_blk = res.expect("child block should exist");
+            let child_blk = res.unwrap();
 
             log::debug!("deferring confidence reset of {child_id}, voting for {next_id}");
 
             // if the child is ever voted for positively,
             // the confidence must be reset first
-            child_blk.borrow_mut().should_falter.set(true);
+            child_blk.borrow().should_falter.set(true);
         }
+
+        Ok(())
     }
 }
 
@@ -1054,26 +889,21 @@ where
 pub(crate) mod topological_tests {
     use super::*;
     use crate::context::Context;
-    use crate::snowman::block::test_block::TestBlock;
-    use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+    // use crate::snowman::block::test_block::TestBlock;
+    // use avalanche_types::choices::decidable;
     use avalanche_types::ids::bag::Bag;
     use avalanche_types::ids::Id;
-    use bytes::Bytes;
+    // use bytes::Bytes;
     use std::cell::RefCell;
     use std::rc::Rc;
-
-    // Helper function to borrow a SnowmanBlock from an Rc<RefCell<SnowmanBlock<B>>>
-    fn borrow_snowman_block<B: Block>(
-        block: &Rc<RefCell<SnowmanBlock<B>>>,
-    ) -> std::cell::Ref<'_, SnowmanBlock<B>> {
-        block.as_ref().borrow()
-    }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological_tests::test_topological_initialize --exact --show-output
     /// Reference: `avalanchego/snow/consensus/snowman#InitializeTest`
     #[allow(clippy::type_complexity)]
     #[test]
-    pub fn test_topological_initialize() {
+    fn test_topological_initialize() {
+        use crate::snowman::block::test_block::TestBlock;
+
         let _ = env_logger::builder()
             .filter_level(log::LevelFilter::Info)
             .is_test(true)
@@ -1098,7 +928,7 @@ pub(crate) mod topological_tests {
             Topological::<TestBlock>::new(Context::default(), params, genesis_id, genesis_height)
                 .expect("failed to create Topological");
 
-        assert!(borrow_snowman_block(&genesis_blk).accepted());
+        assert!(genesis_blk.borrow().accepted());
         assert_eq!(tp.parameters().k, 1);
         assert_eq!(tp.parameters().alpha, 1);
         assert_eq!(tp.parameters().beta_virtuous, 3);
@@ -1166,7 +996,7 @@ pub(crate) mod topological_tests {
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert_eq!(tp.num_processing(), 0);
     }
@@ -1235,11 +1065,11 @@ pub(crate) mod topological_tests {
         // adding to the previous preference will update the preference
         assert!(tp.add_block(blk1.clone()).is_ok());
         assert_eq!(tp.preference(), blk1.id());
-        assert!(tp.block_preferred(&blk1_rc));
+        assert!(tp.block_preferred(Rc::clone(&blk1_rc)));
 
         // adding to something other than the previous preference
         // won't update the preference
-        assert!(tp.add_block(blk2).is_ok());
+        assert!(tp.add_block(blk2.clone()).is_ok());
         assert_eq!(tp.preference(), blk1.id());
     }
 
@@ -1307,11 +1137,11 @@ pub(crate) mod topological_tests {
         // adding to the previous preference will update the preference
         assert!(tp.add_block(blk1.clone()).is_ok());
         assert_eq!(tp.preference(), blk1.id());
-        assert!(tp.block_preferred(&blk1_rc));
+        assert!(tp.block_preferred(Rc::clone(&blk1_rc)));
 
         // adding to something other than the previous preference
         // won't update the preference
-        assert!(tp.add_block(blk2).is_ok());
+        assert!(tp.add_block(blk2.clone()).is_ok());
         assert_eq!(tp.preference(), blk1.id());
     }
 
@@ -1380,11 +1210,8 @@ pub(crate) mod topological_tests {
         // adding a block with an unknown parent means the parent
         // must have already been rejected
         // thus the block should be immediately rejected
-        let added_blk_rc = tp.add_block(blk).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Rejected
-        );
+        let added_blk_rc = tp.add_block(blk.clone()).unwrap();
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Rejected);
         assert_eq!(tp.preference(), genesis_blk_id);
     }
 
@@ -1423,12 +1250,12 @@ pub(crate) mod topological_tests {
         .expect("failed to create Topological");
         assert_eq!(tp.preference(), genesis_blk_id);
 
-        let borrowed_genesis_blk = borrow_snowman_block(&genesis_blk);
+        let borrowed_genesis_blk = genesis_blk.borrow();
         assert!(borrowed_genesis_blk.accepted());
 
         assert!(!tp.block_processing(genesis_blk_id));
-        assert!(tp.block_decided(&genesis_blk));
-        assert!(tp.block_preferred(&genesis_blk));
+        assert!(tp.block_decided(Rc::clone(&genesis_blk)));
+        assert!(tp.block_preferred(Rc::clone(&genesis_blk)));
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_previously_rejected --exact --show-output
@@ -1484,8 +1311,8 @@ pub(crate) mod topological_tests {
         )));
 
         assert!(!tp.block_processing(blk.id()));
-        assert!(tp.block_decided(&blk_rc));
-        assert!(!tp.block_preferred(&blk_rc));
+        assert!(tp.block_decided(Rc::clone(&blk_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&blk_rc)));
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_unissued --exact --show-output
@@ -1541,8 +1368,8 @@ pub(crate) mod topological_tests {
         )));
 
         assert!(!tp.block_processing(blk.id()));
-        assert!(!tp.block_decided(&snowman_blk_rc));
-        assert!(!tp.block_preferred(&snowman_blk_rc));
+        assert!(!tp.block_decided(Rc::clone(&snowman_blk_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&snowman_blk_rc)));
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_status_or_processing_issued --exact --show-output
@@ -1575,7 +1402,7 @@ pub(crate) mod topological_tests {
         };
         let (tp, _) = Topological::<TestBlock>::new(
             Context::default(),
-            params,
+            params.clone(),
             genesis_blk_id,
             genesis_height,
         )
@@ -1594,14 +1421,11 @@ pub(crate) mod topological_tests {
         assert_eq!(blk.status(), Status::Processing);
 
         let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
 
         assert!(tp.block_processing(blk.id()));
-        assert!(!tp.block_decided(&added_blk_rc));
-        assert!(tp.block_preferred(&added_blk_rc));
+        assert!(!tp.block_decided(Rc::clone(&added_blk_rc)));
+        assert!(tp.block_preferred(Rc::clone(&added_blk_rc)));
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_single_block --exact --show-output
@@ -1634,7 +1458,7 @@ pub(crate) mod topological_tests {
         };
         let (tp, _) = Topological::<TestBlock>::new(
             Context::default(),
-            params,
+            params.clone(),
             genesis_blk_id,
             genesis_height,
         )
@@ -1653,32 +1477,23 @@ pub(crate) mod topological_tests {
         assert_eq!(blk.status(), Status::Processing);
 
         let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Accepted
-        );
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Accepted);
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_accept_and_reject --exact --show-output
@@ -1741,46 +1556,28 @@ pub(crate) mod topological_tests {
         assert_eq!(blk2.status(), Status::Processing);
 
         let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk2_rc = tp.add_block(blk2).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk1.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk1.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk1.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk1.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Rejected
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_split_vote_no_change --exact --show-output
@@ -1843,50 +1640,32 @@ pub(crate) mod topological_tests {
         assert_eq!(blk2.status(), Status::Processing);
 
         let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
         let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk1.id(), 1);
         votes_bag.add_count(&blk2.id(), 1);
 
         // The first poll will accept shared bits
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag.clone()).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk1.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         // TODO: check metrics for "polls_failed" and "polls_successful"
 
         // The second poll will do nothing
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk1.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         // TODO: check metrics for "polls_failed" and "polls_successful"
     }
@@ -1917,7 +1696,7 @@ pub(crate) mod topological_tests {
             mixed_query_num_push_to_validators: 0,
             mixed_query_num_push_to_non_validators: 0,
         };
-        let (tp, _) = Topological::<TestBlock>::new(
+        let (tp, added_genesis_blk_rc) = Topological::<TestBlock>::new(
             Context::default(),
             params,
             genesis_blk_id,
@@ -1925,10 +1704,11 @@ pub(crate) mod topological_tests {
         )
         .expect("failed to create Topological");
         assert_eq!(tp.preference(), genesis_blk_id);
+        assert!(added_genesis_blk_rc.borrow().id().is_none());
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&genesis_blk_id, 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), genesis_blk_id);
@@ -1964,7 +1744,7 @@ pub(crate) mod topological_tests {
         };
         let (tp, _) = Topological::<TestBlock>::new(
             Context::default(),
-            params,
+            params.clone(),
             genesis_blk_id,
             genesis_height,
         )
@@ -2005,22 +1785,13 @@ pub(crate) mod topological_tests {
         assert_eq!(blk2.status(), Status::Processing);
 
         let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1_rc = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk2_rc = tp.add_block(blk2).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         // Current graph structure:
         //   G
@@ -2032,7 +1803,7 @@ pub(crate) mod topological_tests {
 
         let votes_bag = Bag::new();
         votes_bag.add_count(&blk0.id(), 1);
-        assert!(tp.record_poll(&votes_bag).is_ok());
+        assert!(tp.record_poll(votes_bag).is_ok());
 
         // Current graph structure:
         // 0
@@ -2040,18 +1811,9 @@ pub(crate) mod topological_tests {
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk0.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Rejected
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_transitively_reset_confidence --exact --show-output
@@ -2086,7 +1848,7 @@ pub(crate) mod topological_tests {
         };
         let (tp, _) = Topological::<TestBlock>::new(
             Context::default(),
-            params,
+            params.clone(),
             genesis_blk_id,
             genesis_height,
         )
@@ -2137,29 +1899,17 @@ pub(crate) mod topological_tests {
         assert_eq!(blk3.id(), Id::empty().prefix(&[4]).unwrap());
         assert_eq!(blk3.status(), Status::Processing);
 
-        let added_blk0_rc = tp.add_block(blk0).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1_rc = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
         let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         // Current graph structure:
         //   G
@@ -2170,117 +1920,57 @@ pub(crate) mod topological_tests {
 
         let votes_bag_for_2 = Bag::new();
         votes_bag_for_2.add_count(&blk2.id(), 1);
-        assert!(tp.record_poll(&votes_bag_for_2).is_ok());
+        assert!(tp.record_poll(votes_bag_for_2).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag_empty = Bag::new();
-        assert!(tp.record_poll(&votes_bag_empty).is_ok());
+        assert!(tp.record_poll(votes_bag_empty).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag_for_2 = Bag::new();
         votes_bag_for_2.add_count(&blk2.id(), 1);
-        assert!(tp.record_poll(&votes_bag_for_2).is_ok());
+        assert!(tp.record_poll(votes_bag_for_2).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag_for_3 = Bag::new();
         votes_bag_for_3.add_count(&blk3.id(), 1);
-        assert!(tp.record_poll(&votes_bag_for_3).is_ok());
+        assert!(tp.record_poll(votes_bag_for_3).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         let votes_bag_for_3 = Bag::new();
         votes_bag_for_3.add_count(&blk3.id(), 1);
-        assert!(tp.record_poll(&votes_bag_for_3).is_ok());
+        assert!(tp.record_poll(votes_bag_for_3).is_ok());
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk3.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Accepted
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Accepted);
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_invalid_vote --exact --show-output
@@ -2332,23 +2022,20 @@ pub(crate) mod topological_tests {
         assert_eq!(blk.status(), Status::Processing);
 
         let added_blk_rc = tp.add_block(blk.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk_rc.borrow().status().unwrap(), Status::Processing);
 
         let valid_votes_bag = Bag::new();
         valid_votes_bag.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&valid_votes_bag).is_ok());
+        assert!(tp.record_poll(valid_votes_bag).is_ok());
 
         let invalid_votes_bag = Bag::new();
         let unknown_blk_id = Id::empty().prefix(&[2]).unwrap();
         invalid_votes_bag.add_count(&unknown_blk_id, 1);
-        assert!(tp.record_poll(&invalid_votes_bag).is_ok());
+        assert!(tp.record_poll(invalid_votes_bag).is_ok());
 
         let valid_votes_bag = Bag::new();
         valid_votes_bag.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&valid_votes_bag).is_ok());
+        assert!(tp.record_poll(valid_votes_bag).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk.id());
@@ -2449,34 +2136,19 @@ pub(crate) mod topological_tests {
         assert_eq!(blk4.status(), Status::Processing);
 
         let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1_rc = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
         let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk3_rc = tp.add_block(blk3).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         let added_blk4_rc = tp.add_block(blk4.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Processing);
 
         // Current graph structure:
         //   G
@@ -2492,7 +2164,7 @@ pub(crate) mod topological_tests {
         votes_0_2_4.add_count(&blk0.id(), 1);
         votes_0_2_4.add_count(&blk2.id(), 1);
         votes_0_2_4.add_count(&blk4.id(), 1);
-        assert!(tp.record_poll(&votes_0_2_4).is_ok());
+        assert!(tp.record_poll(votes_0_2_4).is_ok());
 
         // Current graph structure:
         //   0
@@ -2504,30 +2176,15 @@ pub(crate) mod topological_tests {
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Processing);
 
         let dep_2_2_2 = Bag::new();
         dep_2_2_2.add_count(&blk2.id(), 3);
-        assert!(tp.record_poll(&dep_2_2_2).is_ok());
+        assert!(tp.record_poll(dep_2_2_2).is_ok());
 
         // Current graph structure:
         //   2
@@ -2535,26 +2192,11 @@ pub(crate) mod topological_tests {
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk2.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk4_rc).status().unwrap(),
-            Status::Rejected
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk4_rc.borrow().status().unwrap(), Status::Rejected);
     }
 
     /// `RUST_LOG=debug` cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting --exact --show-output
@@ -2650,61 +2292,34 @@ pub(crate) mod topological_tests {
         assert_eq!(blk3.status(), Status::Processing);
 
         let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1_rc = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
         // The first bit is contested as either 0 or 1. When voting for [block0] and
         // when the first bit is 1, the following bits have been decided to follow
         // the 255 remaining bits of [block0].
         let votes_0 = Bag::new();
         votes_0.add_count(&blk0.id(), 1);
-        assert!(tp.record_poll(&votes_0).is_ok());
+        assert!(tp.record_poll(votes_0).is_ok());
 
         // Although we are adding in [block2] here - the underlying snowball
         // instance has already decided it is rejected. Snowman doesn't actually
         // know that though, because that is an implementation detail of the
         // Snowball trie that is used.
-        let added_blk2_rc = tp.add_block(blk2).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         // Because [block2] is effectively rejected, [block3] is also effectively
         // rejected.
         let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         // Current graph structure:
         //       G
@@ -2724,26 +2339,14 @@ pub(crate) mod topological_tests {
         // transitively.
         let votes_3 = Bag::new();
         votes_3.add_count(&blk3.id(), 1);
-        assert!(tp.record_poll(&votes_3).is_ok());
+        assert!(tp.record_poll(votes_3).is_ok());
 
         assert!(tp.finalized());
         assert_eq!(tp.preference(), blk0.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Accepted
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Rejected
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Rejected
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting_with_no_conflicting_bit --exact --show-output
@@ -2839,16 +2442,10 @@ pub(crate) mod topological_tests {
         assert_eq!(blk3.status(), Status::Processing);
 
         let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1_rc = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
 
         // When voting for [block0], we end up finalizing the first bit as 0. The
         // second bit is contested as either 0 or 1. For when the second bit is 1,
@@ -2856,45 +2453,24 @@ pub(crate) mod topological_tests {
         // [block0].
         let votes_0 = Bag::new();
         votes_0.add_count(&blk0.id(), 1);
-        assert!(tp.record_poll(&votes_0).is_ok());
+        assert!(tp.record_poll(votes_0).is_ok());
 
         // Although we are adding in [block2] here - the underlying snowball
         // instance has already decided it is rejected. Snowman doesn't actually
         // know that though, because that is an implementation detail of the
         // Snowball trie that is used.
-        let added_blk2_rc = tp.add_block(blk2).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
 
         // Because [block2] is effectively rejected, [block3] is also effectively
         // rejected.
         let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
 
         // Current graph structure:
         //       G
@@ -2914,28 +2490,151 @@ pub(crate) mod topological_tests {
         // will never happen.
         let votes_3 = Bag::new();
         votes_3.add_count(&blk3.id(), 1);
-        assert!(tp.record_poll(&votes_3).is_ok());
+        assert!(tp.record_poll(votes_3).is_ok());
 
         assert!(!tp.finalized());
         assert_eq!(tp.preference(), blk0.id());
-        assert_eq!(
-            borrow_snowman_block(&added_blk0_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk1_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk2_rc).status().unwrap(),
-            Status::Processing
-        );
-        assert_eq!(
-            borrow_snowman_block(&added_blk3_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
     }
 
+    /*
+    /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_diverged_voting_with_invalid_block_id_unknown_tail --exact --show-output
+    /// ref. "avalanchego/snow/consensus/snowman#RecordPollDivergedVotingWithInvalidBlockIDUnknownTailTest"
+    #[test]
+    fn test_topological_record_poll_diverged_voting_with_invalid_block_id_unknown_tail() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use bytes::Bytes;
+
+        let _ = env_logger::builder()
+            .filter_level(log::LevelFilter::Trace)
+            .is_test(true)
+            .try_init();
+
+        let genesis_blk_id = Id::empty().prefix(&[0]).unwrap();
+        let genesis_height = 0_u64;
+
+        let params = crate::Parameters {
+            k: 1,
+            alpha: 1,
+            beta_virtuous: 1,
+            beta_rogue: 2,
+            concurrent_repolls: 1,
+            optimal_processing: 1,
+            max_outstanding_items: 1,
+            max_item_processing_time: 1,
+            mixed_query_num_push_to_validators: 0,
+            mixed_query_num_push_to_non_validators: 0,
+        };
+        let (tp, _) =
+            Topological::<TestBlock>::new(Context::default(), params, genesis_blk_id, genesis_height)
+                .expect("failed to create Topological");
+        assert_eq!(tp.preference(), genesis_blk_id);
+
+        let blk0 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x03]), // 0b0011
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk0.id(), Id::from_slice(&[0x03])); // 0b0011
+        assert_eq!(blk0.status(), Status::Processing);
+
+        let blk1 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x08]), // 0b1000
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk1.id(), Id::from_slice(&[0x08])); // 0b1000
+        assert_eq!(blk1.status(), Status::Processing);
+
+        let blk2 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x01]), // 0b0001
+                Status::Processing,
+            ),
+            genesis_blk_id,
+            Ok(()),
+            Bytes::new(),
+            genesis_height + 1,
+            0,
+        );
+        assert_eq!(blk2.id(), Id::from_slice(&[0x01])); // 0b0001
+        assert_eq!(blk2.status(), Status::Processing);
+
+        let blk3 = TestBlock::new(
+            TestDecidable::new(
+                Id::from_slice(&[0x03]), // 0b0011
+                Status::Processing,
+            ),
+            blk2.id(),
+            Ok(()),
+            Bytes::new(),
+            blk2.height() + 1,
+            0,
+        );
+        assert_eq!(blk3.id(), Id::from_slice(&[0x03]));
+        assert_eq!(blk3.status(), Status::Processing);
+
+        let added_blk0_rc = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+
+        let added_blk1_rc = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+
+        let votes_0 = Bag::new();
+        votes_0.add_count(&blk0.id(), 1);
+        assert!(tp.record_poll(votes_0).is_ok());
+
+        let added_blk2_rc = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+
+        let added_blk3_rc = tp.add_block(blk3.clone()).unwrap();
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Processing);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Processing);
+
+        // Current graph structure:
+        //     G
+        //  /  |  \
+        // 0   1   2
+        //         |
+        //         3
+        // Tail = 3
+
+        // Transitively increases block2 confidence by voting for its child block3.
+        // Because block2 shares the first bit with block0 but block0 was added first,
+        // the voting results in accepting block0 instead.
+        // When block2 is rejected, its child gets rejected transitively.
+        let votes_3 = Bag::new();
+        votes_3.add_count(&blk3.id(), 1);
+        assert!(tp.record_poll(votes_3).is_ok());
+
+        assert!(!tp.finalized());
+        assert_eq!(tp.preference(), blk0.id());
+        assert_eq!(added_blk0_rc.borrow().status().unwrap(), Status::Accepted);
+        assert_eq!(added_blk1_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk2_rc.borrow().status().unwrap(), Status::Rejected);
+        assert_eq!(added_blk3_rc.borrow().status().unwrap(), Status::Rejected);
+    }
+    */
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_record_poll_change_preferred_chain --exact --show-output
     /// Reference: `avalanchego/snow/consensus/snowman#RecordPollChangePreferredChainTest`
     #[test]
@@ -3008,58 +2707,46 @@ pub(crate) mod topological_tests {
         );
 
         let a1_rc = tp.add_block(a1.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&a1_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(a1_rc.borrow().status().unwrap(), Status::Processing);
 
         let a2_rc = tp.add_block(a2.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&a2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(a2_rc.borrow().status().unwrap(), Status::Processing);
 
-        let b1_rc = tp.add_block(b1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&b1_rc).status().unwrap(),
-            Status::Processing
-        );
+        let b1_rc = tp.add_block(b1.clone()).unwrap();
+        assert_eq!(b1_rc.borrow().status().unwrap(), Status::Processing);
 
         let b2_rc = tp.add_block(b2.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&b2_rc).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(b2_rc.borrow().status().unwrap(), Status::Processing);
 
         assert_eq!(tp.preference(), a2.id());
-        assert!(tp.block_preferred(&a1_rc));
-        assert!(tp.block_preferred(&a2_rc));
-        assert!(!tp.block_preferred(&b1_rc));
-        assert!(!tp.block_preferred(&b2_rc));
+        assert!(tp.block_preferred(Rc::clone(&a1_rc)));
+        assert!(tp.block_preferred(Rc::clone(&a2_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&b1_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&b2_rc)));
 
         let votes_b2 = Bag::new();
         votes_b2.add_count(&b2.id(), 1);
-        assert!(tp.record_poll(&votes_b2).is_ok());
+        assert!(tp.record_poll(votes_b2).is_ok());
 
         assert_eq!(tp.preference(), b2.id());
-        assert!(!tp.block_preferred(&a1_rc));
-        assert!(!tp.block_preferred(&a2_rc));
-        assert!(tp.block_preferred(&b1_rc));
-        assert!(tp.block_preferred(&b2_rc));
+        assert!(!tp.block_preferred(Rc::clone(&a1_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&a2_rc)));
+        assert!(tp.block_preferred(Rc::clone(&b1_rc)));
+        assert!(tp.block_preferred(Rc::clone(&b2_rc)));
 
-        let votes_a1_first = Bag::new();
-        votes_a1_first.add_count(&a1.id(), 1);
-        assert!(tp.record_poll(&votes_a1_first).is_ok());
+        let votes_a1 = Bag::new();
+        votes_a1.add_count(&a1.id(), 1);
+        assert!(tp.record_poll(votes_a1).is_ok());
 
-        let votes_a1_second = Bag::new();
-        votes_a1_second.add_count(&a1.id(), 1);
-        assert!(tp.record_poll(&votes_a1_second).is_ok());
+        let votes_a1 = Bag::new();
+        votes_a1.add_count(&a1.id(), 1);
+        assert!(tp.record_poll(votes_a1).is_ok());
 
         assert_eq!(tp.preference(), a2.id());
-        assert!(tp.block_preferred(&a1_rc));
-        assert!(tp.block_preferred(&a2_rc));
-        assert!(!tp.block_preferred(&b1_rc));
-        assert!(!tp.block_preferred(&b2_rc));
+        assert!(tp.block_preferred(Rc::clone(&a1_rc)));
+        assert!(tp.block_preferred(Rc::clone(&a2_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&b1_rc)));
+        assert!(!tp.block_preferred(Rc::clone(&b2_rc)));
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_initial_reject --exact --show-output
@@ -3068,7 +2755,7 @@ pub(crate) mod topological_tests {
     pub fn test_topological_error_on_initial_reject() {
         use crate::snowman::block::test_block::TestBlock;
         use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-
+        use avalanche_types::errors::Error;
         use bytes::Bytes;
 
         let _ = env_logger::builder()
@@ -3111,7 +2798,7 @@ pub(crate) mod topological_tests {
 
         let mut rejected_decidable =
             TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
-        rejected_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+        rejected_decidable.set_reject_result(Err(Error::Other {
             message: "test error".to_string(),
             retryable: false,
         }));
@@ -3124,7 +2811,7 @@ pub(crate) mod topological_tests {
             0,
         );
 
-        let res = tp.add_block(blk);
+        let res = tp.add_block(blk.clone());
         assert!(res.is_err());
     }
 
@@ -3134,7 +2821,7 @@ pub(crate) mod topological_tests {
     pub fn test_topological_error_on_initial_accept() {
         use crate::snowman::block::test_block::TestBlock;
         use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-
+        use avalanche_types::errors::Error;
         use bytes::Bytes;
 
         let _ = env_logger::builder()
@@ -3168,7 +2855,7 @@ pub(crate) mod topological_tests {
 
         let mut failing_decidable =
             TestDecidable::new(Id::empty().prefix(&[1]).unwrap(), Status::Processing);
-        failing_decidable.set_accept_result(Err(avalanche_types::errors::Error::Other {
+        failing_decidable.set_accept_result(Err(Error::Other {
             message: "test error".to_string(),
             retryable: false,
         }));
@@ -3182,14 +2869,11 @@ pub(crate) mod topological_tests {
         );
 
         let added_blk = tp.add_block(blk.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk.borrow().status().unwrap(), Status::Processing);
 
         let votes = Bag::new();
         votes.add_count(&blk.id(), 1);
-        assert!(tp.record_poll(&votes).is_err());
+        assert!(tp.record_poll(votes).is_err());
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_reject_sibling --exact --show-output
@@ -3198,7 +2882,7 @@ pub(crate) mod topological_tests {
     pub fn test_topological_error_on_reject_sibling() {
         use crate::snowman::block::test_block::TestBlock;
         use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
-
+        use avalanche_types::errors::Error;
         use bytes::Bytes;
 
         let _ = env_logger::builder()
@@ -3241,7 +2925,7 @@ pub(crate) mod topological_tests {
 
         let mut failing_decidable =
             TestDecidable::new(Id::empty().prefix(&[2]).unwrap(), Status::Processing);
-        failing_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+        failing_decidable.set_reject_result(Err(Error::Other {
             message: "test error".to_string(),
             retryable: false,
         }));
@@ -3255,26 +2939,25 @@ pub(crate) mod topological_tests {
         );
 
         let added_blk0 = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1 = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1 = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1.borrow().status().unwrap(), Status::Processing);
 
         let votes0 = Bag::new();
         votes0.add_count(&blk0.id(), 1);
-        assert!(tp.record_poll(&votes0).is_err());
+        assert!(tp.record_poll(votes0).is_err());
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_transitive_reject --exact --show-output
     /// Reference: `avalanchego/snow/consensus/snowman#ErrorOnTransitiveRejectionTest`
     #[test]
-    pub fn test_topological_error_on_transitive_reject() {
+    fn test_topological_error_on_transitive_reject() {
+        use crate::snowman::block::test_block::TestBlock;
+        use avalanche_types::choices::{decidable::Decidable, test_decidable::TestDecidable};
+        use avalanche_types::errors::Error;
+        use bytes::Bytes;
+
         let _ = env_logger::builder()
             .filter_level(log::LevelFilter::Debug)
             .is_test(true)
@@ -3324,7 +3007,7 @@ pub(crate) mod topological_tests {
 
         let mut failing_decidable =
             TestDecidable::new(Id::empty().prefix(&[3]).unwrap(), Status::Processing);
-        failing_decidable.set_reject_result(Err(avalanche_types::errors::Error::Other {
+        failing_decidable.set_reject_result(Err(Error::Other {
             message: "test error".to_string(),
             retryable: false,
         }));
@@ -3338,26 +3021,17 @@ pub(crate) mod topological_tests {
         );
 
         let added_blk0 = tp.add_block(blk0.clone()).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0).status().unwrap(),
-            Status::Processing
-        );
+        assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk1 = tp.add_block(blk1).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk1).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk1 = tp.add_block(blk1.clone()).unwrap();
+        assert_eq!(added_blk1.borrow().status().unwrap(), Status::Processing);
 
-        let added_blk2 = tp.add_block(blk2).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk2).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk2 = tp.add_block(blk2.clone()).unwrap();
+        assert_eq!(added_blk2.borrow().status().unwrap(), Status::Processing);
 
         let votes0 = Bag::new();
         votes0.add_count(&blk0.id(), 1);
-        assert!(tp.record_poll(&votes0).is_err());
+        assert!(tp.record_poll(votes0).is_err());
     }
 
     /// RUST_LOG=debug cargo test --package avalanche-consensus --lib -- snowman::topological::test_topological_error_on_decided_block --exact --show-output
@@ -3405,12 +3079,12 @@ pub(crate) mod topological_tests {
             genesis_height + 1,
             0,
         );
-
-        let res = tp.add_block(blk);
+        let res = tp.add_block(blk.clone());
         assert!(res.is_err());
         match res {
             Ok(_) => panic!("unexpected Ok"),
-            Err(e) => assert!(e.message().contains("duplicate block add")),
+            Err(e) => assert!(e.to_string().contains("duplicate block add")),
+            //Err(e) => assert!(e.contains("duplicate block add")),
         }
     }
 
@@ -3468,17 +3142,15 @@ pub(crate) mod topological_tests {
             0,
         );
 
-        let added_blk0 = tp.add_block(blk0).unwrap();
-        assert_eq!(
-            borrow_snowman_block(&added_blk0).status().unwrap(),
-            Status::Processing
-        );
+        let added_blk0 = tp.add_block(blk0.clone()).unwrap();
+        assert_eq!(added_blk0.borrow().status().unwrap(), Status::Processing);
 
-        let res = tp.add_block(blk1);
+        let res = tp.add_block(blk1.clone());
         assert!(res.is_err());
         match res {
             Ok(_) => panic!("unexpected Ok"),
-            Err(e) => assert!(e.message().contains("duplicate block add")),
+            Err(e) => assert!(e.to_string().contains("duplicate block add")),
+            // Err(e) => assert!(e.contains("duplicate block add")),
         }
     }
 

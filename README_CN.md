@@ -1,4 +1,4 @@
-# 1  Super Avalanche 项目中文说明
+# Super Avalanche 项目中文说明
 
 基于 Rust 实现的 Avalanche 共识协议，包含核心实现、测试工具和开发SDK。
 
@@ -6,7 +6,37 @@
 - 目前处于 alpha 阶段，版本为 0.1.1
 - 主要目标是为 Rust 开发者提供构建 Avalanche 应用和虚拟机(VM)的基础设施
 
-## 1.1 环境准备
+## 目录
+
+1. [环境准备](#环境准备)
+   - [必需工具](#必需工具)
+   - [安装 Rust 工具链](#安装-rust-工具链)
+   - [安装其他依赖](#安装其他依赖)
+2. [代码检查](#代码检查)
+   - [运行代码检查](#运行代码检查)
+   - [检查工具说明](#检查工具说明)
+3. [项目编译](#项目编译)
+   - [开发版本编译](#开发版本编译)
+   - [发布版本编译](#发布版本编译)
+4. [运行测试](#运行测试)
+   - [单元测试](#单元测试)
+   - [文档测试](#文档测试)
+   - [集成测试套件](#集成测试套件)
+   - [模糊测试](#模糊测试)
+   - [未使用依赖检查](#未使用依赖检查)
+5. [CI/CD 流程](#cicd-流程)
+6. [常见问题处理](#常见问题处理)
+   - [编译错误](#编译错误)
+   - [测试失败](#测试失败)
+   - [性能优化](#性能优化)
+7. [最佳实践](#最佳实践)
+8. [项目结构](#项目结构)
+   - [核心组件](#核心组件)
+   - [设计模式](#设计模式)
+   - [关键目录说明](#关键目录说明)
+   - [开发指南](#开发指南)
+
+## 环境准备
 
 ### 必需工具
 - Rust 工具链 (最低版本 1.70)
@@ -37,22 +67,29 @@ brew install protobuf
 cargo install cargo-nextest
 ```
 
-## 1.2. 代码检查
+## 代码检查
 
-###  运行代码格式化检查 ,运行 clippy 静态分析, 代码质量检查
+### 运行代码检查
 ```bash
 ./scripts/tests.lint.sh
 ```
- 
-其中, cargo fmt:
-专注于代码格式化,处理空格、缩进、换行等排版问题,确保代码风格统一,基于 rustfmt 规则 ,不涉及代码逻辑和质量检查
 
-  cargo clippy:
-关注代码质量和最佳实践,检查潜在的 bug,性能优化建议,代码复杂度分析,安全性检查,包含对测试代码的检查
+### 检查工具说明
+- **cargo fmt**：
+  - 专注于代码格式化
+  - 处理空格、缩进、换行等排版问题
+  - 确保代码风格统一，基于 rustfmt 规则
+  - 不涉及代码逻辑和质量检查
 
+- **cargo clippy**：
+  - 关注代码质量和最佳实践
+  - 检查潜在的 bug
+  - 提供性能优化建议
+  - 进行代码复杂度分析
+  - 执行安全性检查
+  - 包含对测试代码的检查
 
-
-## 1.3. 项目编译
+## 项目编译
 
 ### 开发版本编译
 ```bash
@@ -69,7 +106,7 @@ cargo build --all-features
 ./scripts/build.release.sh
 ```
 
-## 1.4. 运行测试
+## 运行测试
 
 ### 单元测试
 ```bash
@@ -80,7 +117,6 @@ cargo build --all-features
 ./crates/avalanche-types/tests.unit.sh
 ./crates/avalanche-consensus/tests.unit.sh
 ```
-
 
 ### 文档测试
 ```bash
@@ -120,7 +156,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 ./scripts/tests.unused.sh
 ```
 
-## 1.5. CI/CD 流程
+## CI/CD 流程
 
 项目使用 GitHub Actions 进行持续集成，包含以下步骤：
 
@@ -139,7 +175,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
    - 运行拜占庭测试
    - 运行一致性测试
 
-## 1.6. 常见问题处理
+## 常见问题处理
 
 ### 编译错误
 - 确保 Rust 版本满足要求 (1.70+)
@@ -156,7 +192,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 - 使用 `--release` 编译发布版本
 - 适当使用并行测试运行
 
-## 1.7. 最佳实践
+## 最佳实践
 
 1. **开发流程**
    - 在修改代码前运行测试确保基线正常
@@ -173,30 +209,30 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
    - 使用 `--nocapture` 查看测试输出
    - 适当使用 `println!` 或日志进行调试
 
-# 2 项目结构
+## 项目结构
 
-## 2.1 核心组件
+### 核心组件
 
 - `core/`: 核心共识算法实现
 - `crates/`: Rust 模块库
 - `protos/`: Protobuf 协议定义
 
-其中,crates 主要功能如下:
-
-### 核心 Crates:
-/crates
-├── avalanche-types/      # 基础类型定义
-│   ├── src/subnet/      # 子网和VM开发SDK
-│   ├── src/key/        # 密钥管理
-│   └── src/proto/      # Protocol Buffers定义
-└── avalanche-consensus/ # 共识引擎实现 
-
 ### 核心功能模块:
 ```
 /core
 ├── cert-manager/    # 证书管理
-├── network/        # 网络组件
-└── server/        # 服务器实现
+├── network/         # 网络组件
+└── server/          # 服务器实现
+```
+
+### 核心 Crates:
+```
+/crates
+├── avalanche-types/      # 基础类型定义
+│   ├── src/subnet/       # 子网和VM开发SDK
+│   ├── src/key/          # 密钥管理
+│   └── src/proto/        # Protocol Buffers定义
+└── avalanche-consensus/  # 共识引擎实现
 ```
 
 ### 测试相关:
@@ -207,49 +243,48 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 └── avalanchego-conformance/ # 一致性测试
 ```
 
-
 ### 开发工具
 - `avalanchego-conformance/`: 一致性测试框架
 - `avalanchego-conformance-sdk/`: Rust SDK
 - `tests/`: 测试套件
 
 ### 构建配置
-- `Cargo.toml`: 项目依赖配置
-- `build.rs`: 自定义构建脚本
-- `.cargo/`: Cargo 配置
-- `scripts/`: 构建和部署脚本
+- `Cargo.toml`:   项目依赖配置
+- `build.rs`:     自定义构建脚本
+- `.cargo/`:      Cargo 配置
+- `scripts/`:     构建和部署脚本
 
 ### 文档
 - `project_structure_readme.md`: 项目结构说明
 - `LICENSE`: 许可证
 
-##  2.2 设计模式
+### 设计模式
 
-1. **模块化架构**: 功能按crate划分
-2. **协议优先**: 使用Protobuf定义接口
-3. **测试驱动**: 包含完整测试套件
-4. **多层级抽象**: 从核心算法到应用层SDK
+1. **模块化架构**:   功能按crate划分
+2. **协议优先**:     使用Protobuf定义接口
+3. **测试驱动**:     包含完整测试套件
+4. **多层级抽象**:   从核心算法到应用层SDK
 
-##  2.3 关键目录说明
+### 关键目录说明
 
-### `core/`
+#### `core/`
 实现Avalanche共识核心算法:
 - 雪崩协议状态机
 - 网络通信层
 - 交易处理逻辑
 
-### `crates/`
+#### `crates/`
 功能模块库:
 - 加密算法
 - 数据结构
 - 工具函数
 
-### `protos/`
+#### `protos/`
 跨语言接口定义:
 - gRPC服务接口
 - 核心数据结构
 
-## 2.4 开发指南
+### 开发指南
 
 1. 安装Rust工具链
 2. 使用`cargo build`构建项目

@@ -2,12 +2,38 @@
 
 本目录包含 Avalanche-rs 项目的核心 Rust crates，这些 crates 实现了 Avalanche 网络的各种功能和组件。
 
+## 目录
+
+1. [目录结构](#目录结构)
+2. [设计理念](#设计理念)
+3. [Crates 详细说明](#crates-详细说明)
+4. [依赖关系](#依赖关系)
+5. [构建和测试](#构建和测试)
+6. [特性和功能](#特性和功能)
+7. [贡献指南](#贡献指南)
+
 ## 目录结构
 
 ```
 crates/
 ├── avalanche-types/     # Avalanche 基础类型和工具
+│   ├── src/             # 源代码目录
+│   │   ├── avm/         # X-Chain 相关类型
+│   │   ├── platformvm/  # P-Chain 相关类型
+│   │   ├── evm/         # C-Chain 相关类型
+│   │   ├── key/         # 密钥管理
+│   │   ├── message/     # 网络消息
+│   │   ├── proto/       # Protocol Buffers
+│   │   └── ...          # 其他模块
+│   ├── examples/        # 使用示例
+│   ├── tests/           # 集成测试
+│   └── scripts/         # 工具脚本
 └── avalanche-consensus/ # Avalanche 共识算法实现
+    ├── src/             # 源代码目录
+    │   ├── snowman/     # Snowman 共识协议
+    │   ├── context.rs   # 共识上下文
+    │   └── lib.rs       # 主入口
+    └── tests.unit.sh    # 单元测试脚本
 ```
 
 ## 设计理念
@@ -19,13 +45,156 @@ Avalanche-rs 项目采用模块化设计，将功能分解为独立的 crates，
 3. **独立的版本控制**：各个 crate 可以独立发布和版本控制
 4. **清晰的 API 边界**：明确定义的公共接口促进了代码的可维护性
 5. **可选功能**：通过 feature flags 提供可选功能
+6. **可测试性**：独立组件更容易进行单元测试和集成测试
+7. **并行开发**：不同团队可以并行开发不同组件
 
 ## Crates 详细说明
 
 ### avalanche-types
 
-**版本**：0.1.5  
-**描述**：Avalanche 基础类型和工具库  
+`avalanche-types` 是 Avalanche 区块链生态系统的基础类型库，提供了所有核心数据结构和工具。
+
+**主要功能**：
+- 区块链基础类型（ID、哈希等）
+- 密钥管理和地址生成
+- 交易构建和签名
+- 网络消息处理
+- JSON-RPC 客户端
+- 子网 SDK
+
+**设计特点**：
+- 模块化组织，清晰的职责分离
+- 丰富的特性标志，支持按需引入功能
+- 与 AvalancheGo 兼容的类型定义
+- 全面的测试覆盖
+
+### avalanche-consensus
+
+`avalanche-consensus` 实现了 Avalanche 共识协议，特别是 Snowman 协议，用于线性区块链的共识。
+
+**主要功能**：
+- Snowman 共识协议实现
+- 共识参数管理
+- 区块处理和验证
+- 投票机制和分叉选择
+- 引导过程和状态同步
+
+**设计特点**：
+- 高性能实现，支持高吞吐量
+- 灵活的参数配置
+- 清晰的状态管理
+- 可扩展的设计，支持不同共识变体
+
+## 依赖关系
+
+Avalanche-rs 项目中的 crates 之间存在以下依赖关系：
+
+```
+avalanche-consensus
+    └── avalanche-types
+```
+
+- `avalanche-consensus` 依赖 `avalanche-types` 中的基础类型和工具
+- `avalanche-types` 是独立的，不依赖其他 crates
+
+这种依赖结构确保了基础组件的独立性和可重用性，同时允许高级组件利用低级功能。
+
+## 构建和测试
+
+### 构建所有 crates
+
+```bash
+# 开发构建
+cargo build
+
+# 发布构建
+cargo build --release
+```
+
+### 运行测试
+
+```bash
+# 运行单元测试
+./scripts/tests.unit.sh
+
+# 运行集成测试
+./scripts/tests.integration.sh
+
+# 运行特定 crate 的测试
+cd crates/avalanche-types
+cargo test
+```
+
+### 代码质量检查
+
+```bash
+# 运行代码格式化检查
+./scripts/format.sh
+
+# 运行静态分析
+./scripts/clippy.sh
+
+# 运行所有代码质量检查
+./scripts/tests.lint.sh
+```
+
+## 特性和功能
+
+Avalanche-rs 项目支持多种可选功能，可以通过特性标志启用：
+
+### avalanche-types 特性
+
+- `avalanchego`: AvalancheGo 兼容性功能
+- `codec_base64`: Base64 编解码支持
+- `evm`: 以太坊虚拟机支持
+- `jsonrpc_client`: JSON-RPC 客户端
+- `kms_aws`: AWS KMS 集成
+- `message`: 网络消息处理
+- `mnemonic`: 助记词支持
+- `proto`: Protocol Buffers 支持
+- `subnet`: 子网支持
+- `subnet_evm`: 子网 EVM 支持
+- `wallet`: 钱包功能
+
+### 启用特性示例
+
+```bash
+# 启用单个特性
+cargo build --features avalanchego
+
+# 启用多个特性
+cargo build --features "avalanchego,jsonrpc_client,wallet"
+
+# 启用所有特性
+cargo build --all-features
+```
+
+## 贡献指南
+
+### 代码风格
+
+- 遵循 Rust 标准代码风格
+- 使用 `rustfmt` 格式化代码
+- 使用 `clippy` 进行静态分析
+- 添加适当的文档注释
+
+### 提交流程
+
+1. 创建功能分支
+2. 实现功能或修复
+3. 添加测试
+4. 运行代码质量检查
+5. 提交 Pull Request
+
+### 版本控制
+
+- 遵循语义化版本控制 (SemVer)
+- 主版本号：不兼容的 API 变更
+- 次版本号：向后兼容的功能新增
+- 修订号：向后兼容的问题修复
+
+**版本**：0.1.5
+**描述**：Avalanche 基础类型和工具库
 **路径**：`/crates/avalanche-types`
 
 这个 crate 提供了 Avalanche 网络中使用的所有基础类型和工具，是整个项目的基础。它包含了从网络通信到密码学操作的各种功能。
@@ -82,8 +251,8 @@ println!("Public Key: {}", key_pair.public_key());
 
 ### avalanche-consensus
 
-**版本**：0.1.1  
-**描述**：Avalanche 共识算法实现  
+**版本**：0.1.1
+**描述**：Avalanche 共识算法实现
 **路径**：`/crates/avalanche-consensus`
 
 这个 crate 实现了 Avalanche 共识协议，包括 Snowball、Slush 和区块共识。它提供了构建高性能共识系统所需的数据结构和算法。
