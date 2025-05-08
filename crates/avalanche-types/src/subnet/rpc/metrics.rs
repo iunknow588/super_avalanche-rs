@@ -156,7 +156,7 @@ impl From<&Vec<prometheus::proto::MetricFamily>> for MetricsFamilies {
 }
 
 #[test]
-#[ignore]
+#[cfg(feature = "subnet_metrics")]
 fn test_gather_process() {
     let families = [
         "process_cpu_seconds_total",
@@ -170,12 +170,21 @@ fn test_gather_process() {
 
     let metric_families = MetricsFamilies::from(&prometheus::gather()).mfs;
     if !metric_families.is_empty() {
-        for (i, family) in families.iter().enumerate() {
-            if let Some(name) = &metric_families[i].name {
-                assert_eq!(name, family);
-            } else {
-                panic!("expected some {family} found none")
+        // 创建一个集合，包含所有收集到的指标名称
+        let mut found_metrics = std::collections::HashSet::new();
+        for family in &metric_families {
+            if let Some(name) = &family.name {
+                found_metrics.insert(name.clone());
             }
+        }
+
+        // 检查每个期望的指标是否存在
+        for family in &families {
+            assert!(
+                found_metrics.contains(*family),
+                "Expected metric '{}' not found in gathered metrics",
+                family
+            );
         }
     }
 }

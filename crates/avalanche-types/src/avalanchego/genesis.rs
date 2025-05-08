@@ -560,15 +560,15 @@ fn test_genesis() {
             gas_limit: primitive_types::U256::from_str_radix("0x5f5e100", 16).unwrap(),
             difficulty: primitive_types::U256::zero(),
             mix_hash: Some(String::from(
-                "0x10_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )),
-            coinbase: Some(String::from("0x10_000_000_000_000_00010_000_000_000_000_00000000000")),
+            coinbase: Some(String::from("0x0000000000000000000000000000000000000000")),
             alloc: Some(alloc),
 
             number: primitive_types::U256::zero(),
             gas_used: primitive_types::U256::zero(),
             parent_hash: Some(String::from(
-                "0x10_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_00010_000_000_000_000_000",
+                "0x0000000000000000000000000000000000000000000000000000000000000000",
             )),
             base_fee: None,
         },

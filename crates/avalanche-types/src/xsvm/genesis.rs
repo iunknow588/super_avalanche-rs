@@ -214,10 +214,9 @@ fn test_parse() {
     "unknown2": "field2",
 
     "timestamp": 123,
-
-        "allocations": [
-            {"address": "6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV", "balance": 2_000_000_000},
-            {"address": "LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c", "balance": 3_000_000_000}
+    "allocations": [
+            {"address": "6Y3kysjF9jnHnYkdS9yGAuoHyae2eNmeV", "balance": 2000000000},
+            {"address": "LeKrndtsMxcLMzHz3w4uo1XtLDpfi66c", "balance": 3000000000}
         ]
 }
 "#,

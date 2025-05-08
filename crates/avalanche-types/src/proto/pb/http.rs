@@ -61,6 +61,13 @@
 #[allow(clippy::missing_const_for_fn)]
 #[allow(clippy::default_trait_access)]
 #[allow(clippy::used_underscore_items)]
+#[allow(clippy::wildcard_imports)]
+#[allow(clippy::missing_docs_in_private_items)]
+#[allow(clippy::missing_errors_doc)]
+#[allow(clippy::missing_panics_doc)]
+#[allow(clippy::missing_const_for_fn)]
+#[allow(clippy::default_trait_access)]
+#[allow(clippy::used_underscore_items)]
 // @generated
 /// URL is a net.URL see: <https://pkg.go.dev/net/url#URL>
 #[allow(clippy::derive_partial_eq_without_eq)]
