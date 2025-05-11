@@ -215,6 +215,8 @@ RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features --document-private
 
 - `core/`: 核心共识算法实现
 - `crates/`: Rust 模块库
+      - Avalanche-Consensus：新颖的 Avalanche 共识协议的 Rust 实现
+      - Avalanche-Types：实现 Avalanche 中使用的基础类型，并提供用于构建基于 Rust 的 VM 的 SDK
 - `protos/`: Protobuf 协议定义
 
 ### 核心功能模块:
