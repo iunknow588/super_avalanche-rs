@@ -16,7 +16,7 @@ categories = ["cryptography", "algorithms", "blockchain"]
 workspace = true
 
 [dependencies]
-avalanche-types = { version = "0.1.1", path = "../../crates/avalanche-types", features = [] } # https://crates.io/crates/avalanche-types
+avalanche-types = { version = "0.1.5", path = "../../crates/avalanche-types", features = [] } # https://crates.io/crates/avalanche-types
 bytes = "1.4.0"
 log = "0.4.20"
 serde = { version = "1.0.186", features = ["derive"] } # https://github.com/serde-rs/serde/releases
