@@ -28,7 +28,7 @@ Avalanche Protocol Buffers 模块是 Avalanche 网络中跨语言通信的基础
 
 这些定义以 `.proto` 文件的形式存储，并通过 `buf` 工具生成对应的 Rust 代码。生成的代码提供了类型安全的 API，用于序列化和反序列化网络消息，以及通过 gRPC 进行远程过程调用。
 
-当前支持的协议版本为 **33**，与 AvalancheGo v1.11.0 兼容。
+当前支持的协议版本为 **39**，与 AvalancheGo v1.15.0 兼容。
 
 ## 设计模式
 

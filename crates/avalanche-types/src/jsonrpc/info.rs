@@ -335,7 +335,7 @@ fn test_get_node_version() {
     "result": {
         "version": "avalanche/1.10.1",
         "databaseVersion": "v1.4.5",
-        "rpcProtocolVersion": "26",
+        "rpcProtocolVersion": "39",
         "gitCommit": "ef6a2a2f7facd8fbefd5fb2ac9c4908c2bcae3e2",
         "vmVersions": {
           "avm": "v1.10.1",
@@ -362,7 +362,7 @@ fn test_get_node_version() {
                 platform: String::from("v1.10.1"),
                 subnets: HashMap::from([(String::from("subnet-evm"), String::from("v0.5.1"))]),
             },
-            rpc_protocol_version: String::from("26"),
+            rpc_protocol_version: String::from("39"),
         }),
         error: None,
     };

@@ -1,6 +1,6 @@
 # Avalanche-rs Proto
 
-Now Serving: **Protocol Version 28**
+Now Serving: **Protocol Version 39**
 
 Protobuf files are hosted at
 [https://buf.build/ava-labs/avalanche](https://buf.build/ava-labs/avalanche) and
@@ -18,4 +18,3 @@ Introduction to `buf`
 
 To update the protocol version update the `PROTOCOL_VERSION` environment variable
 in `scripts/protobuf_codegen.sh` and `mod.rs` then run the script.
-
