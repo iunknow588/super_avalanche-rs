@@ -1,8 +1,7 @@
-
 [workspace]
 members = [
     "core/cert-manager",
-    "core/network", 
+    "core/network",
     "core/server",
     "crates/avalanche-consensus",
     "crates/avalanche-types",
@@ -40,17 +39,17 @@ missing_errors_doc = "deny"
 missing_panics_doc = "deny"
 
 [workspace.dependencies]
-# Updated to ensure consistent versions
-asn1-rs = "0.6.2"
-asn1-rs-derive = "0.5.1"
-asn1-rs-impl = "0.2.0"
-der-parser = "9.0.0"
-oid-registry = "0.7.1"
+# 保持asn1系列和ring的当前稳定版本
+asn1-rs = "0.7.1"
+asn1-rs-derive = "0.7.0"
+asn1-rs-impl = "0.3.0"
 ring = "0.17.14"
+
+# 更新其他有稳定版本的依赖
+der-parser = "10.0.0"
+oid-registry = "0.8.1"
 spin = "0.9.8"
 syn = "2.0.101"
 synstructure = "0.13.1"
 untrusted = "0.9.0"
-x509-parser = "0.16.0"
-
-# Remove the [patch.crates-io] section we just added
+x509-parser = "0.17.0"
